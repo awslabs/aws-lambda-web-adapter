@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-app
+
+  Sample SAM Template for sam-app
+
+Globals:
+  Function:
+    Timeout: 29
+
+Resources:
+  PetstoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 2048
+      Events:
+        Root:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+        Petstore:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+    Metadata:
+      DockerTag: java8.al2-maven-v1
+      DockerContext: ./app
+      Dockerfile: Dockerfile
+
+Outputs:
+  PetstoreApi:
+    Description: "API Gateway endpoint URL for Prod stage for Petstore function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+
