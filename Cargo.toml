@@ -13,3 +13,16 @@ tokio = { version = "1.4", features = ["macros", "io-util", "sync", "rt-multi-th
 tokio-retry = "0.3"
 lambda_http = "0.3.0"
 reqwest = { version = "0.11", features = ["json"] }
+http = "0.2.4"
+openssl-sys = "0.9.61"
+ctrlc = "3.1.8"
+libc = "0.2.93"
+
+[features]
+# Force openssl-sys to staticly link in the openssl library. Necessary when
+# cross compiling to x86_64-unknown-linux-musl.
+vendored = ["openssl-sys/vendored"]
+
+[[bin]]
+name = "bootstrap"
+path = "src/main.rs"
