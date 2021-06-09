@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: petstore-ec2-svc
+spec:
+  selector:
+    app: petstore-ec2
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
