@@ -428,6 +428,7 @@ dependencies = [
  "lambda_http",
  "libc",
  "log",
+ "once_cell",
  "openssl-sys",
  "reqwest",
  "tokio",

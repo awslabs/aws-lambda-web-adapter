@@ -17,6 +17,7 @@ http = "0.2.4"
 openssl-sys = "0.9.61"
 ctrlc = "3.1.8"
 libc = "0.2.93"
+once_cell = "1.7.2"
 
 [features]
 # Force openssl-sys to staticly link in the openssl library. Necessary when

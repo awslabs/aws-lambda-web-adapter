@@ -1,7 +1,5 @@
 package com.amazonaws.demo.petstore.controller;
 
-
-
 import com.amazonaws.demo.petstore.model.Pet;
 import com.amazonaws.demo.petstore.model.PetData;
 import org.springframework.web.bind.annotation.RequestBody;

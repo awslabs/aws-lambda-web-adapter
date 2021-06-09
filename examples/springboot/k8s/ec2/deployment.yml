@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: petstore-ec2
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: petstore-ec2
@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
         - name: petstore
-          image: 373534280245.dkr.ecr.ap-northeast-1.amazonaws.com/lambda-http-ric-example/springboot2-petstore:petstorefunction-5384c29a25c6-java8.al2-maven-v1
+          image: 373534280245.dkr.ecr.ap-northeast-1.amazonaws.com/lambda-http-ric-example/springboot2-petstore:petstorefunction-678656161559-java8.al2-maven-v1
           ports:
             - containerPort: 8080

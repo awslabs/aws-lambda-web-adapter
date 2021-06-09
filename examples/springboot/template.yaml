@@ -7,7 +7,7 @@ Description: >
 
 Globals:
   Function:
-    Timeout: 29
+    Timeout: 10
 
 Resources:
   PetstoreFunction:
@@ -15,6 +15,10 @@ Resources:
     Properties:
       PackageType: Image
       MemorySize: 2048
+      Tracing: Active
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Type: AllAtOnce
       Events:
         Root:
           Type: HttpApi

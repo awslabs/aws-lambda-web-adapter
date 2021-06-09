@@ -4,8 +4,9 @@ COPY src src/
 COPY pom.xml ./
 RUN mvn -q clean package
 
-FROM public.ecr.aws/lambda/java:8.al2
-COPY --from=public.ecr.aws/awsguru/lambda-http-ric:latest /opt/bootstrap /opt/bootstrap
-COPY --from=build-image /task/target/petstore-0.0.1-SNAPSHOT.jar /var/task/
+FROM public.ecr.aws/bitnami/java:1.8.292-prod
+COPY --from=public.ecr.aws/awsguru/lambda-http-ric:0.0.1 /opt/bootstrap /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
+WORKDIR /opt
+COPY --from=build-image /task/target/petstore-0.0.1-SNAPSHOT.jar /opt
 CMD ["java", "-jar", "petstore-0.0.1-SNAPSHOT.jar"]
