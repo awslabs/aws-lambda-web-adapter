@@ -1,4 +1,4 @@
-use http::{HeaderMap};
+use http::HeaderMap;
 use lambda_http::{
     handler,
     lambda_runtime::{self, Context},
@@ -6,7 +6,7 @@ use lambda_http::{
 };
 use log::*;
 use once_cell::sync::OnceCell;
-use reqwest::Client;
+use reqwest::{redirect, Client};
 use std::env;
 use std::process::Command;
 use tokio_retry::strategy::FixedInterval;
@@ -59,7 +59,12 @@ async fn main() -> Result<(), Error> {
     match env::var("AWS_LAMBDA_RUNTIME_API") {
         // in lambda runtime, start lambda runtime
         Ok(_val) => {
-            HTTP_CLIENT.set(Client::new()).unwrap();
+            HTTP_CLIENT.set(
+                Client::builder()
+                    .redirect(redirect::Policy::none())
+                    .build()
+                    .unwrap()
+            ).unwrap();
             lambda_runtime::run(handler(http_proxy_handler)).await?;
             Ok(())
         }
@@ -92,10 +97,8 @@ async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoRespo
         app_response.headers().clone(),
         lambda_response.headers_mut().unwrap(),
     );
-    // TODO handle binary data
     Ok(lambda_response
         .status(app_response.status())
-        // .body(Body::Text(app_response.text().await?))
         .body(convert_body(app_response).await?)
         .expect("failed to send response"))
 }
