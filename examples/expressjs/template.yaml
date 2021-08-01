@@ -16,6 +16,11 @@ Resources:
     Properties:
       PackageType: Image
       MemorySize: 1024
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension
+      Environment:
+        Variables:
+          RUST_LOG: info
       Events:
         Root:
           Type: HttpApi

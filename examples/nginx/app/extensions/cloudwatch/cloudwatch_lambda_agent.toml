@@ -1,0 +1,31 @@
+request_buffer_size = 20
+stack_size_bytes = 1049000 # 1 MiB # TODO: validate this is not unnecessarily large
+share_telemetry = true
+
+[outputs]
+  request_buffer_recv_timeout_millis = 100
+  event_sink_recv_timeout_millis = 100
+
+  [outputs.backoff_strategy]
+  initial_interval = 50
+  randomization_factor = 0.2
+  multiplier = 1.5
+  max_interval_millis = 2000
+  max_elapsed_time_millis = 2000
+
+[rapid]
+register_path = "/2020-01-01/extension/register"
+next_event_path = "/2020-01-01/extension/event/next"
+init_error_path = "/2020-01-01/extension/init/error"
+exit_error_path = "/2020-01-01/extension/exit/error"
+logs_subscribe_path = "/2020-08-15/logs"
+retry_interval = 200
+
+[inputs]
+sample_interval = 50
+
+[logs]
+logging_port = 3000
+# functions are limited to 5 layers and so we do not expect
+# more than 5 ports being opened for this purpose
+max_logging_port = 3010

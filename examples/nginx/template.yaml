@@ -8,7 +8,7 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 29
+    Timeout: 12
 
 Resources:
   NginxFunction:
@@ -16,6 +16,11 @@ Resources:
     Properties:
       PackageType: Image
       MemorySize: 128
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension
+      Environment:
+        Variables:
+          RUST_LOG: info
       Events:
         Root:
           Type: HttpApi
