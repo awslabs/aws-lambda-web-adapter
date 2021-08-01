@@ -1,3 +1,4 @@
+use futures::stream::StreamExt;
 use http::HeaderMap;
 use lambda_http::{
     handler,
@@ -5,10 +6,17 @@ use lambda_http::{
     Body, IntoResponse, Request, Response,
 };
 use log::*;
+use nix::sys::signal::{kill, Signal};
+use nix::unistd::Pid;
 use once_cell::sync::OnceCell;
 use reqwest::{redirect, Client};
+use signal_hook::consts::signal::*;
+use signal_hook_tokio::Signals;
 use std::env;
-use std::process::Command;
+use std::os::unix::process::CommandExt;
+use std::process::{Child, Command};
+use std::thread;
+use std::time::{Duration, Instant};
 use tokio_retry::strategy::FixedInterval;
 use tokio_retry::Retry;
 
@@ -28,52 +36,104 @@ async fn main() -> Result<(), Error> {
     let command = &args[1];
     let command_args = &args[2..];
 
-    // start application process
-    let mut app_process = Command::new(command)
-        .args(command_args)
-        .spawn()
-        .expect("failed to start user application");
-
-    // TODO improve signal handling for SIGTERM and SIGCHLD
-    let app_process_id = app_process.id() as i32;
-    ctrlc::set_handler(move || {
-        unsafe {
-            // send SIGINT to application process
-            libc::kill(app_process_id, libc::SIGINT);
-        }
-    })
-    .expect("Error setting Ctrl-C handler");
-
-    // check if the application is live every 10 milliseconds
-    Retry::spawn(FixedInterval::from_millis(10), || {
-        let liveness_check_url = format!(
-            "http://127.0.0.1:{}{}",
-            env::var("LIVENESS_CHECK_PORT").unwrap_or("8080".to_string()),
-            env::var("LIVENESS_CHECK_PATH").unwrap_or("/".to_string())
-        );
-        reqwest::get(liveness_check_url)
-    })
-    .await?;
-
     // check runtime environment
     match env::var("AWS_LAMBDA_RUNTIME_API") {
-        // in lambda runtime, start lambda runtime
+        // in lambda
         Ok(_val) => {
-            HTTP_CLIENT.set(
-                Client::builder()
-                    .redirect(redirect::Policy::none())
-                    .build()
-                    .unwrap()
-            ).unwrap();
+            // start the application in a new process
+            let app_process = Command::new(command)
+                .args(command_args)
+                .spawn()
+                .expect("failed to start user application");
+
+            // setup signal handler for SIGTERM
+            let signals = Signals::new(&[SIGTERM])?;
+            let handle = signals.handle();
+            let _signals_task = tokio::spawn(handle_signals(
+                signals,
+                app_process,
+                Duration::from_millis(290),
+            ));
+
+            // check if the application is ready every 10 milliseconds
+            Retry::spawn(FixedInterval::from_millis(10), || {
+                let readiness_check_url = format!(
+                    "http://127.0.0.1:{}{}",
+                    env::var("READINESS_CHECK_PORT").unwrap_or("8080".to_string()),
+                    env::var("READINESS_CHECK_PORT").unwrap_or("/".to_string())
+                );
+                reqwest::get(readiness_check_url)
+            })
+            .await?;
+
+            // start lambda runtime
+            HTTP_CLIENT
+                .set(
+                    Client::builder()
+                        .redirect(redirect::Policy::none())
+                        .build()
+                        .unwrap(),
+                )
+                .unwrap();
             lambda_runtime::run(handler(http_proxy_handler)).await?;
+            handle.close();
             Ok(())
         }
-        // not in lambda, just wait for app process
+        // not in lambda
         Err(_e) => {
-            app_process.wait().unwrap();
+            // execute the application in this process
+            Command::new(command).args(command_args).exec();
             Ok(())
         }
     }
+}
+
+async fn handle_signals(
+    signals: Signals,
+    mut process: Child,
+    timeout: Duration,
+) -> Result<(), Error> {
+    let mut signals = signals.fuse();
+    while let Some(signal) = signals.next().await {
+        match signal {
+            SIGTERM => {
+                debug!("SIGTERM received.");
+                let pid = Pid::from_raw(process.id() as i32);
+                debug!("send SIGTERM to the application process");
+                match kill(pid, Signal::SIGTERM) {
+                    Ok(()) => {
+                        let expire = Instant::now() + timeout;
+                        while let Ok(None) = process.try_wait() {
+                            if Instant::now() > expire {
+                                break;
+                            }
+                            thread::sleep(Duration::from_millis(10));
+                        }
+                        if let Ok(None) = process.try_wait() {
+                            if let Ok(()) = process.kill() {
+                                process.wait()?;
+                                debug!("Application process {} is killed", process.id());
+                            } else {
+                                debug!("Application process {} is terminated", process.id());
+                            }
+                        }
+                        debug!("Application process {} is stopped", process.id());
+                    }
+                    Err(e) => {
+                        error!(
+                            "Failed to kill application process {}. Error: {:?}",
+                            process.id(),
+                            e
+                        );
+                    }
+                };
+                debug!("exiting the main process");
+                std::process::exit(0);
+            }
+            _ => unreachable!(),
+        }
+    }
+    Ok(())
 }
 
 async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoResponse, Error> {
