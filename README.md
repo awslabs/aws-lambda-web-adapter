@@ -37,6 +37,8 @@ CMD ["node", "index.js"]
 Lambda Adapter will run CMD to start nodejs application, and perform readiness check on http://localhost:8080/ every 10ms. 
 It will start lambda runtime after receiving 200 response code from the application and forward requests to http://localhost:8080. 
 
+![lambda-runtime](docs/images/lambda-adapter-runtime.png)
+
 The readiness check port/path and traffic port can be configured using environment variables. 
 
 |Environment Variable|Description          |Default|
