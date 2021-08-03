@@ -35,7 +35,7 @@ ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
 Lambda Adapter will run CMD to start nodejs application, and perform readiness check on http://localhost:8080/ every 10ms. 
-It will start lambda runtime after receiving 200 response code from the application and forward requests to http://localhost:8080. 
+It will start lambda runtime after receiving 200 response from the application and forward requests to http://localhost:8080. 
 
 ![lambda-runtime](docs/images/lambda-adapter-runtime.png)
 
