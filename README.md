@@ -24,12 +24,14 @@ Below is an example Dockerfile to package a nodejs application.
 ```dockerfile
 FROM public.ecr.aws/lambda/nodejs:14
 COPY --from=public.ecr.aws/awsguru/lambda-adapter:latest /opt/bootstrap /opt/bootstrap
+ENTRYPOINT ["/opt/bootstrap"]
 EXPOSE 8080
 WORKDIR "/var/task"
 ADD extensions/ /opt
-ADD src/ /var/task
+ADD src/package.json /var/task/package.json
+ADD src/package-lock.json /var/task/package-lock.json
 RUN npm install --production
-ENTRYPOINT ["/opt/bootstrap"]
+ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
 Lambda Adapter will run CMD to start nodejs application, and perform readiness check on http://localhost:8080/ every 10ms. 
