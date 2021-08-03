@@ -60,7 +60,7 @@ async fn main() -> Result<(), Error> {
                 let readiness_check_url = format!(
                     "http://127.0.0.1:{}{}",
                     env::var("READINESS_CHECK_PORT").unwrap_or("8080".to_string()),
-                    env::var("READINESS_CHECK_PORT").unwrap_or("/".to_string())
+                    env::var("READINESS_CHECK_PATH").unwrap_or("/".to_string())
                 );
                 reqwest::get(readiness_check_url)
             })
@@ -172,17 +172,24 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
         content_type = "application/json";
     }
 
-    if app_response.content_length().unwrap_or_default() == 0 {
-        Ok(Body::Empty)
-    } else if content_type.starts_with("text")
+    if content_type.starts_with("text")
         || content_type.eq("application/json")
         || content_type.eq("application/javascript")
         || content_type.eq("application/xml")
         || content_type.eq("image/svg+xml")
     {
-        Ok(Body::Text(app_response.text().await?))
+        debug!("body is text");
+        let body_text = app_response.text().await?;
+        trace!("body text is '{}'", body_text);
+        return Ok(Body::Text(body_text))
+    }
+    let content = app_response.bytes().await?;
+    return if content.len() > 0 {
+        debug!("body is binary");
+        Ok(Body::Binary(content.to_vec()))
     } else {
-        Ok(Body::Binary(app_response.bytes().await?.to_vec()))
+        debug! {"body is empty"};
+        Ok(Body::Empty)
     }
 }
 

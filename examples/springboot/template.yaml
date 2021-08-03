@@ -16,6 +16,10 @@ Resources:
       PackageType: Image
       MemorySize: 2048
       Tracing: Active
+      Environment:
+        Variables:
+          RUST_LOG: trace
+          READINESS_CHECK_PATH: /healthz
       AutoPublishAlias: live
       DeploymentPreference:
         Type: AllAtOnce
@@ -38,5 +42,5 @@ Resources:
 Outputs:
   PetstoreApi:
     Description: "API Gateway endpoint URL for Prod stage for Petstore function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/pets"
 
