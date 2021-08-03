@@ -18,7 +18,7 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          RUST_LOG: trace
+          RUST_LOG: info
           READINESS_CHECK_PATH: /healthz
       AutoPublishAlias: live
       DeploymentPreference:
