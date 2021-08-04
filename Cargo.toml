@@ -1,5 +1,5 @@
 [package]
-name = "lambda-http-ric"
+name = "aws-lambda-adapter"
 version = "0.1.0"
 authors = ["Harold Sun <sunhua@amazon.com>"]
 edition = "2018"
