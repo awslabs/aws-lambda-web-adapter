@@ -50,6 +50,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
+name = "aws-lambda-adapter"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "futures",
+ "http",
+ "lambda_http",
+ "log",
+ "nix",
+ "once_cell",
+ "openssl-sys",
+ "reqwest",
+ "signal-hook",
+ "signal-hook-tokio",
+ "tokio",
+ "tokio-retry",
+]
+
+[[package]]
 name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -410,25 +429,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d99f9e3e84b8f67f846ef5b4cbbc3b1c29f6c759fcbce6f01aa0e73d932a24c"
 dependencies = [
  "wasm-bindgen",
-]
-
-[[package]]
-name = "lambda-http-ric"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "futures",
- "http",
- "lambda_http",
- "log",
- "nix",
- "once_cell",
- "openssl-sys",
- "reqwest",
- "signal-hook",
- "signal-hook-tokio",
- "tokio",
- "tokio-retry",
 ]
 
 [[package]]

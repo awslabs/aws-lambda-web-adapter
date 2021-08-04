@@ -6,7 +6,7 @@ build:
 
 package: build
 	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/awsguru
-	docker build -t public.ecr.aws/awsguru/lambda-adapter .
+	docker build -t public.ecr.aws/awsguru/aws-lambda-adapter .
 
 publish: package
-	docker push public.ecr.aws/awsguru/lambda-adapter
+	docker push public.ecr.aws/awsguru/aws-lambda-adapter

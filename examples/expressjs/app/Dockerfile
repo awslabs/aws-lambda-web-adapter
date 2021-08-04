@@ -1,5 +1,5 @@
 FROM public.ecr.aws/lambda/nodejs:14
-COPY --from=public.ecr.aws/awsguru/lambda-adapter:latest /opt/bootstrap /opt/bootstrap
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
 EXPOSE 8080
 WORKDIR "/var/task"
