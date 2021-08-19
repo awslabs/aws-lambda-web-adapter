@@ -23,6 +23,11 @@ public class Application {
         return "healthy";
     }
 
+    @RequestMapping(path = "/", method = RequestMethod.GET)
+    public String index() {
+        return "Hello, world!";
+    }
+
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }

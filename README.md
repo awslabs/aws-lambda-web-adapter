@@ -16,14 +16,14 @@ This allows developers to package their web application as a container image and
 ## How to use it? 
 
 AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime). It is compiled as static linked binary. 
-The binary is packaged as container image and published on AWS ECR Public Registry [here](https://gallery.ecr.aws/awsguru/lambda-adapter). 
+The binary is packaged as container image and published on AWS ECR Public Registry as [aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter). 
 
 To use it to build a docker image, just copy the bootstrap binary from lambda-adapter container to your container, and use it as ENTRYPOINT. 
 Below is an example Dockerfile to package a nodejs application. 
 
 ```dockerfile
 FROM public.ecr.aws/lambda/nodejs:14
-COPY --from=public.ecr.aws/awsguru/lambda-adapter:latest /opt/bootstrap /opt/bootstrap
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
 EXPOSE 8080
 WORKDIR "/var/task"
@@ -56,10 +56,17 @@ The readiness check port/path and traffic port can be configured using environme
 - [SpringBoot](examples/springboot)
 
 
-## Similar projects 
+## Acknowledgement
 
-This project took inspiration from several community projects. 
+This project was inspired by several community projects. 
 
 - [re:Web](https://github.com/apparentorder/reweb)
 - [Serverlessish](https://github.com/glassechidna/serverlessish)
 
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+## License
+
+This project is licensed under the Apache-2.0 License.

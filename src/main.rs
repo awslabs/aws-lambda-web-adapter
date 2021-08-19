@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 use futures::stream::StreamExt;
 use http::HeaderMap;
 use lambda_http::{

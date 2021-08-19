@@ -7,6 +7,7 @@ RUN mvn -q clean package
 FROM public.ecr.aws/bitnami/java:1.8.292-prod
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
+EXPOSE 8080
 WORKDIR /opt
 ADD extensions/ /opt
 COPY --from=build-image /task/target/petstore-0.0.1-SNAPSHOT.jar /opt

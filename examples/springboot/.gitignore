@@ -34,4 +34,3 @@ build/
 
 .mvn
 .aws-sam
-k8s
