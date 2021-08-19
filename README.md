@@ -13,6 +13,11 @@ This allows developers to package their web application as a container image and
 
 ![Lambda Adapter](docs/images/lambda-adapter-overview.png)
 
+After Lambda Adapter launch the application, it will perform readiness check on http://localhost:8080/ every 10ms.
+It will start lambda runtime client after receiving 200 response from the application and forward requests to http://localhost:8080. 
+
+![lambda-runtime](docs/images/lambda-adapter-runtime.png)
+
 ## How to use it? 
 
 AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime). It is compiled as static linked binary. 
@@ -34,10 +39,6 @@ RUN npm install --production
 ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
-Lambda Adapter will run CMD to start nodejs application, and perform readiness check on http://localhost:8080/ every 10ms. 
-It will start lambda runtime after receiving 200 response from the application and forward requests to http://localhost:8080. 
-
-![lambda-runtime](docs/images/lambda-adapter-runtime.png)
 
 The readiness check port/path and traffic port can be configured using environment variables. 
 
