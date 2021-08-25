@@ -18,17 +18,25 @@ It will start lambda runtime client after receiving 200 response from the applic
 
 ![lambda-runtime](docs/images/lambda-adapter-runtime.png)
 
+## How to build it?
+
+AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime). 
+You can use GNU Make to compiled as static linked binary and package as a docker image. A [Dockerfile](Dockerfile) including all the required rust tool chain and dependencies are used to build the tool.
+[AWS CLI](https://aws.amazon.com/cli/) and [Docker](https://www.docker.com/get-started) are required to run the build.  
+
+```shell
+make build
+```
+This will create a docker image called "aws-lambda-adapter:latest". In this docker image, AWS Lambda Adapter is packaged as a file "/opt/bootstrap". 
+
 ## How to use it? 
 
-AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime). It is compiled as static linked binary. 
-The binary is packaged as container image and published on AWS ECR Public Registry as [aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter). 
-
-To use it to build a docker image, just copy the bootstrap binary from lambda-adapter container to your container, and use it as ENTRYPOINT. 
+To use it, copy the bootstrap binary from "aws-lambda-adapter:latest" to your container, and set it as ENTRYPOINT. 
 Below is an example Dockerfile to package a nodejs application. 
 
 ```dockerfile
 FROM public.ecr.aws/lambda/nodejs:14
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
+COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
 EXPOSE 8080
 WORKDIR "/var/task"
@@ -48,7 +56,7 @@ The readiness check port/path and traffic port can be configured using environme
 |READINESS_CHECK_PATH|readiness check path | /     |
 |PORT                |traffic port         | 8080  |
 
-## Show me some examples
+## Show me examples
 
 3 examples are included under the 'examples' directory. Check them out, find out how easy it is to run a web application on AWS Lambda. 
 
