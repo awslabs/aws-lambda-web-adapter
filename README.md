@@ -21,8 +21,8 @@ It will start lambda runtime client after receiving 200 response from the applic
 ## How to build it?
 
 AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime). 
-You can use GNU Make to compiled as static linked binary and package as a docker image. A [Dockerfile](Dockerfile) including all the required rust tool chain and dependencies are used to build the tool.
-[AWS CLI](https://aws.amazon.com/cli/) and [Docker](https://www.docker.com/get-started) are required to run the build.  
+You can use GNU Make to compile it as static linked binary and package into a docker image. We provide a [Dockerfile](Dockerfile) including all the required rust toolchain and dependencies. 
+You need to install [AWS CLI](https://aws.amazon.com/cli/) and [Docker](https://www.docker.com/get-started) to run the build.  
 
 ```shell
 make build
@@ -31,8 +31,8 @@ This will create a docker image called "aws-lambda-adapter:latest". In this dock
 
 ## How to use it? 
 
-To use it, copy the bootstrap binary from "aws-lambda-adapter:latest" to your container, and set it as ENTRYPOINT. 
-Below is an example Dockerfile to package a nodejs application. 
+To use it, copy the bootstrap binary from "aws-lambda-adapter:latest" to your container, and use it as ENTRYPOINT. 
+Below is an example Dockerfile for packaging a nodejs application. 
 
 ```dockerfile
 FROM public.ecr.aws/lambda/nodejs:14
