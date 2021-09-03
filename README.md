@@ -1,8 +1,8 @@
 # AWS Lambda Adapter
 
-Run web application containers on AWS Lambda, AWS Fargate and Amazon EC2 without changing code.
+Run web applications inside AWS Lambda without changing code.
 
-![all 3 compute](docs/images/all-3-compute.png)
+![Lambda Adapter](docs/images/lambda-adapter-overview.png)
 
 ## How does it work?
 
@@ -10,8 +10,6 @@ AWS Lambda Adapter supports AWS Lambda function triggered by Amazon API Gateway 
 Lambda Adapter converts incoming events to http requests and send to web application, and convert the http response back to lambda event response. 
 When used outside of AWS Lambda execution environment, Lambda Adapter will just execute web application in the same process. 
 This allows developers to package their web application as a container image and run it on AWS Lambda, AWS Fargate and Amazon EC2 without changing code.
-
-![Lambda Adapter](docs/images/lambda-adapter-overview.png)
 
 After Lambda Adapter launch the application, it will perform readiness check on http://localhost:8080/ every 10ms.
 It will start lambda runtime client after receiving 200 response from the application and forward requests to http://localhost:8080. 
