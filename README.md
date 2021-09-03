@@ -1,6 +1,6 @@
 # AWS Lambda Adapter
 
-Run web applications inside AWS Lambda without changing code.
+A tool to run web applications on AWS Lambda without changing code.
 
 ![Lambda Adapter](docs/images/lambda-adapter-overview.png)
 
