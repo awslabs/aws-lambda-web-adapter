@@ -1,0 +1,25 @@
+name: Rust
+
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: rustup target add x86_64-unknown-linux-musl \
+          && curl -o /musl-1.2.2.tar.gz https://musl.libc.org/releases/musl-1.2.2.tar.gz \
+          && tar zxf /musl-1.2.2.tar.gz && cd musl-1.2.2/ \
+          && ./configure && make install && ln -s /usr/local/musl/bin/musl-gcc /usr/local/bin
+      - name: Build
+        run: CC=musl-gcc cargo build --release --target=x86_64-unknown-linux-musl --features vendored
