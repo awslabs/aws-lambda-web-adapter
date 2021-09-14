@@ -19,7 +19,16 @@ It will start lambda runtime client after receiving 200 response from the applic
 ## How to build it?
 
 AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime). 
-AWS Lambda executes functions in x86_64 Amazon Linux Environment. We need to cross compile the adapter to that environment. 
+AWS Lambda executes functions in x86_64 Amazon Linux Environment. We need to compile the adapter to that environment. 
+
+### Compiling with Docker
+On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker. The Dockerfile is [here](Dockerfile.x86). 
+
+```shell
+$ make build
+```
+
+Once the build completes, it creates a docker image called "aws-lambda-adapter:latest". AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside the docker image.
 
 ### Compiling on macOS
 
@@ -59,15 +68,6 @@ Finally, run the following command to package lambda adapter into a docker image
 $ aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
 $ DOCKER_BUILDKIT=1 docker build -f Dockerfile.mac -t aws-lambda-adapter:latest .
 ```
-
-### Compiling with Docker
-On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker. 
-
-```shell
-$ make build
-```
-
-Once the build completes, it creates a docker image called "aws-lambda-adapter:latest". AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside the docker image. 
 
 ## How to use it? 
 
