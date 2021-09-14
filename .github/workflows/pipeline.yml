@@ -28,5 +28,8 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Linting
+        run: cargo fmt -- --check && cargo clippy -- -Dwarnings
+
       - name: Build
         run: DOCKER_BUILDKIT=1 docker build -f Dockerfile.x86 -t aws-lambda-adapter:latest .
