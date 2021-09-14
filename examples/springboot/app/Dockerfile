@@ -1,4 +1,4 @@
-FROM amd64/maven as build-image
+FROM public.ecr.aws/sam/build-java8.al2:latest as build-image
 WORKDIR "/task"
 COPY src src/
 COPY pom.xml ./
