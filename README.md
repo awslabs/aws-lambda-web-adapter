@@ -22,7 +22,7 @@ AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](htt
 AWS Lambda executes functions in x86_64 Amazon Linux Environment. We need to compile the adapter to that environment. 
 
 ### Compiling with Docker
-On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker. The Dockerfile is [here](/Dockerfile.x86). 
+On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker. The Dockerfile is [here](Dockerfile.x86). 
 
 ```shell
 $ make build
