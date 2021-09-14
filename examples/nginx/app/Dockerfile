@@ -1,4 +1,4 @@
-FROM public.ecr.aws/nginx/nginx:1.21.1
+FROM public.ecr.aws/runecast/nginx:1.21.1-alpine
 WORKDIR "/tmp"
 COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
 ADD config/ /etc/nginx/
