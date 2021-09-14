@@ -16,10 +16,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: rustup target add x86_64-unknown-linux-musl
-          && curl -o ./musl-1.2.2.tar.gz https://musl.libc.org/releases/musl-1.2.2.tar.gz
-          && tar zxf ./musl-1.2.2.tar.gz && cd musl-1.2.2/
-          && ./configure && sudo make install && sudo ln -s /usr/local/musl/bin/musl-gcc /usr/local/bin
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
       - name: Build
-        run: CC=musl-gcc cargo build --release --target=x86_64-unknown-linux-musl --features vendored
+        run: DOCKER_BUILDKIT=1 docker build -t aws-lambda-adapter:latest .

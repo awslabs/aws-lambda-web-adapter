@@ -29,7 +29,7 @@ First, install [rustup](https://rustup.rs/) if you haven't done it already. Then
 $ rustup target add x86_64-unknown-linux-musl
 ```
 
-And we have to install macOS cross-compiler toolchains. `messense/homebrew-macos-cross-toolchains` can be used on both Intel Mac and Apple M1. 
+And we have to install macOS cross-compiler toolchains. `messense/homebrew-macos-cross-toolchains` can be used on both Intel chip and Apple M1 chip. 
 
 ```shell
 $ brew tap messense/macos-cross-toolchains
@@ -53,14 +53,21 @@ $ CC=x86_64-unknown-linux-musl-gcc cargo build --release --target=x86_64-unknown
 
 Lambda Adapter binary will be placed at `target/x86_64-unkonw-linux-musl/release/bootstrap`.
 
-### Compiling on Docker
+Finally, run the following command to package lambda adapter into a docker image named "aws-lambda-adapter:latest". 
+
+```shell
+$ aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+$ DOCKER_BUILDKIT=1 docker build -f Dockerfile.mac -t aws-lambda-adapter:latest .
+```
+
+### Compiling with Docker
 On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker. 
 
 ```shell
-make build
+$ make build
 ```
 
-The build output will be placed into `target` directory. 
+Once the build completes, it creates a docker image called "aws-lambda-adapter:latest". AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside the docker image. 
 
 ## How to use it? 
 
@@ -69,7 +76,7 @@ Below is an example Dockerfile for packaging a nodejs application.
 
 ```dockerfile
 FROM public.ecr.aws/lambda/nodejs:14
-COPY target/x86_64-unkonw-linux-musl/release/bootstrap /opt/bootstrap
+COPY --from aws-lambda-adapter:latest /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
 EXPOSE 8080
 WORKDIR "/var/task"

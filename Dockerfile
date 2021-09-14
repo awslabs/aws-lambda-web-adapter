@@ -11,4 +11,4 @@ ADD . /app
 RUN source $HOME/.cargo/env && CC=musl-gcc cargo build --release --target=x86_64-unknown-linux-musl --features vendored
 
 FROM scratch AS package-stage
-COPY --from=build-stage /app/target/ /
+COPY --from=build-stage /app/target/x86_64-unknown-linux-musl/release/bootstrap /opt/bootstrap
