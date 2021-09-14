@@ -62,8 +62,8 @@ async fn main() -> Result<(), Error> {
             Retry::spawn(FixedInterval::from_millis(10), || {
                 let readiness_check_url = format!(
                     "http://127.0.0.1:{}{}",
-                    env::var("READINESS_CHECK_PORT").unwrap_or("8080".to_string()),
-                    env::var("READINESS_CHECK_PATH").unwrap_or("/".to_string())
+                    env::var("READINESS_CHECK_PORT").unwrap_or_else(|_| "8080".to_string()),
+                    env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())
                 );
                 reqwest::get(readiness_check_url)
             })
@@ -142,7 +142,7 @@ async fn handle_signals(
 async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoResponse, Error> {
     let app_host = format!(
         "http://127.0.0.1:{}",
-        env::var("PORT").unwrap_or("8080".to_string())
+        env::var("PORT").unwrap_or_else(|_| "8080".to_string())
     );
     let (parts, body) = event.into_parts();
     let app_url = app_host + parts.uri.path_and_query().unwrap().as_str();
@@ -184,16 +184,16 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
         debug!("body is text");
         let body_text = app_response.text().await?;
         trace!("body text is '{}'", body_text);
-        return Ok(Body::Text(body_text))
+        return Ok(Body::Text(body_text));
     }
     let content = app_response.bytes().await?;
-    return if content.len() > 0 {
+    return if !content.is_empty() {
         debug!("body is binary");
         Ok(Body::Binary(content.to_vec()))
     } else {
         debug! {"body is empty"};
         Ok(Body::Empty)
-    }
+    };
 }
 
 fn copy_headers(src: HeaderMap, dst: &mut HeaderMap) {
