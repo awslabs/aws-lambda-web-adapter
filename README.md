@@ -19,22 +19,64 @@ It will start lambda runtime client after receiving 200 response from the applic
 ## How to build it?
 
 AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime). 
-You can use GNU Make to compile it as static linked binary and package into a docker image. We provide a [Dockerfile](Dockerfile) including all the required rust toolchain and dependencies. 
-You need to install [AWS CLI](https://aws.amazon.com/cli/) and [Docker](https://www.docker.com/get-started) to run the build.  
+AWS Lambda executes functions in x86_64 Amazon Linux Environment. We need to cross compile the adapter to that environment. 
+
+### Compiling on macOS
+
+First, install [rustup](https://rustup.rs/) if you haven't done it already. Then, add the `x86_64-unknown-linux-musl` target:
 
 ```shell
-make build
+$ rustup target add x86_64-unknown-linux-musl
 ```
-This will create a docker image called "aws-lambda-adapter:latest". In this docker image, AWS Lambda Adapter is packaged as a file "/opt/bootstrap". 
+
+And we have to install macOS cross-compiler toolchains. `messense/homebrew-macos-cross-toolchains` can be used on both Intel chip and Apple M1 chip. 
+
+```shell
+$ brew tap messense/macos-cross-toolchains
+$ brew install x86_64-unknown-linux-musl
+```
+
+And we need to inform Cargo that our project uses the newly-installed linker when building for the `x86_64-unknown-linux-musl` platform. 
+Create a new directory called `.cargo` in your project folder and a new file called `config` inside the new folder.
+
+```shell
+$ mkdir .cargo
+$ echo '[target.x86_64-unknown-linux-musl]
+linker = "x86_64-unknown-linux-musl-gcc"' > .cargo/config
+```
+
+Now we can cross compile AWS Lambda Adapter. 
+
+```shell
+$ CC=x86_64-unknown-linux-musl-gcc cargo build --release --target=x86_64-unknown-linux-musl --features vendored
+```
+
+Lambda Adapter binary will be placed at `target/x86_64-unkonw-linux-musl/release/bootstrap`.
+
+Finally, run the following command to package lambda adapter into a docker image named "aws-lambda-adapter:latest". 
+
+```shell
+$ aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+$ DOCKER_BUILDKIT=1 docker build -f Dockerfile.mac -t aws-lambda-adapter:latest .
+```
+
+### Compiling with Docker
+On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker. 
+
+```shell
+$ make build
+```
+
+Once the build completes, it creates a docker image called "aws-lambda-adapter:latest". AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside the docker image. 
 
 ## How to use it? 
 
-To use it, copy the bootstrap binary from "aws-lambda-adapter:latest" to your container, and use it as ENTRYPOINT. 
+To use it, copy the bootstrap binary to your container, and use it as ENTRYPOINT. 
 Below is an example Dockerfile for packaging a nodejs application. 
 
 ```dockerfile
 FROM public.ecr.aws/lambda/nodejs:14
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
+COPY --from=aws-lambda-adapter:latest /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
 EXPOSE 8080
 WORKDIR "/var/task"
