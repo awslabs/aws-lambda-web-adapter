@@ -29,4 +29,4 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build
-        run: DOCKER_BUILDKIT=1 docker build -t aws-lambda-adapter:latest .
+        run: DOCKER_BUILDKIT=1 docker build -f Dockerfile.x86 -t aws-lambda-adapter:latest .
