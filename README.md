@@ -76,7 +76,7 @@ Below is an example Dockerfile for packaging a nodejs application.
 
 ```dockerfile
 FROM public.ecr.aws/lambda/nodejs:14
-COPY --from aws-lambda-adapter:latest /opt/bootstrap
+COPY --from=aws-lambda-adapter:latest /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
 EXPOSE 8080
 WORKDIR "/var/task"
