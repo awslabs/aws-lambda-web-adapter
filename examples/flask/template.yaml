@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  sam-app
+  python3.8
 
-  Sample SAM Template for sam-app
+  Sample SAM Template for flask
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -11,34 +11,34 @@ Globals:
     Timeout: 29
 
 Resources:
-  ExpressFunction:
+  FlaskFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
       MemorySize: 1024
-      Policies:
-        - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension
-      Environment:
-        Variables:
-          RUST_LOG: info
       Events:
         Root:
           Type: HttpApi
           Properties:
             Path: /
             Method: ANY
-        Petstore:
+        Proxy:
           Type: HttpApi
           Properties:
             Path: /{proxy+}
             Method: ANY
     Metadata:
-      DockerTag: v1
-      DockerContext: ./app
       Dockerfile: Dockerfile
+      DockerContext: ./app
+      DockerTag: python3.8-v1
 
 Outputs:
-  ExpressApi:
-    Description: "API Gateway endpoint URL for Prod stage for Express function"
+  FlaskApi:
+    Description: "API Gateway endpoint URL for Prod stage for Flask function"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
-
+  FlaskFunction:
+    Description: "Flask Lambda Function ARN"
+    Value: !GetAtt FlaskFunction.Arn
+  FlaskIamRole:
+    Description: "Implicit IAM Role created for Flask function"
+    Value: !GetAtt FlaskFunctionRole.Arn

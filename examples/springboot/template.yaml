@@ -42,5 +42,5 @@ Resources:
 Outputs:
   PetstoreApi:
     Description: "API Gateway endpoint URL for Prod stage for Petstore function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/pets"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/pets"
 

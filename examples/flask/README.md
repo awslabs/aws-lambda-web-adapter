@@ -1,27 +1,24 @@
-# Express.js example
+# Flask example
 
-A basic express.js application example. You can build and test it locally as a typical Express.js application.
+A basic Flask application example. You can build and test it locally as a typical Flask application.
 
-Using AWS Lambda Adapter, you can package this web application into Docker image, push to ECR, and deploy to Lambda, ECS/EKS, or EC2.
+Using AWS Lambda Adapter, You can package this web application into Docker image, push to ECR, and deploy to Lambda, ECS/EKS, or EC2.
 
 The application can be deployed in an AWS account using the [Serverless Application Model](https://github.com/awslabs/serverless-application-model). The `template.yaml` file in the root folder contains the application definition.
 
-The top level folder is a typical AWS SAM project. The `app` directory is an express.js application with a [Dockerfile](app/Dockerfile). 
+The top level folder is a typical AWS SAM project. The `app` directory is a flask application with a [Dockerfile](app/Dockerfile).
 
 ```dockerfile
-FROM public.ecr.aws/lambda/nodejs:14
+FROM public.ecr.aws/lambda/python:3.8
 COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
-EXPOSE 8080
-WORKDIR "/var/task"
-ADD src/package.json /var/task/package.json
-ADD src/package-lock.json /var/task/package-lock.json
-RUN npm install --production
-ADD src/ /var/task
-CMD ["node", "index.js"]
+WORKDIR /var/task
+COPY app.py requirements.txt ./
+RUN python3.8 -m pip install -r requirements.txt
+CMD ["gunicorn", "-b=:8080", "-w=1", "app:app"]
 ```
 
-Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the only change to run the express.js application on Lambda.
+Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the only change to run the Flask application on Lambda.
 
 ```dockerfile
 COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
@@ -30,10 +27,10 @@ ENTRYPOINT ["/opt/bootstrap"]
 
 ## Pre-requisites
 
-The following tools should be installed and configured. 
+The following tools should be installed and configured.
 * [AWS CLI](https://aws.amazon.com/cli/)
 * [SAM CLI](https://github.com/awslabs/aws-sam-cli)
-* [Node](https://nodejs.org/en/)
+* [Python](https://www.python.org/)
 * [Docker](https://www.docker.com/products/docker-desktop)
 
 Container image `aws-lambda-adapter:latest` should already exist. You could follow [README](../../README.md#how-to-build-it?) to build Lambda Adapter.
@@ -60,7 +57,7 @@ Once the deployment is completed, the SAM CLI will print out the stack's outputs
 ---------------------------------------------------------------------------------------------------------
 OutputKey-Description                        OutputValue
 ---------------------------------------------------------------------------------------------------------
-PetStoreApi - URL for application            https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/
+FlaskApi - URL for application            https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/
 ---------------------------------------------------------------------------------------------------------
 ...
 
