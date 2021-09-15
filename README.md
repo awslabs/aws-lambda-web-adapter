@@ -89,7 +89,7 @@ ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
 
-Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the minimum configuration required to use Lambda Adapter. No need to change the code.
+Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the only configuration change required to run web application on AWS Lambda. No need to change the application code.
 
 ```dockerfile
 COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
@@ -109,8 +109,8 @@ The readiness check port/path and traffic port can be configured using environme
 
 4 examples are included under the 'examples' directory. Check them out, find out how easy it is to run a web application on AWS Lambda. 
 
-- [Flask]()
-- [express.js](examples/expressjs)
+- [Flask](examples/flask)
+- [Express.js](examples/expressjs)
 - [SpringBoot](examples/springboot)
 - [nginx](examples/nginx)
 
