@@ -8,7 +8,7 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 12
+    Timeout: 29
 
 Resources:
   NginxFunction:
@@ -40,5 +40,5 @@ Resources:
 Outputs:
   NginxApi:
     Description: "API Gateway endpoint URL for Prod stage for Nginx function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
 

@@ -22,7 +22,8 @@ AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](htt
 AWS Lambda executes functions in x86_64 Amazon Linux Environment. We need to compile the adapter to that environment. 
 
 ### Compiling with Docker
-On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker. The Dockerfile is [here](Dockerfile.x86). 
+On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker. 
+The Dockerfile is [here](Dockerfile.x86). [AWS CLI](https://aws.amazon.com/cli/) should have been installed and configured.
 
 ```shell
 $ make build
@@ -88,6 +89,14 @@ ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
 
+Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the minimum configuration required to use Lambda Adapter. No need to change the code.
+
+```dockerfile
+COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
+ENTRYPOINT ["/opt/bootstrap"]
+```
+
+
 The readiness check port/path and traffic port can be configured using environment variables. 
 
 |Environment Variable|Description          |Default|
@@ -98,12 +107,12 @@ The readiness check port/path and traffic port can be configured using environme
 
 ## Show me examples
 
-3 examples are included under the 'examples' directory. Check them out, find out how easy it is to run a web application on AWS Lambda. 
+4 examples are included under the 'examples' directory. Check them out, find out how easy it is to run a web application on AWS Lambda. 
 
-- [nginx](examples/nginx)
+- [Flask]()
 - [express.js](examples/expressjs)
 - [SpringBoot](examples/springboot)
-
+- [nginx](examples/nginx)
 
 ## Acknowledgement
 
