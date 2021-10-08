@@ -41,15 +41,17 @@ $ make build
 Once the build completes, it creates two docker images: 
 - "aws-lambda-adapter:latest-x86_64" for x86_64.
 - "aws-lambda-adapter:latest-aarch64" for arm64.
+
 AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside each docker image. "aws-lambda-adapter:latest" is tagged to the same image as "aws-lambda-adapter:latest-x86_64". 
 
 ### Compiling on macOS
 
 If you want to install rust toolchain in your Macbook and play with the source code, you can follow the steps below.
-First, install [rustup](https://rustup.rs/) if you haven't done it already. Then, add the `x86_64-unknown-linux-musl` target:
+First, install [rustup](https://rustup.rs/) if you haven't done it already. Then, add targets for x86_86 and arm64:
 
 ```shell
 $ rustup target add x86_64-unknown-linux-musl
+$ rustup target add aarch64-unknown-linux-musl
 ```
 
 And we have to install macOS cross-compiler toolchains. `messense/homebrew-macos-cross-toolchains` can be used on both Intel chip and Apple M1 chip.
@@ -60,7 +62,7 @@ $ brew install x86_64-unknown-linux-musl
 $ brew install aarch64-unknown-linux-musl
 ```
 
-And we need to inform Cargo that our project uses the newly-installed linker when building for the `x86_64-unknown-linux-musl` platform.
+And we need to inform Cargo that our project uses the newly-installed linker when building for the `x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl` platforms.
 Create a new directory called `.cargo` in your project folder and a new file called `config` inside the new folder.
 
 ```shell
@@ -82,7 +84,7 @@ $ CC=aarch64-unknown-linux-musl-gcc cargo build --release --target=aarch64-unkno
 Lambda Adapter binary for x86_64 will be placed at `target/x86_64-unknown-linux-musl/release/bootstrap`. 
 Lambda Adapter binary for arm64 will be placed at `target/aarch64-unknown-linux-musl/release/bootstrap`. 
 
-Finally, run the following command to package lambda adapter into a docker image named "aws-lambda-adapter:latest".
+Finally, run the following command to package lambda adapter into two container images for x86_64 and arm64.
 
 ```shell
 $ aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
@@ -90,6 +92,12 @@ $ docker build -f Dockerfile.mac --build-arg ARCH=x86_64 -t aws-lambda-adapter:l
 $ docker build -f Dockerfile.mac --build-arg ARCH=aarch64 -t aws-lambda-adapter:latest-aarch64 .
 $ docker tag aws-lambda-adapter:latest-x86_64 aws-lambda-adapter:latest
 ```
+
+When these commands complete successfully, you will have the following container images. 
+
+- "aws-lambda-adapter:latest-x86_64" for x86_64.
+- "aws-lambda-adapter:latest-aarch64" for arm64.
+- "aws-lambda-adapter:latest" is the same as "aws-lambda-adapter:latest-x86_64".
 
 ## How to use it?
 
