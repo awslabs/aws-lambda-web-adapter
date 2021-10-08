@@ -117,6 +117,7 @@ COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
 ```
 
+To support Graviton2, change `aws-lambda-adapter:latest` to `aws-lambda-adapter:latest-arm64`. 
 
 The readiness check port/path and traffic port can be configured using environment variables.
 
