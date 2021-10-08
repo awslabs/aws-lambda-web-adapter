@@ -31,5 +31,8 @@ jobs:
       - name: Linting
         run: cargo fmt -- --check && cargo clippy -- -Dwarnings
 
-      - name: Build
-        run: DOCKER_BUILDKIT=1 docker build -f Dockerfile.x86 -t aws-lambda-adapter:latest .
+      - name: Build x86_64
+        run: docker build -f Dockerfile --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest-x86_64 .
+
+      - name: Build arm64
+        run: docker build -f Dockerfile --build-arg ARCH=aarch64 -t aws-lambda-adapter:latest-aarch64 .
