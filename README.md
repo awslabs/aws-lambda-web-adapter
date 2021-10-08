@@ -32,13 +32,16 @@ $ cd aws-lambda-adapter
 
 ### Compiling with Docker
 On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker.
-The Dockerfile is [here](Dockerfile.x86). [AWS CLI](https://aws.amazon.com/cli/) should have been installed and configured.
+The Dockerfile is [here](Dockerfile.x86). [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) should have been installed and configured.
 
 ```shell
 $ make build
 ```
 
-Once the build completes, it creates a docker image called "aws-lambda-adapter:latest". AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside the docker image.
+Once the build completes, it creates two docker images: 
+- "aws-lambda-adapter:latest-x86_64" for x86_64.
+- "aws-lambda-adapter:latest-aarch64" for arm64.
+AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside each docker image. "aws-lambda-adapter:latest" is tagged to the same image as "aws-lambda-adapter:latest-x86_64". 
 
 ### Compiling on macOS
 
@@ -54,6 +57,7 @@ And we have to install macOS cross-compiler toolchains. `messense/homebrew-macos
 ```shell
 $ brew tap messense/macos-cross-toolchains
 $ brew install x86_64-unknown-linux-musl
+$ brew install aarch64-unknown-linux-musl
 ```
 
 And we need to inform Cargo that our project uses the newly-installed linker when building for the `x86_64-unknown-linux-musl` platform.
@@ -62,22 +66,29 @@ Create a new directory called `.cargo` in your project folder and a new file cal
 ```shell
 $ mkdir .cargo
 $ echo '[target.x86_64-unknown-linux-musl]
-linker = "x86_64-unknown-linux-musl-gcc"' > .cargo/config
+linker = "x86_64-unknown-linux-musl-gcc"
+
+[target.aarch64-unknown-linux-musl] 
+linker = "aarch64-unknown-linux-musl-gcc"'> .cargo/config
 ```
 
 Now we can cross compile AWS Lambda Adapter.
 
 ```shell
 $ CC=x86_64-unknown-linux-musl-gcc cargo build --release --target=x86_64-unknown-linux-musl --features vendored
+$ CC=aarch64-unknown-linux-musl-gcc cargo build --release --target=aarch64-unknown-linux-musl --features vendored
 ```
 
-Lambda Adapter binary will be placed at `target/x86_64-unknown-linux-musl/release/bootstrap`.
+Lambda Adapter binary for x86_64 will be placed at `target/x86_64-unknown-linux-musl/release/bootstrap`. 
+Lambda Adapter binary for arm64 will be placed at `target/aarch64-unknown-linux-musl/release/bootstrap`. 
 
 Finally, run the following command to package lambda adapter into a docker image named "aws-lambda-adapter:latest".
 
 ```shell
 $ aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-$ DOCKER_BUILDKIT=1 docker build -f Dockerfile.mac -t aws-lambda-adapter:latest .
+$ docker build -f Dockerfile.mac --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest-x86_64 .
+$ docker build -f Dockerfile.mac --build-arg ARCH=aarch64 -t aws-lambda-adapter:latest-aarch64 .
+$ docker tag aws-lambda-adapter:latest-x86_64 aws-lambda-adapter:latest
 ```
 
 ## How to use it?
@@ -106,6 +117,7 @@ COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
 ENTRYPOINT ["/opt/bootstrap"]
 ```
 
+To support Graviton2, change `aws-lambda-adapter:latest` to `aws-lambda-adapter:latest-arm64`. 
 
 The readiness check port/path and traffic port can be configured using environment variables.
 
