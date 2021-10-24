@@ -66,6 +66,7 @@ dependencies = [
  "signal-hook-tokio",
  "tokio",
  "tokio-retry",
+ "url",
 ]
 
 [[package]]
