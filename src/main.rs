@@ -6,7 +6,7 @@ use http::HeaderMap;
 use lambda_http::{
     handler,
     lambda_runtime::{self, Context},
-    Body, IntoResponse, Request, Response,
+    Body, IntoResponse, Request, RequestExt, Response,
 };
 use log::*;
 use nix::sys::signal::{kill, Signal};
@@ -22,6 +22,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use tokio_retry::strategy::FixedInterval;
 use tokio_retry::Retry;
+use url::form_urlencoded::Serializer;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 static HTTP_CLIENT: OnceCell<Client> = OnceCell::new();
@@ -144,8 +145,25 @@ async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoRespo
         "http://127.0.0.1:{}",
         env::var("PORT").unwrap_or_else(|_| "8080".to_string())
     );
+    let query_params = event.query_string_parameters();
+    debug!("query_params are {:#?}", query_params);
+
     let (parts, body) = event.into_parts();
-    let app_url = app_host + parts.uri.path_and_query().unwrap().as_str();
+    let mut app_url = app_host + parts.uri.path();
+
+    // append query parameters to app_url
+    if !query_params.is_empty() {
+        app_url.push('?');
+        let mut serializer = Serializer::new(&mut app_url);
+        for (key, _) in query_params.iter() {
+            for value in query_params.get_all(key).unwrap().iter() {
+                serializer.append_pair(key, value);
+            }
+        }
+        serializer.finish();
+    }
+    debug!("app_url is {:#?}", app_url);
+
     let app_response = HTTP_CLIENT
         .get()
         .unwrap()
