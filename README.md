@@ -137,12 +137,13 @@ The readiness check port/path and traffic port can be configured using environme
 
 ## Show me examples
 
-4 examples are included under the 'examples' directory. Check them out, find out how easy it is to run a web application on AWS Lambda.
+Several examples are included under the 'examples' directory. Check them out, find out how easy it is to run a web application on AWS Lambda.
 
 - [Flask](examples/flask)
 - [Express.js](examples/expressjs)
 - [SpringBoot](examples/springboot)
 - [nginx](examples/nginx)
+- [php](examples/php)
 
 ## Acknowledgement
 
