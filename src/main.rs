@@ -163,6 +163,7 @@ async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoRespo
         serializer.finish();
     }
     debug!("app_url is {:#?}", app_url);
+    debug!("request headers are {:#?}", parts.headers);
 
     let app_response = HTTP_CLIENT
         .get()
@@ -186,18 +187,26 @@ async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoRespo
 
 async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
     let content_type;
+    debug!("app response headers are {:#?}", app_response.headers());
+
+    if let Some(_) = app_response.headers().get(http::header::CONTENT_ENCODING) {
+        debug!("body is binary");
+        let content = app_response.bytes().await?;
+        return Ok(Body::Binary(content.to_vec()))
+    }
+
     if let Some(value) = app_response.headers().get(http::header::CONTENT_TYPE) {
         content_type = value.to_str().unwrap_or_default();
     } else {
-        // default to "application/json" if content-type header is not available in the response
-        content_type = "application/json";
+        // default to "application/octet-stream" if content-type header is not available in the response
+        content_type = "application/octet-stream";
     }
+    debug!("content_type is {:?}", content_type);
 
     if content_type.starts_with("text")
-        || content_type.eq("application/json")
-        || content_type.eq("application/javascript")
-        || content_type.eq("application/xml")
-        || content_type.eq("image/svg+xml")
+        || content_type.starts_with("application/json")
+        || content_type.starts_with("application/javascript")
+        || content_type.starts_with("application/xml")
     {
         debug!("body is text");
         let body_text = app_response.text().await?;
