@@ -192,7 +192,7 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
     if let Some(_) = app_response.headers().get(http::header::CONTENT_ENCODING) {
         debug!("body is binary");
         let content = app_response.bytes().await?;
-        return Ok(Body::Binary(content.to_vec()))
+        return Ok(Body::Binary(content.to_vec()));
     }
 
     if let Some(value) = app_response.headers().get(http::header::CONTENT_TYPE) {
