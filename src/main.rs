@@ -1,25 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use futures::stream::StreamExt;
-use http::HeaderMap;
 use lambda_http::{
     handler,
     lambda_runtime::{self, Context},
     Body, IntoResponse, Request, RequestExt, Response,
 };
 use log::*;
-use nix::sys::signal::{kill, Signal};
-use nix::unistd::Pid;
 use once_cell::sync::OnceCell;
 use reqwest::{redirect, Client};
-use signal_hook::consts::signal::*;
-use signal_hook_tokio::Signals;
-use std::env;
-use std::os::unix::process::CommandExt;
-use std::process::{Child, Command};
-use std::thread;
-use std::time::{Duration, Instant};
+use serde_json::json;
+use std::{env, mem, thread};
 use tokio_retry::strategy::FixedInterval;
 use tokio_retry::Retry;
 use url::form_urlencoded::Serializer;
@@ -31,120 +22,50 @@ static HTTP_CLIENT: OnceCell<Client> = OnceCell::new();
 async fn main() -> Result<(), Error> {
     env_logger::init();
 
-    // parse arguments
-    let args: Vec<String> = env::args().collect();
-    debug!("{:?}", args);
-    if args.len() < 2 {
-        panic!("missing arguments. At least one argument is required.");
-    }
-    let command = &args[1];
-    let command_args = &args[2..];
+    // register as an external extension
+    let aws_lambda_runtime_api = env::var("AWS_LAMBDA_RUNTIME_API").unwrap();
+    let extension_next_url = format!("http://{}/2020-01-01/extension/event/next", aws_lambda_runtime_api);
+    let extension_register_url = format!("http://{}/2020-01-01/extension/register", aws_lambda_runtime_api);
+    let executable_name = env::current_exe().unwrap().file_name().unwrap().to_string_lossy().to_string();
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(extension_register_url)
+        .header("Lambda-Extension-Name", executable_name)
+        .json(&json!({"events": []}))
+        .send()
+        .await?;
+    let extension_id = resp.headers().get("Lambda-Extension-Identifier").unwrap().clone();
+    thread::spawn(move || {
+        let extension_id_str = extension_id.to_str().unwrap();
+        debug!("[extension] enter event loop for extension id: '{}'", extension_id_str);
+        let client = reqwest::blocking::Client::new();
+        client
+            .get(extension_next_url)
+            .header("Lambda-Extension-Identifier", extension_id_str)
+            .send()
+            .unwrap();
+    });
 
-    // check runtime environment
-    match env::var("AWS_LAMBDA_RUNTIME_API") {
-        // in lambda
-        Ok(_val) => {
-            // start the application in a new process
-            let app_process = Command::new(command)
-                .args(command_args)
-                .spawn()
-                .expect("failed to start user application");
+    // check if the application is ready every 10 milliseconds
+    Retry::spawn(FixedInterval::from_millis(10), || {
+        let readiness_check_url = format!(
+            "http://127.0.0.1:{}{}",
+            env::var("READINESS_CHECK_PORT").unwrap_or_else(|_| "8080".to_string()),
+            env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())
+        );
+        reqwest::get(readiness_check_url)
+    })
+    .await?;
 
-            // setup signal handler for SIGTERM
-            let signals = Signals::new(&[SIGTERM])?;
-            let handle = signals.handle();
-            let _signals_task = tokio::spawn(handle_signals(
-                signals,
-                app_process,
-                Duration::from_millis(290),
-            ));
-
-            // check if the application is ready every 10 milliseconds
-            Retry::spawn(FixedInterval::from_millis(10), || {
-                let readiness_check_url = format!(
-                    "http://127.0.0.1:{}{}",
-                    env::var("READINESS_CHECK_PORT").unwrap_or_else(|_| "8080".to_string()),
-                    env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())
-                );
-                reqwest::get(readiness_check_url)
-            })
-            .await?;
-
-            // start lambda runtime
-            HTTP_CLIENT
-                .set(
-                    Client::builder()
-                        .redirect(redirect::Policy::none())
-                        .build()
-                        .unwrap(),
-                )
-                .unwrap();
-            lambda_runtime::run(handler(http_proxy_handler)).await?;
-            handle.close();
-            Ok(())
-        }
-        // not in lambda
-        Err(_e) => {
-            // execute the application in this process
-            Command::new(command).args(command_args).exec();
-            Ok(())
-        }
-    }
-}
-
-async fn handle_signals(
-    signals: Signals,
-    mut process: Child,
-    timeout: Duration,
-) -> Result<(), Error> {
-    let mut signals = signals.fuse();
-    while let Some(signal) = signals.next().await {
-        match signal {
-            SIGTERM => {
-                debug!("SIGTERM received.");
-                let pid = Pid::from_raw(process.id() as i32);
-                debug!("send SIGTERM to the application process");
-                match kill(pid, Signal::SIGTERM) {
-                    Ok(()) => {
-                        let expire = Instant::now() + timeout;
-                        while let Ok(None) = process.try_wait() {
-                            if Instant::now() > expire {
-                                break;
-                            }
-                            thread::sleep(Duration::from_millis(10));
-                        }
-                        if let Ok(None) = process.try_wait() {
-                            if let Ok(()) = process.kill() {
-                                process.wait()?;
-                                debug!("Application process {} is killed", process.id());
-                            } else {
-                                debug!("Application process {} is terminated", process.id());
-                            }
-                        }
-                        debug!("Application process {} is stopped", process.id());
-                    }
-                    Err(e) => {
-                        error!(
-                            "Failed to kill application process {}. Error: {:?}",
-                            process.id(),
-                            e
-                        );
-                    }
-                };
-                debug!("exiting the main process");
-                std::process::exit(0);
-            }
-            _ => unreachable!(),
-        }
-    }
+    // start lambda runtime
+    HTTP_CLIENT.set(Client::builder().redirect(redirect::Policy::none()).build().unwrap()).unwrap();
+    lambda_runtime::run(handler(http_proxy_handler)).await?;
     Ok(())
 }
 
 async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoResponse, Error> {
-    let app_host = format!(
-        "http://127.0.0.1:{}",
-        env::var("PORT").unwrap_or_else(|_| "8080".to_string())
-    );
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let app_host = format!("http://127.0.0.1:{}", port);
     let query_params = event.query_string_parameters();
     debug!("query_params are {:#?}", query_params);
 
@@ -175,10 +96,7 @@ async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoRespo
         .await?;
 
     let mut lambda_response = Response::builder();
-    copy_headers(
-        app_response.headers().clone(),
-        lambda_response.headers_mut().unwrap(),
-    );
+    let _ = mem::replace(lambda_response.headers_mut().unwrap(), app_response.headers().clone());
     Ok(lambda_response
         .status(app_response.status())
         .body(convert_body(app_response).await?)
@@ -189,11 +107,7 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
     let content_type;
     debug!("app response headers are {:#?}", app_response.headers());
 
-    if app_response
-        .headers()
-        .get(http::header::CONTENT_ENCODING)
-        .is_some()
-    {
+    if app_response.headers().get(http::header::CONTENT_ENCODING).is_some() {
         debug!("body is binary");
         let content = app_response.bytes().await?;
         return Ok(Body::Binary(content.to_vec()));
@@ -202,8 +116,7 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
     if let Some(value) = app_response.headers().get(http::header::CONTENT_TYPE) {
         content_type = value.to_str().unwrap_or_default();
     } else {
-        // default to "application/octet-stream" if content-type header is not available in the response
-        content_type = "application/octet-stream";
+        content_type = "";
     }
     debug!("content_type is {:?}", content_type);
 
@@ -214,7 +127,6 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
     {
         debug!("body is text");
         let body_text = app_response.text().await?;
-        trace!("body text is '{}'", body_text);
         return Ok(Body::Text(body_text));
     }
     let content = app_response.bytes().await?;
@@ -225,22 +137,4 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
         debug! {"body is empty"};
         Ok(Body::Empty)
     };
-}
-
-fn copy_headers(src: HeaderMap, dst: &mut HeaderMap) {
-    let mut prev_name = None;
-    for (key, value) in src {
-        match key {
-            Some(key) => {
-                dst.insert(key.clone(), value);
-                prev_name = Some(key);
-            }
-            None => match prev_name {
-                Some(ref key) => {
-                    dst.append(key.clone(), value);
-                }
-                None => unreachable!("HeaderMap::into_iter yielded None first"),
-            },
-        }
-    }
 }
