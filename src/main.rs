@@ -27,18 +27,16 @@ async fn main() -> Result<(), Error> {
     let extension_next_url = format!("http://{}/2020-01-01/extension/event/next", aws_lambda_runtime_api);
     let extension_register_url = format!("http://{}/2020-01-01/extension/register", aws_lambda_runtime_api);
     let executable_name = env::current_exe().unwrap().file_name().unwrap().to_string_lossy().to_string();
-    let client = reqwest::Client::new();
+    let client = reqwest::blocking::Client::new();
     let resp = client
         .post(extension_register_url)
         .header("Lambda-Extension-Name", executable_name)
         .json(&json!({"events": []}))
-        .send()
-        .await?;
+        .send()?;
     let extension_id = resp.headers().get("Lambda-Extension-Identifier").unwrap().clone();
     thread::spawn(move || {
         let extension_id_str = extension_id.to_str().unwrap();
         debug!("[extension] enter event loop for extension id: '{}'", extension_id_str);
-        let client = reqwest::blocking::Client::new();
         client
             .get(extension_next_url)
             .header("Lambda-Extension-Identifier", extension_id_str)
