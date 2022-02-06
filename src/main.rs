@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
     let extension_next_url = format!("http://{}/2020-01-01/extension/event/next", aws_lambda_runtime_api);
     let extension_register_url = format!("http://{}/2020-01-01/extension/register", aws_lambda_runtime_api);
     let executable_name = env::current_exe().unwrap().file_name().unwrap().to_string_lossy().to_string();
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::ClientBuilder::new().timeout(None).build().unwrap();
     let resp = client
         .post(extension_register_url)
         .header("Lambda-Extension-Name", executable_name)
