@@ -45,7 +45,7 @@ This works with any base images except AWS managed base images. To use AWS manag
 
 AWS Lambda Adapter also works with AWS managed Lambda runtimes. You need to do three things: 
 
-1. provide a wrapper script to run your
+1. provide a wrapper script to run your web app
 2. package Lambda Adapter and the wrapper script into a Lambda Layer
 3. configure environment variable `AWS_LAMBDA_EXEC_WRAPPER` to tell Lambda where to find the wrapper script
 
