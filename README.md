@@ -1,116 +1,37 @@
 # AWS Lambda Adapter
 
-A tool to run web applications on AWS Lambda without changing code.
+A tool to run web applications on AWS Lambda
+
+AWS Lambda Adapter allows you to build web app (http api) with familiar frameworks (e.g. Express.js, Flask, SpringBoot, and Laravel, anything speaks HTTP 1.1/1.0) and run it on AWS Lambda.
+The exact same docker image can run on AWS Lambda, Amazon EC2, AWS Fargate, and local computers. 
+
+AWS Lambda adapter is developed as a Lambda extension (since v0.2.0). For details, checkout its [design](docs/design.md) and [development](docs/development.md) documents.
 
 ![Lambda Adapter](docs/images/lambda-adapter-overview.png)
 
-## How does it work?
+## Usage
 
-AWS Lambda Adapter supports AWS Lambda function triggered by Amazon API Gateway Rest API, Http API(v2 event format), and Application Load Balancer.
-Lambda Adapter converts incoming events to http requests and send to web application, and convert the http response back to lambda event response.
-When used outside of AWS Lambda execution environment, Lambda Adapter will just execute web application in the same process.
-This allows developers to package their web application as a container image and run it on AWS Lambda, AWS Fargate and Amazon EC2 without changing code.
+AWS Lambda Adapter work with Lambda functions packaged as both docker images and Zip packages. 
 
-After Lambda Adapter launch the application, it will perform readiness check on http://localhost:8080/ every 10ms.
-It will start lambda runtime client after receiving 200 response from the application and forward requests to http://localhost:8080.
+### Lambda functions packaged as Docker Images or OCI Images
 
-![lambda-runtime](docs/images/lambda-adapter-runtime.png)
-
-## How to build it?
-
-AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime).
-AWS Lambda executes functions in x86_64 Amazon Linux Environment. We need to compile the adapter to that environment.
-
-### Clone the repo
-
-First, clone this repo to your local computer.
-
-```shell
-$ git clone https://github.com/aws-samples/aws-lambda-adapter.git
-$ cd aws-lambda-adapter
-```
-
-### Compiling with Docker
-On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker.
-The Dockerfile is [here](Dockerfile). [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) should have been installed and configured.
-
-```shell
-$ make build
-```
-
-Once the build completes, it creates two docker images: 
-- "aws-lambda-adapter:latest-x86_64" for x86_64.
-- "aws-lambda-adapter:latest-aarch64" for arm64.
-
-AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside each docker image. "aws-lambda-adapter:latest" is tagged to the same image as "aws-lambda-adapter:latest-x86_64". 
-
-### Compiling on macOS
-
-If you want to install rust toolchain in your Macbook and play with the source code, you can follow the steps below.
-First, install [rustup](https://rustup.rs/) if you haven't done it already. Then, add targets for x86_86 and arm64:
-
-```shell
-$ rustup target add x86_64-unknown-linux-musl
-$ rustup target add aarch64-unknown-linux-musl
-```
-
-And we have to install macOS cross-compiler toolchains. `messense/homebrew-macos-cross-toolchains` can be used on both Intel chip and Apple M1 chip.
-
-```shell
-$ brew tap messense/macos-cross-toolchains
-$ brew install x86_64-unknown-linux-musl
-$ brew install aarch64-unknown-linux-musl
-```
-
-And we need to inform Cargo that our project uses the newly-installed linker when building for the `x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl` platforms.
-Create a new directory called `.cargo` in your project folder and a new file called `config` inside the new folder.
-
-```shell
-$ mkdir .cargo
-$ echo '[target.x86_64-unknown-linux-musl]
-linker = "x86_64-unknown-linux-musl-gcc"
-
-[target.aarch64-unknown-linux-musl] 
-linker = "aarch64-unknown-linux-musl-gcc"'> .cargo/config
-```
-
-Now we can cross compile AWS Lambda Adapter.
-
-```shell
-$ CC=x86_64-unknown-linux-musl-gcc cargo build --release --target=x86_64-unknown-linux-musl --features vendored
-$ CC=aarch64-unknown-linux-musl-gcc cargo build --release --target=aarch64-unknown-linux-musl --features vendored
-```
-
-Lambda Adapter binary for x86_64 will be placed at `target/x86_64-unknown-linux-musl/release/bootstrap`. 
-Lambda Adapter binary for arm64 will be placed at `target/aarch64-unknown-linux-musl/release/bootstrap`. 
-
-Finally, run the following command to package lambda adapter into two container images for x86_64 and arm64.
-
-```shell
-$ aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-$ docker build -f Dockerfile.mac --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest-x86_64 .
-$ docker build -f Dockerfile.mac --build-arg ARCH=aarch64 -t aws-lambda-adapter:latest-aarch64 .
-$ docker tag aws-lambda-adapter:latest-x86_64 aws-lambda-adapter:latest
-```
-
-When these commands complete successfully, you will have the following container images. 
-
-- "aws-lambda-adapter:latest-x86_64" for x86_64.
-- "aws-lambda-adapter:latest-aarch64" for arm64.
-- "aws-lambda-adapter:latest" is the same as "aws-lambda-adapter:latest-x86_64".
-
-## How to use it?
-
-To use it, copy the bootstrap binary to your container, and use it as ENTRYPOINT.
-Below is an example Dockerfile for packaging a nodejs application.
+To use Lambda Adapter with docker images, package your web app (http api) in a Dockerfile, and add one line to copy Lambda Adapter binary to /opt/extensions inside your container. 
+By default, Lambda Adapter assume the web app is listening on port 8080. If not, you can change this via [configuration](#Configurations). 
 
 ```dockerfile
-FROM public.ecr.aws/lambda/nodejs:14
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
+```
+
+Pre-compiled Lambda Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
+Multi-arch images are also provided in this repo. It works on both x86_64 and arm64 CPU architecture.
+
+Below is a Dockerfile for [an example nodejs application](examples/expressjs).
+
+```dockerfile
+FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 EXPOSE 8080
 WORKDIR "/var/task"
-ADD extensions/ /opt
 ADD src/package.json /var/task/package.json
 ADD src/package-lock.json /var/task/package-lock.json
 RUN npm install --production
@@ -118,16 +39,22 @@ ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
 
-Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the only configuration change required to run web application on AWS Lambda. No need to change the application code.
+This works with any base images except AWS managed base images. To use AWS managed base images, you need to override the ENTRYPOINT to start your web app.
 
-```dockerfile
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
-```
+### Lambda functions packaged as Zip package for AWS managed runtimes
 
-To support Graviton2, change `aws-lambda-adapter:latest` to `aws-lambda-adapter:latest-arm64`. 
+AWS Lambda Adapter also works with AWS managed Lambda runtimes. You need to do three things: 
 
-The readiness check port/path and traffic port can be configured using environment variables.
+1. provide a wrapper script to run your
+2. package Lambda Adapter and the wrapper script into a Lambda Layer
+3. configure environment variable `AWS_LAMBDA_EXEC_WRAPPER` to tell Lambda where to find the wrapper script
+
+For details, please check out [the example nodejs application](examples/expressjs-zip).
+
+
+### Configurations
+
+The readiness check port/path and traffic port can be configured using environment variables. These environment variables can be defined either within docker file or as Lambda function configuration. 
 
 |Environment Variable|Description          |Default|
 |--------------------|---------------------|-------|
@@ -135,12 +62,11 @@ The readiness check port/path and traffic port can be configured using environme
 |READINESS_CHECK_PATH|readiness check path | /     |
 |PORT                |traffic port         | 8080  |
 
-## Show me examples
-
-Several examples are included under the 'examples' directory. Check them out, find out how easy it is to run a web application on AWS Lambda.
+## Examples
 
 - [Flask](examples/flask)
 - [Express.js](examples/expressjs)
+- [Express.js in Zip](examples/expressjs-zip)
 - [SpringBoot](examples/springboot)
 - [nginx](examples/nginx)
 - [php](examples/php)
