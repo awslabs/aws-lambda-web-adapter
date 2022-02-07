@@ -16,7 +16,7 @@ AWS Lambda Adapter work with Lambda functions packaged as both docker images and
 ### Lambda functions packaged as Docker Images or OCI Images
 
 To use Lambda Adapter with docker images, package your web app (http api) in a Dockerfile, and add one line to copy Lambda Adapter binary to /opt/extensions inside your container. 
-By default, Lambda Adapter assume the web app is listening on port 8080. If not, you can change this via [configuration](#Configurations). 
+By default, Lambda Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#Configurations). 
 
 ```dockerfile
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
@@ -45,9 +45,9 @@ This works with any base images except AWS managed base images. To use AWS manag
 
 AWS Lambda Adapter also works with AWS managed Lambda runtimes. You need to do three things: 
 
-1. provide a wrapper script to run your web app
+1. provide a wrapper script to start your web application
 2. package Lambda Adapter and the wrapper script into a Lambda Layer
-3. configure environment variable `AWS_LAMBDA_EXEC_WRAPPER` to tell Lambda where to find the wrapper script
+3. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` pointing to the wrapper script
 
 For details, please check out [the example nodejs application](examples/expressjs-zip).
 
