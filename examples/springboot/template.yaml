@@ -60,8 +60,16 @@ Resources:
       ScalingTargetId: !Ref MyScalableTarget
       TargetTrackingScalingPolicyConfiguration:
         TargetValue: 0.70 # Any value between 0 and 1 can be used here
-        PredefinedMetricSpecification:
-          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
+        CustomizedMetricSpecification:
+          Dimensions:
+            - Name: FunctionName
+              Value: !Ref PetstoreFunction
+            - Name: Resource
+              Value: !Sub "${PetstoreFunction}:live"
+          MetricName: ProvisionedConcurrencyUtilization
+          Namespace: AWS/Lambda
+          Statistic: Maximum
+          Unit: Count
 
 Outputs:
   PetstoreApi:
