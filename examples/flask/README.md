@@ -9,20 +9,18 @@ The application can be deployed in an AWS account using the [Serverless Applicat
 The top level folder is a typical AWS SAM project. The `app` directory is a flask application with a [Dockerfile](app/Dockerfile).
 
 ```dockerfile
-FROM public.ecr.aws/lambda/python:3.8
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+FROM public.ecr.aws/docker/library/python:3.8.12-slim-buster
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 WORKDIR /var/task
 COPY app.py requirements.txt ./
 RUN python3.8 -m pip install -r requirements.txt
 CMD ["gunicorn", "-b=:8080", "-w=1", "app:app"]
 ```
 
-Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the only change to run the Flask application on Lambda.
+Line 2 copies lambda adapter binary into /opt/extensions. This is the only change to run the Flask application on Lambda.
 
 ```dockerfile
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 ## Pre-requisites

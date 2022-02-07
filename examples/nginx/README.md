@@ -9,16 +9,19 @@ The application can be deployed in an AWS account using the [Serverless Applicat
 The top level folder is a typical AWS SAM project. The `app` directory is the nginx configuration with a [Dockerfile](app/Dockerfile).
 
 ```dockerfile
-FROM public.ecr.aws/runecast/nginx:1.21.1-alpine
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+FROM public.ecr.aws/docker/library/nginx:1.21.6
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 WORKDIR "/tmp"
 ADD config/ /etc/nginx/
 ADD images/ /usr/share/nginx/html/images
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the main change to run the nginx server on Lambda. 
+Line 2 copies lambda adapter binary into /opt/extensions. This is the main change to run the nginx server on Lambda. 
+
+```dockerfile
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
+```
 
 ## Pre-requisites
 

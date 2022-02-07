@@ -22,7 +22,7 @@ Resources:
         - x86_64
       Environment:
         Variables:
-          AWS_LAMBDA_EXEC_WRAPPER: /opt/wrapper.sh
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           RUST_LOG: info
       Layers:
         - !Ref AdapterLayer
