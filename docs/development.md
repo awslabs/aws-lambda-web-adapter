@@ -14,7 +14,7 @@ $ cd aws-lambda-adapter
 
 ### Compiling with Docker
 On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker.
-The Dockerfile is [here](Dockerfile). [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) should have been installed and configured.
+The Dockerfile is [here](../Dockerfile). [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) should have been installed and configured.
 
 ```shell
 $ make build
