@@ -1,6 +1,5 @@
-FROM public.ecr.aws/runecast/nginx:1.21.1-alpine
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+FROM public.ecr.aws/docker/library/nginx:1.21.6
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 WORKDIR "/tmp"
 ADD config/ /etc/nginx/
 ADD images/ /usr/share/nginx/html/images

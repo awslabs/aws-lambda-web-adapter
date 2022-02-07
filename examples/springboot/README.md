@@ -15,20 +15,18 @@ COPY src src/
 COPY pom.xml ./
 RUN mvn -q clean package
 
-FROM public.ecr.aws/bitnami/java:1.8.292-prod
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+FROM public.ecr.aws/docker/library/amazoncorretto:8u322-al2
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 EXPOSE 8080
 WORKDIR /opt
 COPY --from=build-image /task/target/petstore-0.0.1-SNAPSHOT.jar /opt
 CMD ["java", "-jar", "petstore-0.0.1-SNAPSHOT.jar"]
 ```
 
-Line 7 and 8 copy lambda adapter binary and set it as ENTRYPOINT. This is the only change to run the Spring Boot application on Lambda.
+Line 7 copies lambda adapter binary to /opt/extensions. This is the only change to run the Spring Boot application on Lambda.
 
 ```dockerfile
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 ## Pre-requisites
@@ -39,8 +37,6 @@ The following tools should be installed and configured.
 * [SAM CLI](https://github.com/awslabs/aws-sam-cli)
 * [Maven](https://maven.apache.org/)
 * [Docker](https://www.docker.com/products/docker-desktop)
-
-Container image `aws-lambda-adapter:latest` should already exist. You can follow [README](../../README.md#how-to-build-it?) to build Lambda Adapter.
 
 ## Deploy to Lambda
 Navigate to the sample's folder and use the SAM CLI to build a container image
@@ -84,4 +80,12 @@ Use curl to verify the docker container works.
 
 ```shell
 $ curl localhost:8080/pets 
+```
+
+## Clean up
+
+This example use provisioned concurrency to reduce cold start time. It incurs additional cost. You can remove the whole example with the following command. 
+
+```shell
+sam delete
 ```

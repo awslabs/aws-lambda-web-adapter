@@ -9,9 +9,8 @@ The application can be deployed in an AWS account using the [Serverless Applicat
 The top level folder is a typical AWS SAM project. The `app` directory is an express.js application with a [Dockerfile](app/Dockerfile). 
 
 ```dockerfile
-FROM public.ecr.aws/lambda/nodejs:14
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 EXPOSE 8080
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
@@ -21,11 +20,10 @@ ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
 
-Line 2 and 3 copy lambda adapter binary and set it as ENTRYPOINT. This is the only change to run the express.js application on Lambda.
+Line 2 copies lambda adapter binary into /opt/extenions. This is the only change to run the express.js application on Lambda.
 
 ```dockerfile
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 ## Pre-requisites
@@ -36,7 +34,6 @@ The following tools should be installed and configured.
 * [Node](https://nodejs.org/en/)
 * [Docker](https://www.docker.com/products/docker-desktop)
 
-Container image `aws-lambda-adapter:latest` should already exist. You could follow [README](../../README.md#how-to-build-it?) to build Lambda Adapter.
 
 ## Deploy to Lambda
 Navigate to the sample's folder and use the SAM CLI to build a container image

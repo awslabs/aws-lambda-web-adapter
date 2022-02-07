@@ -1,7 +1,6 @@
-FROM public.ecr.aws/lambda/python:3.8
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+FROM public.ecr.aws/docker/library/python:3.8.12-slim-buster
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 WORKDIR /var/task
 COPY app.py requirements.txt ./
-RUN python3.8 -m pip install -r requirements.txt
+RUN python -m pip install -r requirements.txt
 CMD ["gunicorn", "-b=:8080", "-w=1", "app:app"]

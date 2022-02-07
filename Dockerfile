@@ -9,8 +9,8 @@ RUN curl -k -o /${ARCH}-linux-musl-cross.tgz https://musl.cc/${ARCH}-linux-musl-
         && ln -s /${ARCH}-linux-musl-cross/bin/${ARCH}-linux-musl-gcc /usr/local/bin/${ARCH}-unknown-linux-musl-gcc
 WORKDIR /app
 ADD . /app
-RUN source $HOME/.cargo/env && CC=${ARCH}-unknown-linux-musl-gcc cargo build --release --target=${ARCH}-unknown-linux-musl --features vendored
+RUN source $HOME/.cargo/env && CC=${ARCH}-unknown-linux-musl-gcc cargo build --release --target=${ARCH}-unknown-linux-musl
 
 FROM scratch AS package-stage
 ARG ARCH=x86_64
-COPY --from=build-stage /app/target/${ARCH}-unknown-linux-musl/release/bootstrap /opt/bootstrap
+COPY --from=build-stage /app/target/${ARCH}-unknown-linux-musl/release/lambda-adapter /opt/extensions/lambda-adapter

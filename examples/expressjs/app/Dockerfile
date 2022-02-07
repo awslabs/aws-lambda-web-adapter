@@ -1,6 +1,5 @@
-FROM public.ecr.aws/lambda/nodejs:14
-COPY --from=aws-lambda-adapter:latest /opt/bootstrap /opt/bootstrap
-ENTRYPOINT ["/opt/bootstrap"]
+FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 EXPOSE 8080
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
