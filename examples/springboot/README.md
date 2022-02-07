@@ -38,8 +38,6 @@ The following tools should be installed and configured.
 * [Maven](https://maven.apache.org/)
 * [Docker](https://www.docker.com/products/docker-desktop)
 
-Container image `aws-lambda-adapter:latest` should already exist. You can follow [README](../../README.md#how-to-build-it?) to build Lambda Adapter.
-
 ## Deploy to Lambda
 Navigate to the sample's folder and use the SAM CLI to build a container image
 ```shell
