@@ -73,7 +73,6 @@ async fn http_proxy_handler(event: Request) -> Result<impl IntoResponse, Error> 
 }
 
 async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
-    let content_type;
     debug!("app response headers are {:#?}", app_response.headers());
 
     if app_response.headers().get(http::header::CONTENT_ENCODING).is_some() {
@@ -82,11 +81,11 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
         return Ok(Body::Binary(content.to_vec()));
     }
 
-    if let Some(value) = app_response.headers().get(http::header::CONTENT_TYPE) {
-        content_type = value.to_str().unwrap_or_default();
+    let content_type = if let Some(value) = app_response.headers().get(http::header::CONTENT_TYPE) {
+        value.to_str().unwrap_or_default()
     } else {
-        content_type = "";
-    }
+        ""
+    };
     debug!("content_type is {:?}", content_type);
 
     if content_type.starts_with("text")
