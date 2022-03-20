@@ -1,19 +1,14 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use lambda_http::{
-    handler,
-    lambda_runtime::{self, Context},
-    Body, IntoResponse, Request, RequestExt, Response,
-};
+use lambda_extension::{service_fn as extension_handler, Extension};
+use lambda_http::{service_fn as http_handler, Body, IntoResponse, Request, Response};
 use log::*;
 use once_cell::sync::OnceCell;
 use reqwest::{redirect, Client};
-use serde_json::json;
-use std::{env, mem, thread};
-use tokio_retry::strategy::FixedInterval;
-use tokio_retry::Retry;
-use url::form_urlencoded::Serializer;
+use std::{env, mem};
+use tokio::runtime::Handle;
+use tokio_retry::{strategy::FixedInterval, Retry};
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 static HTTP_CLIENT: OnceCell<Client> = OnceCell::new();
@@ -23,25 +18,16 @@ async fn main() -> Result<(), Error> {
     env_logger::init();
 
     // register as an external extension
-    let aws_lambda_runtime_api = env::var("AWS_LAMBDA_RUNTIME_API").unwrap();
-    let extension_next_url = format!("http://{}/2020-01-01/extension/event/next", aws_lambda_runtime_api);
-    let extension_register_url = format!("http://{}/2020-01-01/extension/register", aws_lambda_runtime_api);
-    let executable_name = env::current_exe().unwrap().file_name().unwrap().to_string_lossy().to_string();
-    let client = reqwest::blocking::ClientBuilder::new().timeout(None).build().unwrap();
-    let resp = client
-        .post(extension_register_url)
-        .header("Lambda-Extension-Name", executable_name)
-        .json(&json!({"events": []}))
-        .send()?;
-    let extension_id = resp.headers().get("Lambda-Extension-Identifier").unwrap().clone();
-    thread::spawn(move || {
-        let extension_id_str = extension_id.to_str().unwrap();
-        debug!("[extension] enter event loop for extension id: '{}'", extension_id_str);
-        client
-            .get(extension_next_url)
-            .header("Lambda-Extension-Identifier", extension_id_str)
-            .send()
-            .unwrap();
+    let handle = Handle::current();
+    tokio::task::spawn_blocking(move || {
+        handle.spawn(async {
+            Extension::new()
+                .with_events(&[])
+                .with_events_processor(extension_handler(|_| async { Ok::<(), Error>(()) }))
+                .run()
+                .await
+                .expect("extension thread error");
+        })
     });
 
     // check if the application is ready every 10 milliseconds
@@ -57,30 +43,15 @@ async fn main() -> Result<(), Error> {
 
     // start lambda runtime
     HTTP_CLIENT.set(Client::builder().redirect(redirect::Policy::none()).build().unwrap()).unwrap();
-    lambda_runtime::run(handler(http_proxy_handler)).await?;
+    lambda_http::run(http_handler(http_proxy_handler)).await?;
     Ok(())
 }
 
-async fn http_proxy_handler(event: Request, _: Context) -> Result<impl IntoResponse, Error> {
+async fn http_proxy_handler(event: Request) -> Result<impl IntoResponse, Error> {
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let app_host = format!("http://127.0.0.1:{}", port);
-    let query_params = event.query_string_parameters();
-    debug!("query_params are {:#?}", query_params);
-
     let (parts, body) = event.into_parts();
-    let mut app_url = app_host + parts.uri.path();
-
-    // append query parameters to app_url
-    if !query_params.is_empty() {
-        app_url.push('?');
-        let mut serializer = Serializer::new(&mut app_url);
-        for (key, _) in query_params.iter() {
-            for value in query_params.get_all(key).unwrap().iter() {
-                serializer.append_pair(key, value);
-            }
-        }
-        serializer.finish();
-    }
+    let app_url = app_host + parts.uri.path_and_query().unwrap().as_str();
     debug!("app_url is {:#?}", app_url);
     debug!("request headers are {:#?}", parts.headers);
 
