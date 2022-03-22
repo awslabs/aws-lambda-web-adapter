@@ -448,7 +448,7 @@ dependencies = [
  "chrono",
  "http",
  "hyper",
- "lambda_runtime_api_client",
+ "lambda_runtime_api_client 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "tokio",
@@ -460,8 +460,7 @@ dependencies = [
 [[package]]
 name = "lambda_http"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4ef7e546b1219e6b48c3c825a78894a20412e9d598260ea30044a9d3bc5846b"
+source = "git+https://github.com/bnusunny/aws-lambda-rust-runtime?branch=main#9ee217cab56fa3aba5c9b69299e4ae902bb0afd2"
 dependencies = [
  "aws_lambda_events",
  "base64",
@@ -477,15 +476,14 @@ dependencies = [
 
 [[package]]
 name = "lambda_runtime"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23cbc35fd60573f46fa6c6292a4539198bc094efe4b7691a7ff8c173a56e0382"
+version = "0.5.1"
+source = "git+https://github.com/bnusunny/aws-lambda-rust-runtime?branch=main#9ee217cab56fa3aba5c9b69299e4ae902bb0afd2"
 dependencies = [
  "async-stream",
  "bytes",
  "http",
  "hyper",
- "lambda_runtime_api_client",
+ "lambda_runtime_api_client 0.5.0 (git+https://github.com/bnusunny/aws-lambda-rust-runtime?branch=main)",
  "serde",
  "serde_json",
  "tokio",
@@ -499,6 +497,17 @@ name = "lambda_runtime_api_client"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e921024b5eb4e2f0800a5d6e25c7ed554562aa62f02cf5f60a48c26c8a678974"
+dependencies = [
+ "http",
+ "hyper",
+ "tokio",
+ "tower-service",
+]
+
+[[package]]
+name = "lambda_runtime_api_client"
+version = "0.5.0"
+source = "git+https://github.com/bnusunny/aws-lambda-rust-runtime?branch=main#9ee217cab56fa3aba5c9b69299e4ae902bb0afd2"
 dependencies = [
  "http",
  "hyper",
