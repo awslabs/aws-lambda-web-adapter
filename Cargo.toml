@@ -1,6 +1,6 @@
 [package]
 name = "aws-lambda-adapter"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Harold Sun <sunhua@amazon.com>"]
 edition = "2018"
 
@@ -8,7 +8,7 @@ edition = "2018"
 env_logger = "0.8.3"
 http = "0.2.4"
 lambda-extension = "0.5.0"
-lambda_http = "0.5.1"
+lambda_http = {git = "https://github.com/bnusunny/aws-lambda-rust-runtime", branch = "main"}
 log = "0.4.14"
 once_cell = "1.7.2"
 reqwest = { version = "0.11", default-features = false, features = ["blocking", "json"] }
@@ -18,3 +18,6 @@ tokio-retry = "0.3"
 [[bin]]
 name = "lambda-adapter"
 path = "src/main.rs"
+
+[profile.release]
+strip = true
