@@ -2,16 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lambda_extension::{service_fn as extension_handler, Extension};
-use lambda_http::{service_fn as http_handler, Body, IntoResponse, Request, Response};
+use lambda_http::{service_fn as http_handler, Body, Request, Response};
 use log::*;
-use once_cell::sync::OnceCell;
 use reqwest::{redirect, Client};
 use std::{env, mem};
 use tokio::runtime::Handle;
 use tokio_retry::{strategy::FixedInterval, Retry};
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-static HTTP_CLIENT: OnceCell<Client> = OnceCell::new();
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -42,12 +40,12 @@ async fn main() -> Result<(), Error> {
     .await?;
 
     // start lambda runtime
-    HTTP_CLIENT.set(Client::builder().redirect(redirect::Policy::none()).build().unwrap()).unwrap();
-    lambda_http::run(http_handler(http_proxy_handler)).await?;
+    let http_client = &Client::builder().redirect(redirect::Policy::none()).build().unwrap();
+    lambda_http::run(http_handler(move |event: Request| async move { http_proxy_handler(http_client, event).await })).await?;
     Ok(())
 }
 
-async fn http_proxy_handler(event: Request) -> Result<impl IntoResponse, Error> {
+async fn http_proxy_handler(http_client: &Client, event: Request) -> Result<Response<Body>, Error> {
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let app_host = format!("http://127.0.0.1:{}", port);
     let (parts, body) = event.into_parts();
@@ -55,9 +53,7 @@ async fn http_proxy_handler(event: Request) -> Result<impl IntoResponse, Error> 
     debug!("app_url is {:#?}", app_url);
     debug!("request headers are {:#?}", parts.headers);
 
-    let app_response = HTTP_CLIENT
-        .get()
-        .unwrap()
+    let app_response = http_client
         .request(parts.method, app_url)
         .headers(parts.headers)
         .body(body.to_vec())
