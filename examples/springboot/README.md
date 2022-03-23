@@ -29,6 +29,12 @@ Line 7 copies lambda adapter binary to /opt/extensions. This is the only change 
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
 ```
 
+### Remove the base path
+
+The pet store application is deployed under /v1/{proxy+}. But the application does not know that. So in the SAM template file, we configured environment variable `REMOVE_BASE_PATH=/v1`. 
+This configuration tells the Adapter to remove `/v1` from http request path, so that the pet store application works without changing code. 
+
+
 ## Pre-requisites
 
 The following tools should be installed and configured.
@@ -60,11 +66,11 @@ Once the deployment is completed, the SAM CLI will print out the stack's outputs
 ---------------------------------------------------------------------------------------------------------
 OutputKey-Description                        OutputValue
 ---------------------------------------------------------------------------------------------------------
-PetStoreApi - URL for application            https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/pets
+PetStoreApi - URL for application            https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/v1/pets
 ---------------------------------------------------------------------------------------------------------
 ...
 
-$ curl https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/pets
+$ curl https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/v1/pets
 ```
 
 ## Run the docker locally
