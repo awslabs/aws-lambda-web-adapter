@@ -1,0 +1,178 @@
+[
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-af-sout-artifactsbucket-11lajfh1staod",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-194EQC3NLFA7",
+    "image_repository": "520465526641.dkr.ecr.af-south-1.amazonaws.com/aws-sam-cli-managed-gamma-af-south-1-pipeline-resources-imagerepository-6bun583eh70v",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-af-PipelineExecutionRole-1L9UBND4XBMKN",
+    "arm64_supported": false,
+    "region": "af-south-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ap-east-artifactsbucket-1dhv13ybrli4q",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-YR71NDX479KY",
+    "image_repository": "520465526641.dkr.ecr.ap-east-1.amazonaws.com/aws-sam-cli-managed-gamma-ap-east-1-pipeline-resources-imagerepository-fqept7pw6as3",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ap-PipelineExecutionRole-1N26DU28FTY88",
+    "arm64_supported": false,
+    "region": "ap-east-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ap-nort-artifactsbucket-1dalv6bsbu8lj",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-17D3Z9W7VLK5K",
+    "image_repository": "520465526641.dkr.ecr.ap-northeast-1.amazonaws.com/aws-sam-cli-managed-gamma-ap-northeast-1-pipeline-resources-imagerepository-ibr2f6hzhcie",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ap-PipelineExecutionRole-MLRZXGIOERIB",
+    "arm64_supported": true,
+    "region": "ap-northeast-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ap-nort-artifactsbucket-h23ejkpiovfu",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-N8XG5KL22LWG",
+    "image_repository": "520465526641.dkr.ecr.ap-northeast-2.amazonaws.com/aws-sam-cli-managed-gamma-ap-northeast-2-pipeline-resources-imagerepository-plocdvkkdla9",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ap-PipelineExecutionRole-1L223OAMGHEU0",
+    "arm64_supported": false,
+    "region": "ap-northeast-2"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ap-nort-artifactsbucket-10xy43yavpg32",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-HE2HEG4VR40C",
+    "image_repository": "520465526641.dkr.ecr.ap-northeast-3.amazonaws.com/aws-sam-cli-managed-gamma-ap-northeast-3-pipeline-resources-imagerepository-jrvivrmgn35x",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ap-PipelineExecutionRole-1XYIU5JYLPDK6",
+    "arm64_supported": false,
+    "region": "ap-northeast-3"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ap-sout-artifactsbucket-1osqgli0dpnwq",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-16BKLSP9GKDZL",
+    "image_repository": "520465526641.dkr.ecr.ap-south-1.amazonaws.com/aws-sam-cli-managed-gamma-ap-south-1-pipeline-resources-imagerepository-5pixktafh9kg",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ap-PipelineExecutionRole-1B4WU9LQINGPK",
+    "arm64_supported": true,
+    "region": "ap-south-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ap-sout-artifactsbucket-c7f8mrhkj4b8",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1OYIUPE6K4PEX",
+    "image_repository": "520465526641.dkr.ecr.ap-southeast-1.amazonaws.com/aws-sam-cli-managed-gamma-ap-southeast-1-pipeline-resources-imagerepository-uh52rkmnqnay",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ap-PipelineExecutionRole-5QGCZAG4TGNU",
+    "arm64_supported": true,
+    "region": "ap-southeast-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ap-sout-artifactsbucket-1ncq6p3abtduo",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1K17WN36F7E6O",
+    "image_repository": "520465526641.dkr.ecr.ap-southeast-2.amazonaws.com/aws-sam-cli-managed-gamma-ap-southeast-2-pipeline-resources-imagerepository-h0gilh0klxyu",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ap-PipelineExecutionRole-1VHHTA8Y1PO9K",
+    "arm64_supported": true,
+    "region": "ap-southeast-2"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ap-sout-artifactsbucket-165x64w79vila",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-JLC7H4MUWFUJ",
+    "image_repository": "520465526641.dkr.ecr.ap-southeast-3.amazonaws.com/aws-sam-cli-managed-gamma-ap-southeast-3-pipeline-resources-imagerepository-jdbfwc4m3qzs",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ap-PipelineExecutionRole-G4ZQSNX04K6O",
+    "arm64_supported": false,
+    "region": "ap-southeast-3"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-ca-cent-artifactsbucket-hfk5j8ezazel",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1POCX4BMJINR5",
+    "image_repository": "520465526641.dkr.ecr.ca-central-1.amazonaws.com/aws-sam-cli-managed-gamma-ca-central-1-pipeline-resources-imagerepository-nkxkvhrndvzg",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-ca-PipelineExecutionRole-HLG3H7BPVJ02",
+    "arm64_supported": false,
+    "region": "ca-central-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-eu-cent-artifactsbucket-1ch1v495far0z",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1BDLM4QRFXIYO",
+    "image_repository": "520465526641.dkr.ecr.eu-central-1.amazonaws.com/aws-sam-cli-managed-gamma-eu-central-1-pipeline-resources-imagerepository-rjkpzgztw73o",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-eu-PipelineExecutionRole-51F0JJQVKARS",
+    "arm64_supported": true,
+    "region": "eu-central-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-eu-nort-artifactsbucket-uj8zqaxs9rca",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-113EK0DM78UIE",
+    "image_repository": "520465526641.dkr.ecr.eu-north-1.amazonaws.com/aws-sam-cli-managed-gamma-eu-north-1-pipeline-resources-imagerepository-vuxam6qln0td",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-eu-PipelineExecutionRole-1S4T1XSF4QZSB",
+    "arm64_supported": false,
+    "region": "eu-north-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-eu-sout-artifactsbucket-1ak3u16wkxhps",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-HY7SVLQW7O04",
+    "image_repository": "520465526641.dkr.ecr.eu-south-1.amazonaws.com/aws-sam-cli-managed-gamma-eu-south-1-pipeline-resources-imagerepository-xpxzzhhrqkd2",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-eu-PipelineExecutionRole-11Q0EGWNIZ98T",
+    "arm64_supported": false,
+    "region": "eu-south-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-eu-west-artifactsbucket-1nxkbv9evu7xv",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-12KG14536UUBL",
+    "image_repository": "520465526641.dkr.ecr.eu-west-1.amazonaws.com/aws-sam-cli-managed-gamma-eu-west-1-pipeline-resources-imagerepository-tmqheozfrpgf",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-eu-PipelineExecutionRole-9TYYBSY5QZWY",
+    "arm64_supported": true,
+    "region": "eu-west-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-eu-west-artifactsbucket-1epleo7t2c0nz",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-EAYE7S0B83A9",
+    "image_repository": "520465526641.dkr.ecr.eu-west-2.amazonaws.com/aws-sam-cli-managed-gamma-eu-west-2-pipeline-resources-imagerepository-7yykvo66zgy4",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-eu-PipelineExecutionRole-Z46IF9QRZ10E",
+    "arm64_supported": true,
+    "region": "eu-west-2"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-eu-west-artifactsbucket-19skjtf80vkm",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-18XXDK7TV362S",
+    "image_repository": "520465526641.dkr.ecr.eu-west-3.amazonaws.com/aws-sam-cli-managed-gamma-eu-west-3-pipeline-resources-imagerepository-krf8qgd9x7e6",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-eu-PipelineExecutionRole-14N9BX16GQRGX",
+    "arm64_supported": false,
+    "region": "eu-west-3"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-me-sout-artifactsbucket-1nsitglxt27m9",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-TKEJJI04NE9",
+    "image_repository": "520465526641.dkr.ecr.me-south-1.amazonaws.com/aws-sam-cli-managed-gamma-me-south-1-pipeline-resources-imagerepository-w9nsrlqwg8eg",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-me-PipelineExecutionRole-TNJR7SGBNEDW",
+    "arm64_supported": false,
+    "region": "me-south-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-sa-east-artifactsbucket-1tgwd0c9zgf9s",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-UOLU8TRPD7RR",
+    "image_repository": "520465526641.dkr.ecr.sa-east-1.amazonaws.com/aws-sam-cli-managed-gamma-sa-east-1-pipeline-resources-imagerepository-9eoq7m8n445o",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-sa-PipelineExecutionRole-RTHLTBGHT4ZP",
+    "arm64_supported": false,
+    "region": "sa-east-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-us-east-artifactsbucket-1x6k1aq8hupfu",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1Q9DQHVAMRF22",
+    "image_repository": "520465526641.dkr.ecr.us-east-1.amazonaws.com/aws-sam-cli-managed-gamma-us-east-1-pipeline-resources-imagerepository-e3kcryeksl5j",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-us-PipelineExecutionRole-O4ZL3CVFH05H",
+    "arm64_supported": true,
+    "region": "us-east-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-us-east-artifactsbucket-16aly25hi36xy",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1566D4FGH4F7T",
+    "image_repository": "520465526641.dkr.ecr.us-east-2.amazonaws.com/aws-sam-cli-managed-gamma-us-east-2-pipeline-resources-imagerepository-jpl4lnxc8jao",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-us-PipelineExecutionRole-1CJPOGKV3416S",
+    "arm64_supported": true,
+    "region": "us-east-2"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-us-west-artifactsbucket-14pt0ij40larp",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1S4ACQFFK5KWJ",
+    "image_repository": "520465526641.dkr.ecr.us-west-1.amazonaws.com/aws-sam-cli-managed-gamma-us-west-1-pipeline-resources-imagerepository-jjybec26kraz",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-us-PipelineExecutionRole-6FRJK26W90G9",
+    "arm64_supported": false,
+    "region": "us-west-1"
+  },
+  {
+    "artifacts_bucket": "aws-sam-cli-managed-gamma-us-west-artifactsbucket-o0sr7fta89ia",
+    "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1HILB9R6H9RZJ",
+    "image_repository": "520465526641.dkr.ecr.us-west-2.amazonaws.com/aws-sam-cli-managed-gamma-us-west-2-pipeline-resources-imagerepository-suttucwbwgjm",
+    "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-us-PipelineExecutionRole-MTUMNZHWV98",
+    "arm64_supported": true,
+    "region": "us-west-2"
+  }
+]

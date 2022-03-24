@@ -1,0 +1,441 @@
+name: Pipeline
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  release:
+    types:
+      - released
+
+env:
+  PIPELINE_USER_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  PIPELINE_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  SAM_TEMPLATE_X86_64: template-x86_64.yaml
+  SAM_TEMPLATE_ARM64: template-arm64.yaml
+  BETA_STACK_NAME: lambda-adapter-beta
+  BETA_PIPELINE_EXECUTION_ROLE: arn:aws:iam::477159140107:role/aws-sam-cli-managed-beta-pip-PipelineExecutionRole-13NXRWTRTHDCJ
+  BETA_CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::477159140107:role/aws-sam-cli-managed-beta-CloudFormationExecutionR-132I77VBFOWQ2
+  BETA_ARTIFACTS_BUCKET: aws-sam-cli-managed-beta-pipeline-artifactsbucket-889nlo0z1nt0
+  BETA_IMAGE_REPOSITORY: 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/aws-sam-cli-managed-beta-pipeline-resources-imagerepository-0hbn3hxi9pcm
+  BETA_REGION: ap-northeast-1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+      - name: linting
+        run: cargo fmt -- --check && cargo clippy -- -Dwarnings
+      - run: cargo test
+
+  load-gamma-matrix:
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}"
+
+  load-prod-matrix:
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}"
+
+  build:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: aws-actions/setup-sam@v1
+
+      - name: Build x86_64 Layer
+        run: sam build --template ${SAM_TEMPLATE_X86_64} -b build-x86_64
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: aws-sam-build-x86_64
+          path: build-x86_64
+
+      - name: Build arm64 Layer
+        run: sam build --template ${SAM_TEMPLATE_ARM64} -b build-arm64
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: aws-sam-build-arm64
+          path: build-arm64
+
+
+  package-beta:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: aws-actions/setup-sam@v1
+
+      - name: Assume the beta pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: beta-packaging
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: aws-sam-build-x86_64
+          path: build-x86_64
+
+      - name: Upload x86_64 layer to beta artifact buckets
+        run: |
+          sam package \
+            --template build-x86_64/template.yaml \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --region ${BETA_REGION} \
+            --output-template-file packaged-beta-x86_64.yaml
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: packaged-beta-x86_64.yaml
+          path: packaged-beta-x86_64.yaml
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: aws-sam-build-arm64
+          path: build-arm64
+
+      - name: Upload arm64 layer to beta artifact buckets
+        run: |
+          sam package \
+            --template build-arm64/template.yaml \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --region ${BETA_REGION} \
+            --output-template-file packaged-beta-arm64.yaml
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: packaged-beta-arm64.yaml
+          path: packaged-beta-arm64.yaml
+
+
+  package-gamma:
+    needs: [ build, load-gamma-matrix ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: aws-actions/setup-sam@v1
+
+      - name: Assume the gamma pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ matrix.pipeline_execution_role }}
+          role-session-name: gamma-packaging
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: aws-sam-build-x86_64
+          path: build-x86_64
+
+      - name: Upload x86_64 layer to gamma artifact buckets
+        run: |
+          sam package \
+            --template build-x86_64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-gamma-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
+          path: packaged-gamma-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: aws-sam-build-arm64
+          path: build-arm64
+
+      - name: Upload arm64 layer to gamma artifact buckets
+        run: |
+          sam package \
+            --template build-arm64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-gamma-arm64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: packaged-gamma-arm64-${{ matrix.region }}.yaml
+          path: packaged-gamma-arm64-${{ matrix.region }}.yaml
+
+  package-prod:
+    needs: [ build, load-prod-matrix ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: aws-actions/setup-sam@v1
+
+      - name: Assume the prod pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ matrix.pipeline_execution_role }}
+          role-session-name: prod-packaging
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: aws-sam-build-x86_64
+          path: build-x86_64
+
+      - name: Upload x86_64 layer to prod artifact buckets
+        run: |
+          sam package \
+            --template build-x86_64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-prod-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: packaged-prod-x86_64-${{ matrix.region }}.yaml
+          path: packaged-prod-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: aws-sam-build-arm64
+          path: build-arm64
+
+      - name: Upload arm64 layer to prod artifact buckets
+        run: |
+          sam package \
+            --template build-arm64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-prod-arm64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: packaged-prod-arm64-${{ matrix.region }}.yaml
+          path: packaged-prod-arm64-${{ matrix.region }}.yaml
+
+  deploy-beta:
+    needs: [package-beta, package-gamma, package-prod]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: aws-actions/setup-sam@v1
+
+      - name: Assume the beta pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: beta-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: packaged-beta-x86_64.yaml
+
+      - name: Deploy x86_64 layer to beta account
+        run: |
+          sam deploy --stack-name ${BETA_STACK_NAME}-x86 \
+            --template packaged-beta-x86_64.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: packaged-beta-arm64.yaml
+
+      - name: Deploy arm64 layer to beta account
+        run: |
+          sam deploy --stack-name ${BETA_STACK_NAME}-arm64 \
+            --template packaged-beta-arm64.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+  integration-test:
+    needs: [deploy-beta]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          # trigger the integration tests here
+
+  load-gamma-matrix2:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ integration-test ]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}"
+
+  deploy-gamma:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [load-gamma-matrix2]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: aws-actions/setup-sam@v1
+
+      - name: Assume the gamma pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ matrix.pipeline_execution_role }}
+          role-session-name: gamma-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
+
+      - name: Deploy x86_64 Layer to all regions in gamma account
+        run: |
+          sam deploy --stack-name lambda-adapter-gamma-x86-${{ matrix.region }} \
+            --template packaged-gamma-x86_64-${{ matrix.region }}.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ matrix.region }} \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${{ matrix.cloudformation_execution_role }}
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: packaged-gamma-arm64-${{ matrix.region }}.yaml
+
+      - name: Deploy arm64 Layer to supported regions in gamma account
+        if: ${{ matrix.arm64_supported }}
+        run: |
+          sam deploy --stack-name lambda-adapter-gamma-arm64-${{ matrix.region }} \
+            --template packaged-gamma-arm64-${{ matrix.region }}.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ matrix.region }} \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${{ matrix.cloudformation_execution_role }}
+
+  load-prod-matrix2:
+    if: ${{ github.event_name == 'release' }}
+    needs: [ deploy-gamma ]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}"
+
+  deploy-prod:
+    if: ${{ github.event_name == 'release' }}
+    needs: [load-prod-matrix2]
+    runs-on: ubuntu-latest
+    environment: prod
+    strategy:
+      matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: aws-actions/setup-sam@v1
+
+      - name: Assume the prod pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ matrix.pipeline_execution_role }}
+          role-session-name: prod-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: packaged-prod-x86_64-${{ matrix.region }}.yaml
+
+      - name: Deploy x86_64 Layer to all regions in prod account
+        run: |
+          sam deploy --stack-name lambda-adapter-prod-x86-${{ matrix.region }} \
+            --template packaged-prod-x86_64-${{ matrix.region }}.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ matrix.region }} \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${{ matrix.cloudformation_execution_role }}
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: packaged-prod-arm64-${{ matrix.region }}.yaml
+
+      - name: Deploy arm64 Layer to supported regions in prod account
+        if: ${{ matrix.arm64_supported }}
+        run: |
+          sam deploy --stack-name lambda-adapter-prod-arm64-${{ matrix.region }} \
+            --template packaged-prod-arm64-${{ matrix.region }}.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ matrix.region }} \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${{ matrix.cloudformation_execution_role }}
