@@ -18,7 +18,9 @@ build-mac:
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile.mac --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest .
 
 build-LambdaAdapterLayerX86:
+	cp layer/* $(ARTIFACTS_DIR)/
 	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=x86_64 -o $(ARTIFACTS_DIR)/extensions .
 
 build-LambdaAdapterLayerArm64:
+	cp layer/* $(ARTIFACTS_DIR)/
 	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -o $(ARTIFACTS_DIR)/extensions .

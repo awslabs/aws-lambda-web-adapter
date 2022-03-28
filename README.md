@@ -45,9 +45,11 @@ This works with any base images except AWS managed base images. To use AWS manag
 
 AWS Lambda Adapter also works with AWS managed Lambda runtimes. You need to do three things:
 
-1. provide a wrapper script to start your web application
-2. package Lambda Adapter and the wrapper script into a Lambda Layer
-3. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` pointing to the wrapper script
+1. attach Lambda Adapter layer to your function. 
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:1`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:1`
+2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. 
+3. set function handler to your web application start up script. e.g. `run.sh`.
 
 For details, please check out [the example nodejs application](examples/expressjs-zip).
 
