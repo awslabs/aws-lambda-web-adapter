@@ -19,7 +19,7 @@ To use Lambda Adapter with docker images, package your web app (http api) in a D
 By default, Lambda Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#Configurations).
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.4.0 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.2 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 Pre-compiled Lambda Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
@@ -29,7 +29,7 @@ Below is a Dockerfile for [an example nodejs application](examples/expressjs).
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.4.0 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.2 /lambda-adapter /opt/extensions/lambda-adapter
 EXPOSE 8080
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
@@ -63,10 +63,10 @@ The readiness check port/path and traffic port can be configured using environme
 |PORT                | traffic port                                  | 8080         |
 |REMOVE_BASE_PATH    | the base path to be removed from request path | empty string |
 
-REMOVE_BASE_PATH - The value of this environment variable tells the adapter whether the application is running under a base path.
+**REMOVE_BASE_PATH** - The value of this environment variable tells the adapter whether the application is running under a base path.
 For example, you could have configured your API Gateway to have a /orders/{proxy+} and a /catalog/{proxy+} resource.
 Each resource is handled by a separate Lambda functions. For this reason, the application inside Lambda may not be aware of the fact that the /orders path exists.
-Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the application. Defaults to empty string.
+Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the application. Defaults to empty string. Checkout [SpringBoot](examples/springboot) example.
 
 ## Examples
 
