@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AWS Lambda Adapter (Arm64) - Run web applications on AWS Lambda
+
+Resources:
+  LambdaAdapterLayerArm64:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: .
+      CompatibleArchitectures:
+        - arm64
+      CompatibleRuntimes:
+        - nodejs14.x
+        - nodejs12.x
+        - python3.9
+        - python3.8
+        - ruby2.7
+        - java11
+        - java8.al2
+        - dotnet6
+        - dotnetcore3.1
+        - provided.al2
+      Description: 'Layer for AWS Lambda Adapter arm64'
+      LicenseInfo: 'Available under the Apache-2.0 license.'
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: makefile
+      BuildArchitecture: arm64
+
+Outputs:
+  LambdaAdapterLayerArm64Arn:
+    Description: "arn for LambdaAdapterLayerArm64"
+    Value: !Ref LambdaAdapterLayerArm64

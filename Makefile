@@ -3,11 +3,11 @@ clean:
 
 build-x86:
 	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-	docker build --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest-x86_64 .
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest-x86_64 .
 
 build-arm:
 	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-	docker build --build-arg ARCH=aarch64 -t aws-lambda-adapter:latest-aarch64 .
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -t aws-lambda-adapter:latest-aarch64 .
 
 build: build-x86 build-arm
 	docker tag aws-lambda-adapter:latest-x86_64 aws-lambda-adapter:latest
@@ -15,4 +15,10 @@ build: build-x86 build-arm
 build-mac:
 	CC=x86_64-unknown-linux-musl-gcc cargo build --release --target=x86_64-unknown-linux-musl
 	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-	docker build -f Dockerfile.mac --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest .
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile.mac --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest .
+
+build-LambdaAdapterLayerX86:
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=x86_64 -o $(ARTIFACTS_DIR)/extensions .
+
+build-LambdaAdapterLayerArm64:
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -o $(ARTIFACTS_DIR)/extensions .
