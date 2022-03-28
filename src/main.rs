@@ -2,16 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lambda_extension::{service_fn as extension_handler, Extension};
-use lambda_http::{service_fn as http_handler, Body, IntoResponse, Request, Response};
+use lambda_http::{service_fn as http_handler, Body, Request, Response};
 use log::*;
-use once_cell::sync::OnceCell;
 use reqwest::{redirect, Client};
 use std::{env, mem};
 use tokio::runtime::Handle;
 use tokio_retry::{strategy::FixedInterval, Retry};
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-static HTTP_CLIENT: OnceCell<Client> = OnceCell::new();
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -42,22 +40,39 @@ async fn main() -> Result<(), Error> {
     .await?;
 
     // start lambda runtime
-    HTTP_CLIENT.set(Client::builder().redirect(redirect::Policy::none()).build().unwrap()).unwrap();
-    lambda_http::run(http_handler(http_proxy_handler)).await?;
+    let options = &HandlerOptions {
+        http_client: Client::builder().redirect(redirect::Policy::none()).build().unwrap(),
+        host: env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string()),
+        port: env::var("PORT").unwrap_or_else(|_| "8080".to_string()),
+        base_path: env::var("REMOVE_BASE_PATH").unwrap_or_default(),
+    };
+    lambda_http::run(http_handler(move |event: Request| async move { http_proxy_handler(event, options).await })).await?;
     Ok(())
 }
 
-async fn http_proxy_handler(event: Request) -> Result<impl IntoResponse, Error> {
-    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
-    let app_host = format!("http://127.0.0.1:{}", port);
-    let (parts, body) = event.into_parts();
-    let app_url = app_host + parts.uri.path_and_query().unwrap().as_str();
-    debug!("app_url is {:#?}", app_url);
-    debug!("request headers are {:#?}", parts.headers);
+struct HandlerOptions {
+    http_client: Client,
+    host: String,
+    port: String,
+    base_path: String,
+}
 
-    let app_response = HTTP_CLIENT
-        .get()
-        .unwrap()
+async fn http_proxy_handler(event: Request, options: &HandlerOptions) -> Result<Response<Body>, Error> {
+    let host = options.host.as_str();
+    let port = options.port.as_str();
+    let (parts, body) = event.into_parts();
+    let mut path_and_query = parts.uri.path_and_query().unwrap().as_str();
+    // strip away Base Path if environment variable REMOVE_BASE_PATH is set.
+    if options.base_path != String::default() {
+        if let Some(value) = path_and_query.strip_prefix(options.base_path.as_str()) {
+            path_and_query = value;
+        };
+    }
+    let app_url = format!("http://{}:{}{}", host, port, path_and_query);
+    debug!("app_url is {:#?}", app_url);
+
+    let app_response = options
+        .http_client
         .request(parts.method, app_url)
         .headers(parts.headers)
         .body(body.to_vec())
@@ -76,7 +91,6 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
     debug!("app response headers are {:#?}", app_response.headers());
 
     if app_response.headers().get(http::header::CONTENT_ENCODING).is_some() {
-        debug!("body is binary");
         let content = app_response.bytes().await?;
         return Ok(Body::Binary(content.to_vec()));
     }
@@ -86,23 +100,19 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
     } else {
         ""
     };
-    debug!("content_type is {:?}", content_type);
 
     if content_type.starts_with("text")
         || content_type.starts_with("application/json")
         || content_type.starts_with("application/javascript")
         || content_type.starts_with("application/xml")
     {
-        debug!("body is text");
         let body_text = app_response.text().await?;
         return Ok(Body::Text(body_text));
     }
     let content = app_response.bytes().await?;
-    return if !content.is_empty() {
-        debug!("body is binary");
+    if !content.is_empty() {
         Ok(Body::Binary(content.to_vec()))
     } else {
-        debug! {"body is empty"};
         Ok(Body::Empty)
-    };
+    }
 }

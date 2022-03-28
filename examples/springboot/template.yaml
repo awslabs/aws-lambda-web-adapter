@@ -20,6 +20,7 @@ Resources:
         Variables:
           RUST_LOG: info
           READINESS_CHECK_PATH: /healthz
+          REMOVE_BASE_PATH: /v1
       AutoPublishAlias: live
       DeploymentPreference:
         Type: AllAtOnce
@@ -29,12 +30,12 @@ Resources:
         Root:
           Type: HttpApi
           Properties:
-            Path: /
+            Path: /v1
             Method: ANY
         Petstore:
           Type: HttpApi
           Properties:
-            Path: /{proxy+}
+            Path: /v1/{proxy+}
             Method: ANY
     Metadata:
       DockerTag: java8.al2-maven-v1
@@ -74,5 +75,5 @@ Resources:
 Outputs:
   PetstoreApi:
     Description: "API Gateway endpoint URL for Prod stage for Petstore function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/pets"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/v1/pets"
 

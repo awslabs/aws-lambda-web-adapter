@@ -56,11 +56,17 @@ For details, please check out [the example nodejs application](examples/expressj
 
 The readiness check port/path and traffic port can be configured using environment variables. These environment variables can be defined either within docker file or as Lambda function configuration. 
 
-|Environment Variable|Description          |Default|
-|--------------------|---------------------|-------|
-|READINESS_CHECK_PORT|readiness check port | 8080  |
-|READINESS_CHECK_PATH|readiness check path | /     |
-|PORT                |traffic port         | 8080  |
+|Environment Variable| Description                                   | Default      |
+|--------------------|-----------------------------------------------|--------------|
+|READINESS_CHECK_PORT| readiness check port                          | 8080         |
+|READINESS_CHECK_PATH| readiness check path                          | /            |
+|PORT                | traffic port                                  | 8080         |
+|REMOVE_BASE_PATH    | the base path to be removed from request path | empty string |
+
+REMOVE_BASE_PATH - The value of this environment variable tells the adapter whether the application is running under a base path. 
+For example, you could have configured your API Gateway to have a /orders/{proxy+} and a /catalog/{proxy+} resource. 
+Each resource is handled by a separate Lambda functions. For this reason, the application inside Lambda may not be aware of the fact that the /orders path exists. 
+Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the application. Defaults to empty string.
 
 ## Examples
 
