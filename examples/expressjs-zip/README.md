@@ -4,9 +4,13 @@ This example shows how to use Lambda Adapter to run an express.js application on
 
 ### How does it work?
 
-We package Lambda Adapter binary and a wrapper script into a Lambda Layer. And we configure environment variable 'AWS_LAMBDA_EXEC_WRAPPER' pointing to the wrapper script.
+We add Lambda Adapter layer to the function and configure wrapper script. 
 
-When Lambda execution environment starts, Lambda will execute the wrapper script and starts the adapter. 
+1. attach Lambda Adapter layer to your function. This layer containers Lambda Adapter binary and a wrapper script. 
+    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:2`
+    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:2`
+2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. This is a wrapper script included in the layer.
+3. set function handler to a startup command: `run.sh`. The wrapper script will execute this command to boot up your application. 
 
 To get more information of Wrapper script, please read Lambda documentation [here](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper). 
 
