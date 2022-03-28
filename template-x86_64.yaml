@@ -36,7 +36,7 @@ Resources:
     Properties:
       Action: lambda:GetLayerVersion
       LayerVersionArn: !Ref LambdaAdapterLayerX86
-      Principal: *
+      Principal: '*'
 
 Outputs:
   LambdaAdapterLayerX86Arn:
