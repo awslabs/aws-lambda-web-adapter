@@ -31,6 +31,13 @@ Resources:
       BuildMethod: makefile
       BuildArchitecture: x86_64
 
+  LayerPermission:
+    Type: AWS::Lambda::LayerVersionPermission
+    Properties:
+      Action: lambda:GetLayerVersion
+      LayerVersionArn: !Ref LambdaAdapterLayerX86
+      Principal: '*'
+
 Outputs:
   LambdaAdapterLayerX86Arn:
     Description: "arn for LambdaAdapterLayerX86"

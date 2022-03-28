@@ -28,6 +28,13 @@ Resources:
       BuildMethod: makefile
       BuildArchitecture: arm64
 
+  LayerPermission:
+    Type: AWS::Lambda::LayerVersionPermission
+    Properties:
+      Action: lambda:GetLayerVersion
+      LayerVersionArn: !Ref LambdaAdapterLayerArm64
+      Principal: '*'
+
 Outputs:
   LambdaAdapterLayerArm64Arn:
     Description: "arn for LambdaAdapterLayerArm64"
