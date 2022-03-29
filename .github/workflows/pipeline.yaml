@@ -23,6 +23,11 @@ env:
   BETA_ARTIFACTS_BUCKET: aws-sam-cli-managed-beta-pipeline-artifactsbucket-889nlo0z1nt0
   BETA_IMAGE_REPOSITORY: 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/aws-sam-cli-managed-beta-pipeline-resources-imagerepository-0hbn3hxi9pcm
   BETA_REGION: ap-northeast-1
+  PROD_ECR_PIPELINE_EXECUTION_ROLE: arn:aws:iam::373534280245:role/aws-sam-cli-managed-prod-ecr-PipelineExecutionRole-12FE9QIHNFYOI
+  PROD_ECR_CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::373534280245:role/aws-sam-cli-managed-prod-CloudFormationExecutionR-RDUT9EAJJ1ZN
+  PROD_ARTIFACTS_BUCKET: aws-sam-cli-managed-prod-ecr-pipe-artifactsbucket-1mjporc66dkgn
+  PROD_IMAGE_REPOSITORY: 373534280245.dkr.ecr.us-east-1.amazonaws.com/aws-sam-cli-managed-prod-ecr-pipeline-resources-imagerepository-fhpoty0tapro
+  PROD_ECR_REGION: us-east-1
 
 jobs:
   test:
@@ -34,30 +39,14 @@ jobs:
           toolchain: stable
           components: clippy
       - name: linting
-        run: cargo fmt -- --check && cargo clippy -- -Dwarnings
+        run: |
+          cargo fmt -- --check
+          cargo clippy -- -Dwarnings
       - run: cargo test
 
-  load-gamma-matrix:
-    needs: [ test ]
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v2
-      - id: set-matrix
-        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}"
-
-  load-prod-matrix:
-    needs: [ test ]
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v2
-      - id: set-matrix
-        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}"
 
   build:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [test]
     runs-on: ubuntu-latest
     steps:
@@ -81,8 +70,30 @@ jobs:
           name: aws-sam-build-arm64
           path: build-arm64
 
+  load-gamma-matrix:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}"
+
+  load-prod-matrix:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}"
 
   package-beta:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
@@ -141,6 +152,7 @@ jobs:
 
 
   package-gamma:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-gamma-matrix ]
     runs-on: ubuntu-latest
     strategy:
@@ -200,6 +212,7 @@ jobs:
           path: packaged-gamma-arm64-${{ matrix.region }}.yaml
 
   package-prod:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-prod-matrix ]
     runs-on: ubuntu-latest
     strategy:
@@ -259,6 +272,7 @@ jobs:
           path: packaged-prod-arm64-${{ matrix.region }}.yaml
 
   deploy-beta:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [package-beta, package-gamma, package-prod]
     runs-on: ubuntu-latest
     steps:
@@ -308,6 +322,7 @@ jobs:
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
   integration-test:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [deploy-beta]
     runs-on: ubuntu-latest
     steps:
@@ -443,3 +458,30 @@ jobs:
             --image-repository ${{ matrix.image_repository }} \
             --no-fail-on-empty-changeset \
             --role-arn ${{ matrix.cloudformation_execution_role }}
+
+  publish-to-public-ecr:
+    if: ${{ github.event_name == 'release' }}
+    needs: [deploy-prod]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Assume the prod pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.PROD_ECR_REGION }}
+          role-to-assume: ${{ env.PROD_ECR_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: prod-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: build OCI images for x86_64 and aarch64
+        run: |
+          make build-x86
+          make build-arm
+
+      - name: publish OCI images to ECR public repository
+        run: |
+          make publish

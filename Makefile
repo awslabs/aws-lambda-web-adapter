@@ -1,20 +1,28 @@
+CARGO_PKG_VERSION := $(shell cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')
+
 clean:
 	rm -rf target
 
 build-x86:
-	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest-x86_64 .
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=x86_64 -t public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64 .
 
 build-arm:
-	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -t aws-lambda-adapter:latest-aarch64 .
+	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -t public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64 .
 
 build: build-x86 build-arm
-	docker tag aws-lambda-adapter:latest-x86_64 aws-lambda-adapter:latest
+	docker push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64
+	docker push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
+	docker manifest create public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION) \
+				public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64 \
+				public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
+	docker manifest annotate --arch arm64 public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION) \
+				public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
+
+publish: build
+	docker manifest push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)
 
 build-mac:
 	CC=x86_64-unknown-linux-musl-gcc cargo build --release --target=x86_64-unknown-linux-musl
-	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile.mac --build-arg ARCH=x86_64 -t aws-lambda-adapter:latest .
 
 build-LambdaAdapterLayerX86:
