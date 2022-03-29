@@ -479,8 +479,7 @@ jobs:
 
       - name: build OCI images for x86_64 and aarch64
         run: |
-          make build-x86
-          make build-arm
+          make build
 
       - name: publish OCI images to ECR public repository
         run: |
