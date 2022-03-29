@@ -477,6 +477,10 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: login ECR Public Registry
+        run: |
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+
       - name: build OCI images for x86_64 and aarch64
         run: |
           make build
