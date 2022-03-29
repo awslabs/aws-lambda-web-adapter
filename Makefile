@@ -18,7 +18,7 @@ build: build-x86 build-arm
 	docker manifest annotate --arch arm64 public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION) \
 				public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
 
-publish: build
+publish:
 	docker manifest push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)
 
 build-mac:
