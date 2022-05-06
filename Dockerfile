@@ -10,7 +10,7 @@ RUN curl -k -o /${ARCH}-linux-musl-cross.tgz https://musl.cc/${ARCH}-linux-musl-
 WORKDIR /app
 ADD . /app
 RUN source $HOME/.cargo/env &&\
-    LAMBDA_RUNTIME_USER_AGENT=aws-lambda-adapter/$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version') \
+    LAMBDA_RUNTIME_USER_AGENT=aws-lambda-rust/aws-lambda-adapter/$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version') \
     CC=${ARCH}-unknown-linux-musl-gcc cargo build --release --target=${ARCH}-unknown-linux-musl
 
 FROM scratch AS package-stage
