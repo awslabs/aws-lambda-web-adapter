@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-app
+
+  Sample SAM Template for sam-app
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  PetstoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 2048
+      Handler: run.sh
+      CodeUri: app/
+      Runtime: java11
+      Environment:
+        Variables:
+          RUST_LOG: info
+          READINESS_CHECK_PATH: /healthz
+          REMOVE_BASE_PATH: /v1
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:2
+      Events:
+        Root:
+          Type: HttpApi
+          Properties:
+            Path: /v1
+            Method: ANY
+        Petstore:
+          Type: HttpApi
+          Properties:
+            Path: /v1/{proxy+}
+            Method: ANY
+
+Outputs:
+  PetstoreApi:
+    Description: "API Gateway endpoint URL for Prod stage for Petstore function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/v1/pets"
+
