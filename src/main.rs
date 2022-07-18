@@ -5,6 +5,7 @@ use lambda_extension::{service_fn as extension_handler, Extension};
 use lambda_http::{service_fn as http_handler, Body, Request, Response};
 use log::*;
 use reqwest::{redirect, Client};
+use std::time::Duration;
 use std::{env, future, mem};
 use tokio_retry::{strategy::FixedInterval, Retry};
 
@@ -57,7 +58,11 @@ async fn main() -> Result<(), Error> {
     .expect("application server is not ready");
 
     // start lambda runtime
-    let http_client = &Client::builder().redirect(redirect::Policy::none()).build().unwrap();
+    let http_client = &Client::builder()
+        .redirect(redirect::Policy::none())
+        .pool_idle_timeout(Duration::from_secs(4))
+        .build()
+        .unwrap();
     lambda_http::run(http_handler(|event: Request| async move {
         http_proxy_handler(event, http_client, options).await
     }))
