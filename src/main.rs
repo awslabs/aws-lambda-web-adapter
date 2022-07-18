@@ -111,24 +111,25 @@ async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
         return Ok(Body::Binary(content.to_vec()));
     }
 
-    let content_type = if let Some(value) = app_response.headers().get(http::header::CONTENT_TYPE) {
-        value.to_str().unwrap_or_default()
-    } else {
-        ""
-    };
+    match app_response.headers().get(http::header::CONTENT_TYPE) {
+        Some(value) => {
+            let content_type = value.to_str().unwrap_or_default();
 
-    if content_type.starts_with("text")
-        || content_type.starts_with("application/json")
-        || content_type.starts_with("application/javascript")
-        || content_type.starts_with("application/xml")
-    {
-        let body_text = app_response.text().await?;
-        return Ok(Body::Text(body_text));
-    }
-    let content = app_response.bytes().await?;
-    if !content.is_empty() {
-        Ok(Body::Binary(content.to_vec()))
-    } else {
-        Ok(Body::Empty)
+            if content_type.starts_with("text")
+                || content_type.starts_with("application/json")
+                || content_type.starts_with("application/javascript")
+                || content_type.starts_with("application/xml")
+            {
+                Ok(Body::Text(app_response.text().await?))
+            } else {
+                let content = app_response.bytes().await?;
+                if content.is_empty() {
+                    Ok(Body::Empty)
+                } else {
+                    Ok(Body::Binary(content.to_vec()))
+                }
+            }
+        }
+        None => Ok(Body::Text(app_response.text().await?)),
     }
 }
