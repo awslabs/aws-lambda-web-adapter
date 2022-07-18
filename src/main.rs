@@ -5,8 +5,7 @@ use lambda_extension::{service_fn as extension_handler, Extension};
 use lambda_http::{service_fn as http_handler, Body, Request, Response};
 use log::*;
 use reqwest::{redirect, Client};
-use std::{env, mem};
-use tokio::runtime::Handle;
+use std::{env, future, mem};
 use tokio_retry::{strategy::FixedInterval, Retry};
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -34,16 +33,13 @@ async fn main() -> Result<(), Error> {
     };
 
     // register as an external extension
-    let handle = Handle::current();
-    tokio::task::spawn_blocking(move || {
-        handle.spawn(async {
-            Extension::new()
-                .with_events(&[])
-                .with_events_processor(extension_handler(|_| async { Ok::<(), Error>(()) }))
-                .run()
-                .await
-                .expect("extension thread error");
-        })
+    tokio::task::spawn(async move {
+        Extension::new()
+            .with_events(&[])
+            .with_events_processor(extension_handler(|_| async { Ok::<(), Error>(()) }))
+            .run()
+            .await
+            .expect("extension thread error");
     });
 
     // check if the application is ready every 10 milliseconds
@@ -52,9 +48,13 @@ async fn main() -> Result<(), Error> {
             "http://{}:{}{}",
             options.host, options.readiness_check_port, options.readiness_check_path
         );
-        reqwest::get(readiness_check_url)
+        match reqwest::blocking::get(readiness_check_url) {
+            Ok(response) if { response.status().is_success() } => future::ready(Ok(())),
+            _ => future::ready(Err::<(), i32>(-1)),
+        }
     })
-    .await?;
+    .await
+    .expect("application server is not ready");
 
     // start lambda runtime
     let http_client = &Client::builder().redirect(redirect::Policy::none()).build().unwrap();
