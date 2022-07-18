@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lambda_extension::{service_fn as extension_handler, Extension};
-use lambda_http::{service_fn as http_handler, Body, Request, Response};
+use lambda_http::{service_fn as http_handler, Body, Request, RequestExt, Response};
 use log::*;
 use reqwest::{redirect, Client};
 use std::time::Duration;
@@ -75,17 +75,22 @@ async fn http_proxy_handler(
     http_client: &Client,
     options: &AdapterOptions,
 ) -> Result<Response<Body>, Error> {
-    let host = options.host.as_str();
-    let port = options.port.as_str();
+    let raw_path = event.raw_http_path();
     let (parts, body) = event.into_parts();
-    let mut path_and_query = parts.uri.path_and_query().unwrap().as_str();
+
+    // construct the path and query without APIGW stage
+    let mut path_and_query = match parts.uri.query() {
+        Some(query) => format!("{}?{}", raw_path, query),
+        None => raw_path,
+    };
+
     // strip away Base Path if environment variable REMOVE_BASE_PATH is set.
     if options.base_path.is_some() {
         if let Some(value) = path_and_query.strip_prefix(options.base_path.as_ref().unwrap()) {
-            path_and_query = value;
+            path_and_query = value.to_string();
         };
     }
-    let app_url = format!("http://{}:{}{}", host, port, path_and_query);
+    let app_url = format!("http://{}:{}{}", options.host, options.port, path_and_query);
     debug!("app_url is {:#?}", app_url);
 
     let app_response = http_client
