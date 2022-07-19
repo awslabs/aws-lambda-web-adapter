@@ -371,16 +371,16 @@ dependencies = [
 
 [[package]]
 name = "lambda-extension"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cd0f503de72d995012c2d7ff6c9d9f0bb0129ae2687b678ddae6d3816930a8c"
+checksum = "69dc28136f0e926be17409be18fdb82cd8afe1dd7c3c7d2beeb93aca57e554fd"
 dependencies = [
  "async-stream",
  "bytes",
  "chrono",
  "http",
  "hyper",
- "lambda_runtime_api_client 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lambda_runtime_api_client",
  "serde",
  "serde_json",
  "tokio",
@@ -391,8 +391,9 @@ dependencies = [
 
 [[package]]
 name = "lambda_http"
-version = "0.5.2"
-source = "git+https://github.com/awslabs/aws-lambda-rust-runtime#bb241992287105837efd5211a6a1588331a716ba"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a540048486ccfaa407ef7d2b50b7ff7b8c18abfbf351731a4ff7ccd165fc43fa"
 dependencies = [
  "aws_lambda_events",
  "base64",
@@ -411,14 +412,15 @@ dependencies = [
 
 [[package]]
 name = "lambda_runtime"
-version = "0.5.1"
-source = "git+https://github.com/awslabs/aws-lambda-rust-runtime#bb241992287105837efd5211a6a1588331a716ba"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76cf2e2a435d327806e7c8d46d341d624a6a2e3b35b253eee44d1c89980451be"
 dependencies = [
  "async-stream",
  "bytes",
  "http",
  "hyper",
- "lambda_runtime_api_client 0.5.0 (git+https://github.com/awslabs/aws-lambda-rust-runtime)",
+ "lambda_runtime_api_client",
  "serde",
  "serde_json",
  "tokio",
@@ -429,20 +431,9 @@ dependencies = [
 
 [[package]]
 name = "lambda_runtime_api_client"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e921024b5eb4e2f0800a5d6e25c7ed554562aa62f02cf5f60a48c26c8a678974"
-dependencies = [
- "http",
- "hyper",
- "tokio",
- "tower-service",
-]
-
-[[package]]
-name = "lambda_runtime_api_client"
-version = "0.5.0"
-source = "git+https://github.com/awslabs/aws-lambda-rust-runtime#bb241992287105837efd5211a6a1588331a716ba"
+checksum = "b54698c666ffe503cb51fa66e4567e53e806128a10359de7095999d925a771ed"
 dependencies = [
  "http",
  "hyper",
