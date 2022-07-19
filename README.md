@@ -19,7 +19,7 @@ To use Lambda Web Adapter with docker images, package your web app (http api) in
 By default, Lambda Web Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#Configurations).
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.2 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.3 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 Pre-compiled Lambda Web Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
@@ -29,8 +29,8 @@ Below is a Dockerfile for [an example nodejs application](examples/expressjs).
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.2 /lambda-adapter /opt/extensions/lambda-adapter
-EXPOSE 8080
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.3 /lambda-adapter /opt/extensions/lambda-adapter
+ENV PORT=7000
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
 ADD src/package-lock.json /var/task/package-lock.json
@@ -45,25 +45,34 @@ This works with any base images except AWS managed base images. To use AWS manag
 
 AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to do three things:
 
-1. attach Lambda Web Adapter layer to your function. 
-   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:2`
-   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:2`
-2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. 
+1. attach Lambda Web Adapter layer to your function.
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:3`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:3`
+2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 
 For details, please check out [the example nodejs application](examples/expressjs-zip).
 
+### Readiness Check
+
+When a new Lambda Execution Environment starts up, Lambda Web Adapter will boot up as a Lambda Extension, followed by the web application. 
+
+Lambda Web Adapter will send HTTP GET requests to the web application at `http://127.0.0.1:{READINESS_CHECK_PORT}{READINESS_CHECK_PATH}`. 
+
+Lambda Web Adapter will retry this request every 10 milliseconds until the web application returns a successful response (http status code 2xx) or the function times out. 
+
+After passing readiness check, Lambda Web Adapter will start Lambda Runtime and forward the invokes to the web application. 
 
 ### Configurations
 
 The readiness check port/path and traffic port can be configured using environment variables. These environment variables can be defined either within docker file or as Lambda function configuration.
 
-|Environment Variable| Description                                   | Default      |
-|--------------------|-----------------------------------------------|--------------|
-|READINESS_CHECK_PORT| readiness check port                          | 8080         |
-|READINESS_CHECK_PATH| readiness check path                          | /            |
-|PORT                | traffic port                                  | 8080         |
-|REMOVE_BASE_PATH    | the base path to be removed from request path | empty string |
+|Environment Variable| Description                                                | Default |
+|--------------------|------------------------------------------------------------|---------|
+|PORT                | traffic port                                               | "8080"  |
+|READINESS_CHECK_PORT| readiness check port, default to the fraffic port          | PORT    |
+|READINESS_CHECK_PATH| readiness check path                                       | "/"     |
+|REMOVE_BASE_PATH    | (optional) the base path to be removed from request path   | None    |
 
 **REMOVE_BASE_PATH** - The value of this environment variable tells the adapter whether the application is running under a base path.
 For example, you could have configured your API Gateway to have a /orders/{proxy+} and a /catalog/{proxy+} resource.
