@@ -1,6 +1,6 @@
 FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.3 /lambda-adapter /opt/extensions/lambda-adapter
-ENV PORT=7000
+EXPOSE 8080
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
 ADD src/package-lock.json /var/task/package-lock.json
