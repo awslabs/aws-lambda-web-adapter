@@ -67,12 +67,20 @@ After passing readiness check, Lambda Web Adapter will start Lambda Runtime and 
 
 The readiness check port/path and traffic port can be configured using environment variables. These environment variables can be defined either within docker file or as Lambda function configuration.
 
-|Environment Variable| Description                                                | Default |
-|--------------------|------------------------------------------------------------|---------|
-|PORT                | traffic port                                               | "8080"  |
-|READINESS_CHECK_PORT| readiness check port, default to the fraffic port          | PORT    |
-|READINESS_CHECK_PATH| readiness check path                                       | "/"     |
-|REMOVE_BASE_PATH    | (optional) the base path to be removed from request path   | None    |
+| Environment Variable | Description                                                      | Default |
+|----------------------|------------------------------------------------------------------|---------|
+| PORT                 | traffic port                                                     | "8080"  |
+| READINESS_CHECK_PORT | readiness check port, default to the traffic port                | PORT    |
+| READINESS_CHECK_PATH | readiness check path                                             | "/"     |
+| ASYNC_INIT           | enable asynchronous initialization for high cold start functions | "false" |
+| REMOVE_BASE_PATH     | (optional) the base path to be removed from request path         | None    |
+
+**ASYNC_INIT** Lambda managed runtimes offer up to 10 seconds for lambda function initialization. Duration this period of time, Lambda functions have burst of CPU to accelerate cold start, and it is not billed. 
+If a lambda function couldn't complete the initialization within 10 seconds, Lambda will stop the function, restart the initialization, and bill the initialization time. 
+To help functions to use this 10 seconds free initialization time and avoid the restart, Lambda Web Adapter supports asynchronous initialization. 
+When this feature is enabled, Lambda Web Adapter will performance readiness check up to 9.8 seconds. If the web app is not readiness by then, 
+Lambda Web Adapter will signal to Lambda service that the init is completed, and continue readiness check in the handler. 
+This feature is disabled by default. Enabled it by setting environment variable `ASYNC_INIT` to `true`. 
 
 **REMOVE_BASE_PATH** - The value of this environment variable tells the adapter whether the application is running under a base path.
 For example, you could have configured your API Gateway to have a /orders/{proxy+} and a /catalog/{proxy+} resource.

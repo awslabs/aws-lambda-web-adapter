@@ -7,6 +7,7 @@ use log::*;
 use reqwest::{redirect, Client};
 use std::time::Duration;
 use std::{env, future, mem};
+use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -17,6 +18,7 @@ struct AdapterOptions {
     readiness_check_port: String,
     readiness_check_path: String,
     base_path: Option<String>,
+    async_init: bool,
 }
 
 #[tokio::main]
@@ -31,6 +33,10 @@ async fn main() -> Result<(), Error> {
             .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
         readiness_check_path: env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string()),
         base_path: env::var("REMOVE_BASE_PATH").ok(),
+        async_init: env::var("ASYNC_INIT")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse()
+            .unwrap_or(false),
     };
 
     // register as an external extension
@@ -43,7 +49,29 @@ async fn main() -> Result<(), Error> {
             .expect("extension thread error");
     });
 
-    // check if the application is ready every 10 milliseconds
+    // check if the application is ready
+    let is_ready = if options.async_init {
+        timeout(Duration::from_secs_f32(9.8), check_readiness(options))
+            .await
+            .is_ok()
+    } else {
+        check_readiness(options).await
+    };
+
+    // start lambda runtime
+    let http_client = &Client::builder()
+        .redirect(redirect::Policy::none())
+        .pool_idle_timeout(Duration::from_secs(4))
+        .build()
+        .unwrap();
+    lambda_http::run(http_handler(|event: Request| async move {
+        http_proxy_handler(event, http_client, options, is_ready).await
+    }))
+    .await?;
+    Ok(())
+}
+
+async fn check_readiness(options: &AdapterOptions) -> bool {
     Retry::spawn(FixedInterval::from_millis(10), || {
         let readiness_check_url = format!(
             "http://{}:{}{}",
@@ -55,26 +83,20 @@ async fn main() -> Result<(), Error> {
         }
     })
     .await
-    .expect("application server is not ready");
-
-    // start lambda runtime
-    let http_client = &Client::builder()
-        .redirect(redirect::Policy::none())
-        .pool_idle_timeout(Duration::from_secs(4))
-        .build()
-        .unwrap();
-    lambda_http::run(http_handler(|event: Request| async move {
-        http_proxy_handler(event, http_client, options).await
-    }))
-    .await?;
-    Ok(())
+    .is_ok()
 }
 
 async fn http_proxy_handler(
     event: Request,
     http_client: &Client,
     options: &AdapterOptions,
+    is_app_ready: bool,
 ) -> Result<Response<Body>, Error> {
+    // continue checking readiness if async_init is configured and the app is not ready
+    if options.async_init && !is_app_ready {
+        check_readiness(options).await;
+    }
+
     let raw_path = event.raw_http_path();
     let (parts, body) = event.into_parts();
 
