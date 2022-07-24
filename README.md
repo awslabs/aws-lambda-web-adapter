@@ -78,7 +78,7 @@ The readiness check port/path and traffic port can be configured using environme
 **ASYNC_INIT** Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization, and it is free. 
 If a lambda function couldn't complete the initialization within 10 seconds, Lambda will restart the function, and bill for the initialization. 
 To help functions to use this 10 seconds free initialization time and avoid the restart, Lambda Web Adapter supports asynchronous initialization. 
-When this feature is enabled, Lambda Web Adapter will performance readiness check up to 9.8 seconds. If the web app is not ready by then, 
+When this feature is enabled, Lambda Web Adapter performs readiness check up to 9.8 seconds. If the web app is not ready by then, 
 Lambda Web Adapter signals to Lambda service that the init is completed, and continues readiness check in the handler. 
 This feature is disabled by default. Enable it by setting environment variable `ASYNC_INIT` to `true`. 
 
