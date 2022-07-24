@@ -11,7 +11,7 @@ lambda-extension = "0.6.0"
 lambda_http = "0.6.0"
 log = "0.4.14"
 reqwest = { version = "0.11", default-features = false, features = ["blocking", "json"] }
-tokio = { version = "1.20.0", features = ["macros", "io-util", "sync", "rt-multi-thread"] }
+tokio = { version = "1.20.0", features = ["macros", "io-util", "sync", "rt-multi-thread", "time"] }
 tokio-retry = "0.3"
 
 [[bin]]
