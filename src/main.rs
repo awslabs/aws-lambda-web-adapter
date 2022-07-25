@@ -64,8 +64,15 @@ async fn main() -> Result<(), Error> {
         .pool_idle_timeout(Duration::from_secs(4))
         .build()
         .unwrap();
-    lambda_http::run(http_handler(|event: Request| async move {
-        http_proxy_handler(event, http_client, options, is_ready).await
+    let mut first_invoke = true;
+    lambda_http::run(http_handler(|event: Request| {
+        let is_app_ready = if first_invoke {
+            first_invoke = false;
+            is_ready
+        } else {
+            true // the app must be ready after the first invoke
+        };
+        async move { http_proxy_handler(event, http_client, options, is_app_ready).await }
     }))
     .await?;
     Ok(())
