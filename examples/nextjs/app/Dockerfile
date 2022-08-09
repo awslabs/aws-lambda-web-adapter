@@ -3,7 +3,7 @@ WORKDIR /app
 COPY . .
 RUN npm ci && npm run build
 
-FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim as runner
+FROM public.ecr.aws/docker/library/node:16.16.0-slim as runner
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.3 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=3000 NODE_ENV=production
 WORKDIR /app
