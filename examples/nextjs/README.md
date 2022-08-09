@@ -88,24 +88,10 @@ To simplify troubleshooting, SAM CLI has a command called `sam logs`. `sam logs`
 `NOTE`: This command works for all AWS Lambda functions; not just the ones you deploy using SAM.
 
 ```bash
-serverless-nextjs-demo$ sam logs -n HelloWorldFunction --stack-name serverless-nextjs-demo --tail
+serverless-nextjs-demo$ sam logs -n NextjsFunction --stack-name serverless-nextjs-demo --tail
 ```
 
 You can find more information and examples about filtering Lambda function logs in the [SAM CLI Documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-logging.html).
-
-## Tests
-
-Tests are defined in the `hello-world/tests` folder in this project. Use NPM to install the [Mocha test framework](https://mochajs.org/) and run tests.
-
-```bash
-serverless-nextjs-demo$ cd hello-world
-hello-world$ npm install
-# Unit test
-hello-world$ npm run test
-# Integration test, requiring deploying the stack first.
-# Create the env variable AWS_SAM_STACK_NAME with the name of the stack we are testing
-hello-world$ AWS_SAM_STACK_NAME=<stack-name> npm run integ-test
-```
 
 ## Cleanup
 
