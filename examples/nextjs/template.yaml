@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  serverless-nextjs-demo
+
+  Sample SAM Template for serverless-nextjs-demo
+  
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  NextjsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      MemorySize: 512
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Events:
+        Root:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+        Proxy:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+    Metadata:
+      DockerTag: v1
+      DockerContext: ./app
+      Dockerfile: Dockerfile
+      
+Outputs:
+  NextjsFunctionURL:
+    Description: "API Gateway endpoint URL for Next.js"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
