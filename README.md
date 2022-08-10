@@ -92,10 +92,12 @@ Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the a
 - [Flask](examples/flask)
 - [Express.js](examples/expressjs)
 - [Express.js in Zip](examples/expressjs-zip)
+- [Next.js](examples/nextjs)
 - [SpringBoot](examples/springboot)
 - [SpringBoot in Zip](examples/springboot-zip)
 - [nginx](examples/nginx)
 - [php](examples/php)
+- [rust axum](examples/rust-axum-zip)
 
 ## Acknowledgement
 
