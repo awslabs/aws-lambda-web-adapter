@@ -45,8 +45,8 @@ build-mac:
 
 build-LambdaAdapterLayerX86:
 	cp layer/* $(ARTIFACTS_DIR)/
-	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=x86_64 -o $(ARTIFACTS_DIR)/extensions .
+	DOCKER_BUILDKIT=1 docker build --build-arg TARGET_PLATFORM=linux/amd64 --build-arg ARCH=x86_64 -o $(ARTIFACTS_DIR)/extensions .
 
 build-LambdaAdapterLayerArm64:
 	cp layer/* $(ARTIFACTS_DIR)/
-	DOCKER_BUILDKIT=1 docker build --build-arg ARCH=aarch64 -o $(ARTIFACTS_DIR)/extensions .
+	DOCKER_BUILDKIT=1 docker build --build-arg TARGET_PLATFORM=linux/arm64 --build-arg ARCH=aarch64 -o $(ARTIFACTS_DIR)/extensions .
