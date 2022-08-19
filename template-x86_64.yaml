@@ -9,6 +9,7 @@ Resources:
     Properties:
       ContentUri: .
       CompatibleRuntimes:
+        - nodejs16.x
         - nodejs14.x
         - nodejs12.x
         - python3.9
@@ -31,8 +32,10 @@ Resources:
       BuildMethod: makefile
       BuildArchitecture: x86_64
 
-  LayerPermission:
+  LayerVersionPermission:
     Type: AWS::Lambda::LayerVersionPermission
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Action: lambda:GetLayerVersion
       LayerVersionArn: !Ref LambdaAdapterLayerX86
