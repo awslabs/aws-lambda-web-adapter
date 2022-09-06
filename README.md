@@ -2,7 +2,7 @@
 
 A tool to run web applications on AWS Lambda
 
-AWS Lambda Web Adapter allows developers to build web app (http api) with familiar frameworks (e.g. Express.js, Flask, SpringBoot, and Laravel, anything speaks HTTP 1.1/1.0) and run it on AWS Lambda.
+AWS Lambda Web Adapter allows developers to build web apps (http api) with familiar frameworks (e.g. Express.js, Next.js, Flask, SpringBoot, and Laravel, anything speaks HTTP 1.1/1.0) and run it on AWS Lambda.
 The same docker image can run on AWS Lambda, Amazon EC2, AWS Fargate, and local computers.
 
 AWS Lambda Web Adapter is developed as a Lambda extension (since v0.2.0). For details, checkout its [design](docs/design.md) and [development](docs/development.md) documents.
@@ -93,6 +93,7 @@ Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the a
 - [Express.js](examples/expressjs)
 - [Express.js in Zip](examples/expressjs-zip)
 - [Next.js](examples/nextjs)
+- [Next.js in Zip](examples/nextjs-zip)
 - [SpringBoot](examples/springboot)
 - [SpringBoot in Zip](examples/springboot-zip)
 - [nginx](examples/nginx)
