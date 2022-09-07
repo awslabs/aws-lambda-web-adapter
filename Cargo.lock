@@ -51,7 +51,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "aws-lambda-adapter"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "env_logger",
  "http",
@@ -393,9 +393,9 @@ dependencies = [
 
 [[package]]
 name = "lambda_http"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a540048486ccfaa407ef7d2b50b7ff7b8c18abfbf351731a4ff7ccd165fc43fa"
+checksum = "cf9542aeed47b5ac3484b290b78f0af4d35739886dfaaa85da3151327a8ce47a"
 dependencies = [
  "aws_lambda_events",
  "base64",
@@ -410,6 +410,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "url",
 ]
 
 [[package]]
