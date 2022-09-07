@@ -50,3 +50,6 @@ build-LambdaAdapterLayerX86:
 build-LambdaAdapterLayerArm64:
 	cp layer/* $(ARTIFACTS_DIR)/
 	DOCKER_BUILDKIT=1 docker build --build-arg TARGET_PLATFORM=linux/arm64 --build-arg ARCH=aarch64 -o $(ARTIFACTS_DIR)/extensions .
+
+fmt:
+	cargo +nightly fmt --all
