@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 use lambda_extension::Extension;
 use lambda_http::{Body, Request, RequestExt, Response};
 use reqwest::{redirect, Client, Url};
@@ -112,9 +115,9 @@ impl Adapter {
 /// Implement a `Tower.Service` that sends the requests
 /// to the web server.
 impl Service<Request> for Adapter {
-    type Error = Error;
     type Response = http::Response<Body>;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Error>>>>;
+    type Error = Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
     fn poll_ready(&mut self, _cx: &mut core::task::Context<'_>) -> core::task::Poll<Result<(), Self::Error>> {
         core::task::Poll::Ready(Ok(()))
