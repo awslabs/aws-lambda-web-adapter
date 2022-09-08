@@ -1,8 +1,20 @@
 [package]
-name = "aws-lambda-adapter"
+name = "lambda_web_adapter"
 version = "0.3.4"
-authors = ["Harold Sun <sunhua@amazon.com>"]
+authors = [
+    "Harold Sun <sunhua@amazon.com>",
+    "David Calavera <dcalaver@amazon.com>",
+]
 edition = "2021"
+description = "Run web applications on AWS Lambda"
+keywords = ["AWS", "Lambda", "APIGateway", "ALB", "API"]
+license = "Apache-2.0"
+homepage = "https://github.com/awslabs/aws-lambda-web-adapter"
+repository = "https://github.com/awslabs/aws-lambda-web-adapter"
+documentation = "https://docs.rs/lambda_web_adapter"
+categories = ["web-programming::http-server"]
+readme = "README.md"
+exclude = ["examples"]
 
 [dependencies]
 env_logger = "0.8.3"
