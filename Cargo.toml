@@ -1,7 +1,10 @@
 [package]
 name = "aws-lambda-adapter"
 version = "0.3.4"
-authors = ["Harold Sun <sunhua@amazon.com>"]
+authors = [
+    "Harold Sun <sunhua@amazon.com>",
+    "David Calavera <dcalaver@amazon.com>",
+]
 edition = "2021"
 description = "Run web applications on AWS Lambda"
 keywords = ["AWS", "Lambda", "APIGateway", "ALB", "API"]
