@@ -3,7 +3,7 @@
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 
-use aws_lambda_adapter::{Adapter, AdapterOptions};
+use lambda_web_adapter::{Adapter, AdapterOptions};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -14,7 +14,7 @@ async fn main() -> Result<(), Error> {
         .init();
 
     let options = AdapterOptions::from_env();
-    aws_lambda_adapter::register_default_extension();
+    lambda_web_adapter::register_default_extension();
 
     let mut adapter = Adapter::new(&options);
     adapter.check_init_health().await;
