@@ -1,5 +1,5 @@
 [package]
-name = "aws-lambda-adapter"
+name = "lambda_web_adapter"
 version = "0.3.4"
 authors = [
     "Harold Sun <sunhua@amazon.com>",
