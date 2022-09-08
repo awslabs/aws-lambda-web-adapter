@@ -13,8 +13,8 @@ homepage = "https://github.com/awslabs/aws-lambda-web-adapter"
 repository = "https://github.com/awslabs/aws-lambda-web-adapter"
 documentation = "https://docs.rs/lambda_web_adapter"
 categories = ["web-programming::http-server"]
-readme = "/README.md"
-exclude = ["/examples"]
+readme = "README.md"
+exclude = ["examples"]
 
 [dependencies]
 env_logger = "0.8.3"
