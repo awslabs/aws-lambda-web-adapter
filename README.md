@@ -46,8 +46,8 @@ This works with any base images except AWS managed base images. To use AWS manag
 AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to do three things:
 
 1. attach Lambda Web Adapter layer to your function.
-   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:3`
-   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:3`
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:4`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:4`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 
@@ -106,6 +106,16 @@ This project was inspired by several community projects.
 
 - [re:Web](https://github.com/apparentorder/reweb)
 - [Serverlessish](https://github.com/glassechidna/serverlessish)
+
+## Similar Projects
+
+Several projects also provides similar capabilities as language specific package/frameworks. 
+
+- [Serverless Java Container](https://github.com/awslabs/aws-serverless-java-container)
+- [Serverless Express](https://github.com/vendia/serverless-express)
+- [Serverless Python - Zappa](https://github.com/zappa/Zappa)
+- [Serverless Ruby - Lamby](https://github.com/customink/lamby) 
+- [Serverless Php - Bref](https://github.com/brefphp/bref) 
 
 ## Security
 
