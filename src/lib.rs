@@ -4,7 +4,7 @@
 use lambda_extension::Extension;
 use lambda_http::{Body, Request, RequestExt, Response};
 use reqwest::{redirect, Client, Url};
-use std::{env, future::Future, mem, pin::Pin, time::Duration};
+use std::{env, future, future::Future, mem, pin::Pin, time::Duration};
 use tokio::{runtime::Handle, time::timeout};
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
@@ -95,20 +95,13 @@ impl Adapter {
 
     async fn check_readiness(&self) -> bool {
         Retry::spawn(FixedInterval::from_millis(10), || {
-            let fut = self.check_health_url();
-            async move { fut.await }
+            match reqwest::blocking::get(&self.healthcheck_url) {
+                Ok(response) if { response.status().is_success() } => future::ready(Ok(())),
+                _ => future::ready(Err::<(), i32>(-1)),
+            }
         })
         .await
-        .unwrap()
-    }
-
-    async fn check_health_url(&self) -> Result<bool, std::convert::Infallible> {
-        self.client
-            .head(&self.healthcheck_url)
-            .send()
-            .await
-            .map(|r| r.status().is_success())
-            .or(Ok(false))
+        .is_ok()
     }
 }
 
