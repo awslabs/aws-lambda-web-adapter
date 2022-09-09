@@ -115,7 +115,7 @@ Several projects also provides similar capabilities as language specific package
 - [Serverless Express](https://github.com/vendia/serverless-express)
 - [Serverless Python - Zappa](https://github.com/zappa/Zappa)
 - [Serverless Ruby - Lamby](https://github.com/customink/lamby) 
-- [Serverless Php - Bref](https://github.com/brefphp/bref) 
+- [Serverless PHP - Bref](https://github.com/brefphp/bref) 
 
 ## Security
 
