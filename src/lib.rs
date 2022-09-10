@@ -4,8 +4,18 @@
 use lambda_extension::Extension;
 use lambda_http::{Body, Request, RequestExt, Response};
 use reqwest::{redirect, Client, Url};
-use std::{env, future, future::Future, mem, pin::Pin, time::Duration};
-use tokio::{runtime::Handle, time::timeout};
+use std::{
+    env,
+    future::Future,
+    mem,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
+use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
 
@@ -39,10 +49,10 @@ impl AdapterOptions {
 }
 
 pub struct Adapter {
-    client: Client,
+    client: Arc<Client>,
     healthcheck_url: String,
     async_init: bool,
-    ready_at_init: bool,
+    ready_at_init: Arc<AtomicBool>,
     domain: Url,
     base_path: Option<String>,
 }
@@ -66,42 +76,40 @@ impl Adapter {
         let domain = format!("http://{}:{}", options.host, options.port).parse().unwrap();
 
         Adapter {
-            client,
+            client: Arc::new(client),
             healthcheck_url,
             domain,
             base_path: options.base_path.clone(),
             async_init: options.async_init,
-            ready_at_init: false,
+            ready_at_init: Arc::new(AtomicBool::new(false)),
         }
     }
 
     /// Switch the default HTTP client with a different one.
     pub fn with_client(self, client: Client) -> Self {
-        Adapter { client, ..self }
+        Adapter {
+            client: Arc::new(client),
+            ..self
+        }
     }
 
     /// Check if the web server has been initialized.
     /// If `Adapter.async_init` is true, cancel this check before
     /// Lambda's init 10s timeout, and let the server boot in the background.
     pub async fn check_init_health(&mut self) {
-        self.ready_at_init = if self.async_init {
+        let ready_at_init = if self.async_init {
             timeout(Duration::from_secs_f32(9.8), self.check_readiness())
                 .await
                 .unwrap_or_default()
         } else {
             self.check_readiness().await
         };
+        self.ready_at_init.store(ready_at_init, Ordering::SeqCst);
     }
 
     async fn check_readiness(&self) -> bool {
-        Retry::spawn(FixedInterval::from_millis(10), || {
-            match reqwest::blocking::get(&self.healthcheck_url) {
-                Ok(response) if { response.status().is_success() } => future::ready(Ok(())),
-                _ => future::ready(Err::<(), i32>(-1)),
-            }
-        })
-        .await
-        .is_ok()
+        let url = self.healthcheck_url.clone();
+        is_web_ready(&url).await
     }
 }
 
@@ -117,44 +125,83 @@ impl Service<Request> for Adapter {
     }
 
     fn call(&mut self, event: Request) -> Self::Future {
-        if self.async_init && !self.ready_at_init {
-            let handle = Handle::current();
-            handle.block_on(self.check_readiness());
-            self.ready_at_init = true;
-        }
-
-        let path = event.raw_http_path();
-        let mut path = path.as_str();
-        let (parts, body) = event.into_parts();
-
-        // strip away Base Path if environment variable REMOVE_BASE_PATH is set.
-        if let Some(base_path) = self.base_path.as_deref() {
-            path = path.trim_start_matches(base_path);
-        }
-
-        let mut app_url = self.domain.clone();
-        app_url.set_path(path);
-        app_url.set_query(parts.uri.query());
-        tracing::debug!(app_url = %app_url, "sending request to server");
-
-        let app_response = self
-            .client
-            .request(parts.method, app_url.to_string())
-            .headers(parts.headers)
-            .body(body.to_vec())
-            .send();
+        let async_init = self.async_init;
+        let client = self.client.clone();
+        let ready_at_init = self.ready_at_init.clone();
+        let healthcheck_url = self.healthcheck_url.clone();
+        let domain = self.domain.clone();
+        let base_path = self.base_path.clone();
 
         Box::pin(async move {
-            let app_response = app_response.await?;
-            let mut lambda_response = Response::builder();
-            let _ = mem::replace(lambda_response.headers_mut().unwrap(), app_response.headers().clone());
-
-            let status = app_response.status();
-            let body = convert_body(app_response).await?;
-            let resp = lambda_response.status(status).body(body).map_err(Box::new)?;
-
-            Ok(resp)
+            fetch_response(
+                async_init,
+                ready_at_init,
+                client,
+                base_path,
+                domain,
+                healthcheck_url,
+                event,
+            )
+            .await
         })
+    }
+}
+
+async fn fetch_response(
+    async_init: bool,
+    ready_at_init: Arc<AtomicBool>,
+    client: Arc<Client>,
+    base_path: Option<String>,
+    domain: Url,
+    healthcheck_url: String,
+    event: Request,
+) -> Result<http::Response<Body>, Error> {
+    if async_init && !ready_at_init.load(Ordering::SeqCst) {
+        is_web_ready(&healthcheck_url).await;
+        ready_at_init.store(true, Ordering::SeqCst);
+    }
+
+    let path = event.raw_http_path();
+    let mut path = path.as_str();
+    let (parts, body) = event.into_parts();
+
+    // strip away Base Path if environment variable REMOVE_BASE_PATH is set.
+    if let Some(base_path) = base_path.as_deref() {
+        path = path.trim_start_matches(base_path);
+    }
+
+    let mut app_url = domain;
+    app_url.set_path(path);
+    app_url.set_query(parts.uri.query());
+    tracing::debug!(app_url = %app_url, "sending request to server");
+
+    let app_response = client
+        .request(parts.method, app_url.to_string())
+        .headers(parts.headers)
+        .body(body.to_vec())
+        .send()
+        .await?;
+
+    let mut lambda_response = Response::builder();
+    let _ = mem::replace(lambda_response.headers_mut().unwrap(), app_response.headers().clone());
+
+    let status = app_response.status();
+    let body = convert_body(app_response).await?;
+    let resp = lambda_response.status(status).body(body).map_err(Box::new)?;
+
+    Ok(resp)
+}
+
+async fn is_web_ready(url: &str) -> bool {
+    Retry::spawn(FixedInterval::from_millis(10), || check_web_readiness(url))
+        .await
+        .is_ok()
+}
+
+async fn check_web_readiness(url: &str) -> Result<(), i8> {
+    match reqwest::get(url).await {
+        Ok(response) if { response.status().is_success() } => Ok(()),
+        _ => Err(-1),
     }
 }
 
