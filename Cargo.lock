@@ -421,7 +421,7 @@ dependencies = [
 
 [[package]]
 name = "lambda_web_adapter"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "env_logger",
  "http",
