@@ -19,7 +19,7 @@ To use Lambda Web Adapter with docker images, package your web app (http api) in
 By default, Lambda Web Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#Configurations).
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.3 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.4.0 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 Pre-compiled Lambda Web Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
@@ -29,7 +29,7 @@ Below is a Dockerfile for [an example nodejs application](examples/expressjs).
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.3 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.4.0 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=7000
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
@@ -46,8 +46,8 @@ This works with any base images except AWS managed base images. To use AWS manag
 AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to do three things:
 
 1. attach Lambda Web Adapter layer to your function.
-   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:3`
-   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:3`
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:5`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:5`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 
@@ -96,9 +96,9 @@ Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the a
 - [Next.js in Zip](examples/nextjs-zip)
 - [SpringBoot](examples/springboot)
 - [SpringBoot in Zip](examples/springboot-zip)
-- [nginx](examples/nginx)
-- [php](examples/php)
-- [rust axum](examples/rust-axum-zip)
+- [Nginx](examples/nginx)
+- [PHP](examples/php)
+- [Rust Axum in Zip](examples/rust-axum-zip)
 
 ## Acknowledgement
 
@@ -109,12 +109,12 @@ This project was inspired by several community projects.
 
 ## Similar Projects
 
-Several projects also provides similar capabilities as language specific package/frameworks. 
+Several projects also provide similar capabilities as language specific packages/frameworks. 
 
 - [Serverless Java Container](https://github.com/awslabs/aws-serverless-java-container)
 - [Serverless Express](https://github.com/vendia/serverless-express)
 - [Serverless Python - Zappa](https://github.com/zappa/Zappa)
-- [Serverless Ruby - Lamby](https://github.com/customink/lamby) 
+- [Serverless Rails - Lamby](https://github.com/customink/lamby) 
 - [Serverless PHP - Bref](https://github.com/brefphp/bref) 
 
 ## Security
