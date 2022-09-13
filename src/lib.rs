@@ -112,6 +112,7 @@ impl Adapter {
         is_web_ready(&url).await
     }
 
+    /// Run the adapter to take events from Lambda.
     pub async fn run(self) -> Result<(), Error> {
         lambda_http::run(self).await
     }
