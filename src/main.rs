@@ -1,9 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-
-use lambda_web_adapter::{Adapter, AdapterOptions};
+use lambda_web_adapter::{Adapter, AdapterOptions, Error};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 #[tokio::main]
@@ -18,6 +16,5 @@ async fn main() -> Result<(), Error> {
 
     let mut adapter = Adapter::new(&options);
     adapter.check_init_health().await;
-
-    lambda_http::run(adapter).await
+    adapter.run().await
 }

@@ -19,7 +19,7 @@ use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
 
-type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
+pub use lambda_http::Error;
 
 #[derive(Default)]
 pub struct AdapterOptions {
@@ -110,6 +110,11 @@ impl Adapter {
     async fn check_readiness(&self) -> bool {
         let url = self.healthcheck_url.clone();
         is_web_ready(&url).await
+    }
+
+    /// Run the adapter to take events from Lambda.
+    pub async fn run(self) -> Result<(), Error> {
+        lambda_http::run(self).await
     }
 }
 
