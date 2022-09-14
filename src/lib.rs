@@ -93,6 +93,22 @@ impl Adapter {
         }
     }
 
+    /// Register a Lambda Extension to ensure
+    /// that the adapter is loaded before any Lambda function
+    /// associated with it.
+    pub fn register_default_extension(&self) {
+        // register as an external extension
+        tokio::task::spawn(async move {
+            match Extension::new().with_events(&[]).run().await {
+                Ok(_) => {}
+                Err(err) => {
+                    tracing::error!(err = err, "extension terminated unexpectedly");
+                    panic!("extension thread execution");
+                }
+            }
+        });
+    }
+
     /// Check if the web server has been initialized.
     /// If `Adapter.async_init` is true, cancel this check before
     /// Lambda's init 10s timeout, and let the server boot in the background.
@@ -121,7 +137,7 @@ impl Adapter {
 /// Implement a `Tower.Service` that sends the requests
 /// to the web server.
 impl Service<Request> for Adapter {
-    type Response = http::Response<Body>;
+    type Response = Response<Body>;
     type Error = Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
@@ -160,7 +176,7 @@ async fn fetch_response(
     domain: Url,
     healthcheck_url: String,
     event: Request,
-) -> Result<http::Response<Body>, Error> {
+) -> Result<Response<Body>, Error> {
     if async_init && !ready_at_init.load(Ordering::SeqCst) {
         is_web_ready(&healthcheck_url).await;
         ready_at_init.store(true, Ordering::SeqCst);
@@ -208,22 +224,6 @@ async fn check_web_readiness(url: &str) -> Result<(), i8> {
         Ok(response) if { response.status().is_success() } => Ok(()),
         _ => Err(-1),
     }
-}
-
-/// Register a Lambda Extension to ensure
-/// that the adapter is loaded before any Lambda function
-/// associated with it.
-pub fn register_default_extension() {
-    // register as an external extension
-    tokio::task::spawn(async move {
-        match Extension::new().with_events(&[]).run().await {
-            Ok(_) => {}
-            Err(err) => {
-                tracing::error!(err = err, "extension terminated unexpectedly");
-                panic!("extension thread execution");
-            }
-        }
-    });
 }
 
 async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
