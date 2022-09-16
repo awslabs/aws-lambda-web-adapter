@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+use http_body::Body as HttpBody;
 use lambda_extension::Extension;
 use lambda_http::{Body, Request, RequestExt, Response};
 use reqwest::{redirect, Client, Url};
@@ -191,23 +192,30 @@ async fn fetch_response(
         path = path.trim_start_matches(base_path);
     }
 
+    let req_headers = parts.headers;
+
     let mut app_url = domain;
     app_url.set_path(path);
     app_url.set_query(parts.uri.query());
-    tracing::debug!(app_url = %app_url, "sending request to server");
+    tracing::debug!(app_url = %app_url, req_headers = ?req_headers, "sending request to app server");
 
     let app_response = client
         .request(parts.method, app_url.to_string())
-        .headers(parts.headers)
+        .headers(req_headers)
         .body(body.to_vec())
         .send()
         .await?;
 
-    let mut lambda_response = Response::builder();
-    let _ = mem::replace(lambda_response.headers_mut().unwrap(), app_response.headers().clone());
-
+    let app_headers = app_response.headers().clone();
     let status = app_response.status();
     let body = convert_body(app_response).await?;
+
+    tracing::debug!(status = %status, body_size = body.size_hint().lower(), app_headers = ?app_headers, "responding to lambda event");
+
+    let mut lambda_response = Response::builder();
+    if let Some(headers) = lambda_response.headers_mut() {
+        let _ = mem::replace(headers, app_headers);
+    }
     let resp = lambda_response.status(status).body(body).map_err(Box::new)?;
 
     Ok(resp)
@@ -227,11 +235,13 @@ async fn check_web_readiness(url: &str) -> Result<(), i8> {
 }
 
 async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
-    tracing::debug!(resp_headers = ?app_response.headers(), "converting response body");
-
     if app_response.headers().get(http::header::CONTENT_ENCODING).is_some() {
         let content = app_response.bytes().await?;
-        return Ok(Body::Binary(content.to_vec()));
+        if content.is_empty() {
+            return Ok(Body::Empty);
+        } else {
+            return Ok(Body::Binary(content.to_vec()));
+        }
     }
 
     match app_response.headers().get(http::header::CONTENT_TYPE) {

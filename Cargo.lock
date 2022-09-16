@@ -425,6 +425,7 @@ version = "0.4.0"
 dependencies = [
  "env_logger",
  "http",
+ "http-body",
  "lambda-extension",
  "lambda_http",
  "reqwest",

@@ -27,6 +27,7 @@ tokio-retry = "0.3"
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
 tower = "0.4.13"
+http-body = "0.4.5"
 
 [[bin]]
 name = "lambda-adapter"
