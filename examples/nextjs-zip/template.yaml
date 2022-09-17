@@ -23,7 +23,7 @@ Resources:
         Variables:
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           RUST_LOG: info
-          PORT: 8080
+          PORT: 8000
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:5
       Events:
