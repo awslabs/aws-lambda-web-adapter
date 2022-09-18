@@ -23,7 +23,7 @@ use tower::Service;
 pub use lambda_http::Error;
 use tokio::net::TcpStream;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Protocol {
     Http,
     Tcp,
