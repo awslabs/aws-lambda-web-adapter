@@ -70,7 +70,7 @@ nextjs-zip$ sam local invoke HelloWorldFunction --event events/event.json
 The SAM CLI can also emulate your application's API. Use the `sam local start-api` to run the API locally on port 3000.
 
 ```bash
-nextjs-zip$ sam local start-api
+nextjs-zip$ sam local start-api --region us-west-2
 nextjs-zip$ curl http://localhost:3000/
 ```
 
