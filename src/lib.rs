@@ -21,6 +21,29 @@ use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
 
 pub use lambda_http::Error;
+use tokio::net::TcpStream;
+
+#[derive(Clone, Copy)]
+pub enum Protocol {
+    Http,
+    Tcp,
+}
+
+impl Default for Protocol {
+    fn default() -> Self {
+        Protocol::Http
+    }
+}
+
+impl From<&str> for Protocol {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "http" => Protocol::Http,
+            "tcp" => Protocol::Tcp,
+            _ => Protocol::Http,
+        }
+    }
+}
 
 #[derive(Default)]
 pub struct AdapterOptions {
@@ -28,6 +51,7 @@ pub struct AdapterOptions {
     port: String,
     readiness_check_port: String,
     readiness_check_path: String,
+    readiness_check_protocol: Protocol,
     base_path: Option<String>,
     async_init: bool,
 }
@@ -40,6 +64,10 @@ impl AdapterOptions {
             readiness_check_port: env::var("READINESS_CHECK_PORT")
                 .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
             readiness_check_path: env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string()),
+            readiness_check_protocol: env::var("READINESS_CHECK_PROTOCOL")
+                .unwrap_or_else(|_| "HTTP".to_string())
+                .as_str()
+                .into(),
             base_path: env::var("REMOVE_BASE_PATH").ok(),
             async_init: env::var("ASYNC_INIT")
                 .unwrap_or_else(|_| "false".to_string())
@@ -51,7 +79,8 @@ impl AdapterOptions {
 
 pub struct Adapter {
     client: Arc<Client>,
-    healthcheck_url: String,
+    healthcheck_url: Url,
+    healthcheck_protocol: Protocol,
     async_init: bool,
     ready_at_init: Arc<AtomicBool>,
     domain: Url,
@@ -72,13 +101,16 @@ impl Adapter {
         let healthcheck_url = format!(
             "http://{}:{}{}",
             options.host, options.readiness_check_port, options.readiness_check_path
-        );
+        )
+        .parse()
+        .unwrap();
 
         let domain = format!("http://{}:{}", options.host, options.port).parse().unwrap();
 
         Adapter {
             client: Arc::new(client),
             healthcheck_url,
+            healthcheck_protocol: options.readiness_check_protocol,
             domain,
             base_path: options.base_path.clone(),
             async_init: options.async_init,
@@ -126,7 +158,8 @@ impl Adapter {
 
     async fn check_readiness(&self) -> bool {
         let url = self.healthcheck_url.clone();
-        is_web_ready(&url).await
+        let protocol = self.healthcheck_protocol;
+        is_web_ready(&url, &protocol).await
     }
 
     /// Run the adapter to take events from Lambda.
@@ -151,6 +184,7 @@ impl Service<Request> for Adapter {
         let client = self.client.clone();
         let ready_at_init = self.ready_at_init.clone();
         let healthcheck_url = self.healthcheck_url.clone();
+        let healthcheck_protocol = self.healthcheck_protocol;
         let domain = self.domain.clone();
         let base_path = self.base_path.clone();
 
@@ -162,6 +196,7 @@ impl Service<Request> for Adapter {
                 base_path,
                 domain,
                 healthcheck_url,
+                healthcheck_protocol,
                 event,
             )
             .await
@@ -175,11 +210,12 @@ async fn fetch_response(
     client: Arc<Client>,
     base_path: Option<String>,
     domain: Url,
-    healthcheck_url: String,
+    healthcheck_url: Url,
+    healthcheck_protocol: Protocol,
     event: Request,
 ) -> Result<Response<Body>, Error> {
     if async_init && !ready_at_init.load(Ordering::SeqCst) {
-        is_web_ready(&healthcheck_url).await;
+        is_web_ready(&healthcheck_url, &healthcheck_protocol).await;
         ready_at_init.store(true, Ordering::SeqCst);
     }
 
@@ -221,27 +257,33 @@ async fn fetch_response(
     Ok(resp)
 }
 
-async fn is_web_ready(url: &str) -> bool {
-    Retry::spawn(FixedInterval::from_millis(10), || check_web_readiness(url))
+async fn is_web_ready(url: &Url, protocol: &Protocol) -> bool {
+    Retry::spawn(FixedInterval::from_millis(10), || check_web_readiness(url, protocol))
         .await
         .is_ok()
 }
 
-async fn check_web_readiness(url: &str) -> Result<(), i8> {
-    match reqwest::get(url).await {
-        Ok(response) if { response.status().is_success() } => Ok(()),
-        _ => Err(-1),
+async fn check_web_readiness(url: &Url, protocol: &Protocol) -> Result<(), i8> {
+    match protocol {
+        Protocol::Http => match reqwest::get(url.as_str()).await {
+            Ok(response) if { response.status().is_success() } => Ok(()),
+            _ => Err(-1),
+        },
+        Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await {
+            Ok(_) => Ok(()),
+            Err(_) => Err(-1),
+        },
     }
 }
 
 async fn convert_body(app_response: reqwest::Response) -> Result<Body, Error> {
     if app_response.headers().get(http::header::CONTENT_ENCODING).is_some() {
         let content = app_response.bytes().await?;
-        if content.is_empty() {
-            return Ok(Body::Empty);
+        return if content.is_empty() {
+            Ok(Body::Empty)
         } else {
-            return Ok(Body::Binary(content.to_vec()));
-        }
+            Ok(Body::Binary(content.to_vec()))
+        };
     }
 
     match app_response.headers().get(http::header::CONTENT_TYPE) {
