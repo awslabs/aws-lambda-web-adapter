@@ -16,12 +16,12 @@ use std::{
     },
     time::Duration,
 };
+use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
 
 pub use lambda_http::Error;
-use tokio::net::TcpStream;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Protocol {
@@ -204,6 +204,7 @@ impl Service<Request> for Adapter {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn fetch_response(
     async_init: bool,
     ready_at_init: Arc<AtomicBool>,
