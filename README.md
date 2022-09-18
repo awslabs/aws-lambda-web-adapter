@@ -67,13 +67,14 @@ After passing readiness check, Lambda Web Adapter will start Lambda Runtime and 
 
 The readiness check port/path and traffic port can be configured using environment variables. These environment variables can be defined either within docker file or as Lambda function configuration.
 
-| Environment Variable | Description                                                          | Default |
-|----------------------|----------------------------------------------------------------------|---------|
-| PORT                 | traffic port                                                         | "8080"  |
-| READINESS_CHECK_PORT | readiness check port, default to the traffic port                    | PORT    |
-| READINESS_CHECK_PATH | readiness check path                                                 | "/"     |
-| ASYNC_INIT           | enable asynchronous initialization for long initialization functions | "false" |
-| REMOVE_BASE_PATH     | (optional) the base path to be removed from request path             | None    |
+| Environment Variable     | Description                                                          | Default |
+|--------------------------|----------------------------------------------------------------------|---------|
+| PORT                     | traffic port                                                         | "8080"  |
+| READINESS_CHECK_PORT     | readiness check port, default to the traffic port                    | PORT    |
+| READINESS_CHECK_PATH     | readiness check path                                                 | "/"     |
+| READINESS_CHECK_PROTOCOL | readiness check protocol: "http" or "tcp", default is "http"         | "http"  |
+| ASYNC_INIT               | enable asynchronous initialization for long initialization functions | "false" |
+| REMOVE_BASE_PATH         | (optional) the base path to be removed from request path             | None    |
 
 **ASYNC_INIT** Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization, and it is free. 
 If a lambda function couldn't complete the initialization within 10 seconds, Lambda will restart the function, and bill for the initialization. 
