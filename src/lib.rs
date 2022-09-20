@@ -1,10 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use http_body::Body as HttpBody;
-use lambda_extension::Extension;
-use lambda_http::{Body, Request, RequestExt, Response};
-use reqwest::{redirect, Client, Url};
 use std::{
     env,
     future::Future,
@@ -16,12 +12,16 @@ use std::{
     },
     time::Duration,
 };
+
+use http_body::Body as HttpBody;
+use lambda_extension::Extension;
+pub use lambda_http::Error;
+use lambda_http::{Body, Request, RequestExt, Response};
+use reqwest::{redirect, Client, Url};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
-
-pub use lambda_http::Error;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Protocol {
