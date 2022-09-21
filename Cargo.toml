@@ -1,6 +1,6 @@
 [package]
 name = "lambda_web_adapter"
-version = "0.4.0"
+version = "0.4.1"
 authors = [
     "Harold Sun <sunhua@amazon.com>",
     "David Calavera <dcalaver@amazon.com>",
@@ -17,7 +17,6 @@ readme = "README.md"
 exclude = ["examples"]
 
 [dependencies]
-env_logger = "0.8.3"
 http = "0.2.4"
 lambda-extension = "0.6.0"
 lambda_http = "0.6.1"
