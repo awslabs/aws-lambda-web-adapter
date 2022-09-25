@@ -103,6 +103,8 @@ Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the a
 - [Nginx](examples/nginx)
 - [PHP](examples/php)
 - [Rust Axum in Zip](examples/rust-axum-zip)
+- [Golang Gin](examples/gin)
+- [Golang Gin in Zip](examples/gin-zip)
 
 ## Acknowledgement
 
