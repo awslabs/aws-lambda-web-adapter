@@ -19,6 +19,7 @@ To get more information of Wrapper script, please read Lambda documentation [her
 Run the following commands to build and deploy the application to lambda. 
 
 ```bash
+aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
 sam build --use-container
 sam deploy --guided
 ```
