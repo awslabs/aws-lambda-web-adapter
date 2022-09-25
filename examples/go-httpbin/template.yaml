@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Go-HttpBin
+
+  Sample SAM Template for Go-HttpBin
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  HttpBinFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 256
+      Events:
+        APIEvent:
+          Type: HttpApi
+    Metadata:
+      DockerTag: v1
+      DockerContext: ./app
+      Dockerfile: Dockerfile
+
+Outputs:
+  HttpBinApi:
+    Description: "API Gateway endpoint URL for Prod stage for HttpBin function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+
