@@ -5,26 +5,144 @@ Description: >
 
   Sample SAM Template for Go-HttpBin
 
+Parameters:
+  Subnets:
+    Type: AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>
+    Default: /lambda-web-adapter/e2e/subnets
+  VpcId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::VPC::Id>
+    Default: /lambda-web-adapter/e2e/vpcid
+  CertificateArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /lambda-web-adapter/e2e/cert
+  Route53HostedZone:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /lambda-web-adapter/e2e/hostedzone
+  Route53HostedZoneId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /lambda-web-adapter/e2e/hostedzoneid
+
 Globals:
   Function:
     Timeout: 10
 
 Resources:
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      BinaryMediaTypes:
+        - '*~1*'
+      Domain:
+        CertificateArn: !Ref CertificateArn
+        DomainName: !Sub httpbin-rest-oci.${Route53HostedZone}
+        EndpointConfiguration: REGIONAL
+        Route53:
+          HostedZoneId: !Ref Route53HostedZoneId
+      EndpointConfiguration:
+        Type: REGIONAL
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Domain:
+        CertificateArn: !Ref CertificateArn
+        DomainName: !Sub httpbin-http-oci.${Route53HostedZone}
+        Route53:
+          HostedZoneId: !Ref Route53HostedZoneId
+
   HttpBinFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
       MemorySize: 256
       Events:
-        APIEvent:
+        HttpAPIEvent:
           Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+        RestAPIRoot:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref RestApi
+        RestAPIProxy:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref RestApi
     Metadata:
       DockerTag: v1
       DockerContext: ./app
       Dockerfile: Dockerfile
 
-Outputs:
-  HttpBinApi:
-    Description: "API Gateway endpoint URL for Prod stage for HttpBin function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
 
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Subnets: !Ref Subnets
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+
+  HttpBinFunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt HttpBinFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: elasticloadbalancing.amazonaws.com
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: HttpBinFunctionInvokePermission
+    Properties:
+      TargetType: lambda
+      Targets:
+        - Id: !GetAtt HttpBinFunction.Arn
+
+  HttpsListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+
+  AlbDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId : !Ref Route53HostedZoneId
+      Name: !Sub httpbin-alb-oci.${Route53HostedZone}
+      AliasTarget:
+        DNSName: !GetAtt LoadBalancer.DNSName
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+      Type: A
+
+Outputs:
+  HttpBinHttpApi:
+    Description: "API Gateway Http API endpoint URL for default stage for HttpBin function"
+    Value: !Sub "https://httpbin-http-oci.${Route53HostedZone}/"
+
+  HttpBinRestApi:
+    Description: "API Gateway Rest API endpoint URL for Prod stage for HttpBin function"
+    Value: !Sub "https://httpbin-rest-oci.${Route53HostedZone}/"
+
+  HttpBinAlbDNS:
+    Description: "Application Load Balancer for HttpBin function"
+    Value: !Sub "https://${AlbDNSRecord}/"
