@@ -173,7 +173,7 @@ impl Adapter {
 impl Service<Request> for Adapter {
     type Response = Response<Body>;
     type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, _cx: &mut core::task::Context<'_>) -> core::task::Poll<Result<(), Self::Error>> {
         core::task::Poll::Ready(Ok(()))
