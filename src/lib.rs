@@ -267,8 +267,8 @@ async fn is_web_ready(url: &Url, protocol: &Protocol) -> bool {
 async fn check_web_readiness(url: &Url, protocol: &Protocol) -> Result<(), i8> {
     match protocol {
         Protocol::Http => match reqwest::get(url.as_str()).await {
-            Ok(response) if { response.status().is_success() } => Ok(()),
-            _ => Err(-1),
+            Ok(_) => Ok(()),
+            Err(_) => Err(-1),
         },
         Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await {
             Ok(_) => Ok(()),
