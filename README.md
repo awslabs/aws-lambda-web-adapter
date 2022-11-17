@@ -59,7 +59,7 @@ When a new Lambda Execution Environment starts up, Lambda Web Adapter will boot 
 
 By default, Lambda Web Adapter will send HTTP GET requests to the web application at `http://127.0.0.1:8080/`. The port and path can be customized with two environment variables: `READINESS_CHECK_PORT` and `READINESS_CHECK_PATH`.  
 
-Lambda Web Adapter will retry this request every 10 milliseconds until the web application returns a successful response (http status code 2xx) or the function times out. 
+Lambda Web Adapter will retry this request every 10 milliseconds until the web application returns an HTTP response (any status code) or the function times out. 
 
 In addition, you can configure the adapter to preform readiness check with TCP connect, by setting `READINESS_CHECK_PROTOCOL` to `tcp`. 
 
