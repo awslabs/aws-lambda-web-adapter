@@ -19,7 +19,7 @@ To use Lambda Web Adapter with docker images, package your web app (http api) in
 By default, Lambda Web Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#Configurations).
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.5.0 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.0 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 Pre-compiled Lambda Web Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
@@ -29,7 +29,7 @@ Below is a Dockerfile for [an example nodejs application](examples/expressjs).
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.5.0 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.0 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=7000
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
@@ -46,8 +46,8 @@ This works with any base images except AWS managed base images. To use AWS manag
 AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to do three things:
 
 1. attach Lambda Web Adapter layer to your function.
-   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:7`
-   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:7`
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:10`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:10`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 
@@ -89,6 +89,13 @@ This feature is disabled by default. Enable it by setting environment variable `
 For example, you could have configured your API Gateway to have a /orders/{proxy+} and a /catalog/{proxy+} resource.
 Each resource is handled by a separate Lambda functions. For this reason, the application inside Lambda may not be aware of the fact that the /orders path exists.
 Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the application. Defaults to empty string. Checkout [SpringBoot](examples/springboot) example.
+
+### Request Context
+
+**Request Context** is metadata API Gateway sends to Lambda for a request. It usually contains requestId, requestTime, apiId, identity, and authorizer. Identity and authorizer are useful to get client identity for authorization. API Gateway Developer Guide contains more details [here](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format).  
+
+Lambda Web Adapter forwards this information to the web applicatioin in a Http Header named "x-amzn-request-context". In the web application, you can retrieve the value of this http header and deserialize it into a JSON object. Check out [Express.js in Zip](examples/expressjs-zip) on how to use it.
+
 
 ## Examples
 

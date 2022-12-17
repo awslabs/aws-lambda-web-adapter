@@ -13,10 +13,13 @@ Resources:
   PetstoreFunction:
     Type: AWS::Serverless::Function
     Properties:
-      MemorySize: 2048
+      MemorySize: 512
       Handler: run.sh
       CodeUri: app/
       Runtime: java11
+      AutoPublishAlias: live
+      SnapStart:
+        ApplyOn: PublishedVersions
       Environment:
         Variables:
           RUST_LOG: info
@@ -24,7 +27,7 @@ Resources:
           REMOVE_BASE_PATH: /v1
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:7
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:10
       Events:
         Root:
           Type: HttpApi
