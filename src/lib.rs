@@ -13,8 +13,10 @@ use std::{
     time::Duration,
 };
 
+use http::header::{HeaderName, HeaderValue};
 use http_body::Body as HttpBody;
 use lambda_extension::Extension;
+use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
 use lambda_http::{Body, Request, RequestExt, Response};
 use reqwest::{redirect, Client, Url};
@@ -220,6 +222,7 @@ async fn fetch_response(
         ready_at_init.store(true, Ordering::SeqCst);
     }
 
+    let request_context = event.request_context();
     let path = event.raw_http_path();
     let mut path = path.as_str();
     let (parts, body) = event.into_parts();
@@ -229,7 +232,13 @@ async fn fetch_response(
         path = path.trim_start_matches(base_path);
     }
 
-    let req_headers = parts.headers;
+    let mut req_headers = parts.headers;
+
+    // include request context in http header "x-amzn-request-context"
+    req_headers.append(
+        HeaderName::from_static("x-amzn-request-context"),
+        HeaderValue::from_bytes(serde_json::to_string(&request_context).unwrap().as_bytes()).unwrap(),
+    );
 
     let mut app_url = domain;
     app_url.set_path(path);
