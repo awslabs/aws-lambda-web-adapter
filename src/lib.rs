@@ -25,7 +25,7 @@ use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Protocol {
     Http,
     Tcp,
@@ -49,13 +49,13 @@ impl From<&str> for Protocol {
 
 #[derive(Default)]
 pub struct AdapterOptions {
-    host: String,
-    port: String,
-    readiness_check_port: String,
-    readiness_check_path: String,
-    readiness_check_protocol: Protocol,
-    base_path: Option<String>,
-    async_init: bool,
+    pub host: String,
+    pub port: String,
+    pub readiness_check_port: String,
+    pub readiness_check_path: String,
+    pub readiness_check_protocol: Protocol,
+    pub base_path: Option<String>,
+    pub async_init: bool,
 }
 
 impl AdapterOptions {
