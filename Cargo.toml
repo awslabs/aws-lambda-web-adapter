@@ -28,6 +28,9 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["e
 tower = "0.4.13"
 http-body = "0.4.5"
 
+[dev-dependencies]
+httpmock = "0.6"
+
 [[bin]]
 name = "lambda-adapter"
 path = "src/main.rs"
