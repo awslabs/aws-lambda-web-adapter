@@ -17,16 +17,26 @@ readme = "README.md"
 exclude = ["examples"]
 
 [dependencies]
-http = "0.2.4"
+http = "0.2"
+hyper = { version = "0.14", features = ["client"] }
 lambda-extension = "0.7.0"
 lambda_http = "0.7.2"
-reqwest = { version = "0.11", default-features = false, features = ["json"] }
-tokio = { version = "1.20.0", features = ["macros", "io-util", "sync", "rt-multi-thread", "time"] }
+tokio = { version = "1.20.0", features = [
+    "macros",
+    "io-util",
+    "sync",
+    "rt-multi-thread",
+    "time",
+] }
 tokio-retry = "0.3"
 tracing = { version = "0.1", features = ["log"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+    "env-filter",
+    "fmt",
+] }
 tower = "0.4.13"
-http-body = "0.4.5"
+encoding_rs = "0.8.31"
+mime = "0.3.16"
 
 [dev-dependencies]
 httpmock = "0.6"
