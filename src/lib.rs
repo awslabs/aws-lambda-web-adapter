@@ -138,7 +138,7 @@ impl Adapter {
         // register as an external extension
         tokio::task::spawn(async move {
             let aws_lambda_runtime_api: String =
-                env::var("aws_lambda_runtime_api").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
+                env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
             let client = hyper::Client::new();
             let register_req = hyper::Request::builder()
                 .method(Method::POST)
