@@ -21,7 +21,7 @@ http = "0.2"
 hyper = { version = "0.14", features = ["client"] }
 lambda-extension = "0.7.0"
 lambda_http = "0.7.2"
-tokio = { version = "1.20.0", features = [
+tokio = { version = "1.20.3", features = [
     "macros",
     "io-util",
     "sync",
