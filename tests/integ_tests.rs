@@ -8,10 +8,9 @@ use httpmock::{
     Method::{DELETE, GET, POST, PUT},
     MockServer,
 };
-use lambda_extension::Service;
-
 use lambda_http::Body;
 use lambda_web_adapter::{Adapter, AdapterOptions, Protocol};
+use tower::Service;
 
 #[test]
 fn test_adapter_options_from_env() {
