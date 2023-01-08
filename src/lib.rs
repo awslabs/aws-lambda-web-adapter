@@ -17,13 +17,13 @@ use std::{
 use encoding_rs::{Encoding, UTF_8};
 use http::{
     header::{HeaderName, HeaderValue},
-    Uri,
+    Method, StatusCode, Uri,
 };
 use hyper::{
     body::HttpBody,
     client::{Client, HttpConnector},
+    Body,
 };
-use lambda_extension::Extension;
 use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
 use lambda_http::{Body as LambdaBody, Request, RequestExt, Response};
@@ -137,13 +137,31 @@ impl Adapter {
     pub fn register_default_extension(&self) {
         // register as an external extension
         tokio::task::spawn(async move {
-            match Extension::new().with_events(&[]).run().await {
-                Ok(_) => {}
-                Err(err) => {
-                    tracing::error!(err = err, "extension terminated unexpectedly");
-                    panic!("extension thread execution");
-                }
+            let aws_lambda_runtime_api: String =
+                env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
+            let client = hyper::Client::new();
+            let register_req = hyper::Request::builder()
+                .method(Method::POST)
+                .uri(format!("http://{aws_lambda_runtime_api}/2020-01-01/extension/register"))
+                .header("Lambda-Extension-Name", "lambda-adapter")
+                .body(Body::from("{ \"events\": [] }"))
+                .unwrap();
+            let register_res = client.request(register_req).await.unwrap();
+            if register_res.status() != StatusCode::OK {
+                panic!("extension registration failure");
             }
+            let next_req = hyper::Request::builder()
+                .method(Method::GET)
+                .uri(format!(
+                    "http://{aws_lambda_runtime_api}/2020-01-01/extension/event/next"
+                ))
+                .header(
+                    "Lambda-Extension-Identifier",
+                    register_res.headers().get("Lambda-Extension-Identifier").unwrap(),
+                )
+                .body(Body::empty())
+                .unwrap();
+            client.request(next_req).await.unwrap();
         });
     }
 
