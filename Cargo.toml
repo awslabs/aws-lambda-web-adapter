@@ -1,6 +1,6 @@
 [package]
 name = "lambda_web_adapter"
-version = "0.6.0"
+version = "0.6.1"
 authors = [
     "Harold Sun <sunhua@amazon.com>",
     "David Calavera <dcalaver@amazon.com>",
@@ -19,7 +19,7 @@ exclude = ["examples"]
 [dependencies]
 http = "0.2"
 hyper = { version = "0.14", features = ["client"] }
-lambda_http = "0.7.2"
+lambda_http = "0.7.3"
 tokio = { version = "1.24", features = [
     "macros",
     "io-util",
