@@ -4,7 +4,7 @@ COPY . .
 RUN npm ci && npm run build
 
 FROM public.ecr.aws/docker/library/node:16.16.0-slim as runner
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.0 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.1 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=3000 NODE_ENV=production
 WORKDIR /app
 COPY --from=builder /app/public ./public
