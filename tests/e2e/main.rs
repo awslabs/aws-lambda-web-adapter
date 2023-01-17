@@ -9,7 +9,7 @@ async fn test_oci_rest_basic_request() {
 
     let client = Client::builder().build::<_, hyper::Body>(HttpsConnector::new());
 
-    let response = client.get((&oci_rest_endpoint).parse().unwrap()).await.unwrap();
+    let response = client.get(oci_rest_endpoint.parse().unwrap()).await.unwrap();
 
     assert_eq!(200, response.status());
 }
