@@ -337,8 +337,70 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: |
-          # trigger the integration tests here
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the beta pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: beta-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: deploy the oci x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e/fixtures/go-httpbin
+        run: |
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-oci-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - name: deploy the zip x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e/fixtures/go-httpbin-zip
+        run: |
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-zip-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - uses: dkershner6/aws-ssm-getparameters-action@v1
+        with:
+          parameterPairs:   "/lambda-web-adapter/e2e/oci/rest-api-endpoint = OCI_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/oci/http-api-endpoint = OCI_HTTP_ENDPOINT, 
+                             /lambda-web-adapter/e2e/oci/alb-endpoint      = OCI_ALB_ENDPOINT, 
+                             /lambda-web-adapter/e2e/oci/function-url      = OCI_FURL_ENDPOINT,
+                             /lambda-web-adapter/e2e/zip/rest-api-endpoint = ZIP_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/zip/http-api-endpoint = ZIP_HTTP_ENDPOINT, 
+                             /lambda-web-adapter/e2e/zip/alb-endpoint      = ZIP_ALB_ENDPOINT, 
+                             /lambda-web-adapter/e2e/zip/function-url      = ZIP_FURL_ENDPOINT"
+
+      - name: run e2e tests
+        run: |
+          cargo test -- --ignored
+
+      - name: remove the oci x86 integration test stacks
+        working-directory: ./tests/e2e/fixtures/go-httpbin
+        run: |
+          sam delete --no-prompts --stack-name ${BETA_STACK_NAME}-oci-x86 
+
+      - name: deploy the zip x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e/fixtures/go-httpbin-zip
+        run: |
+          sam delete --no-prompts --stack-name ${BETA_STACK_NAME}-zip-x86 
 
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}

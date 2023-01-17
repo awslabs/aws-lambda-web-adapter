@@ -39,6 +39,7 @@ mime = "0.3.16"
 
 [dev-dependencies]
 httpmock = "0.6"
+hyper-tls = "0.5.0"
 
 [[bin]]
 name = "lambda-adapter"
