@@ -395,12 +395,12 @@ jobs:
       - name: remove the oci x86 integration test stacks
         working-directory: ./tests/e2e/fixtures/go-httpbin
         run: |
-          sam delete --no-prompts --stack-name ${BETA_STACK_NAME}-oci-x86 
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86 
 
       - name: deploy the zip x86 integration test stacks for the beta environment
         working-directory: ./tests/e2e/fixtures/go-httpbin-zip
         run: |
-          sam delete --no-prompts --stack-name ${BETA_STACK_NAME}-zip-x86 
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86 
 
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
