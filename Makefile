@@ -52,4 +52,4 @@ build-LambdaAdapterLayerArm64:
 	DOCKER_BUILDKIT=1 docker build --build-arg TARGET_PLATFORM=linux/arm64 --build-arg ARCH=aarch64 -o $(ARTIFACTS_DIR)/extensions .
 
 fmt:
-	cargo +nightly fmt --all
+	cargo fmt --all

@@ -7,8 +7,8 @@ This example shows how to use Lambda Adapter to run an Flask application on mana
 We add Lambda Adapter layer to the function and configure wrapper script. 
 
 1. attach Lambda Adapter layer to your function. This layer containers Lambda Adapter binary and a wrapper script. 
-    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:6`
-    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:6`
+    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11`
+    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:11`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. This is a wrapper script included in the layer.
 3. set function handler to a startup command: `run.sh`. The wrapper script will execute this command to boot up your application. 
 

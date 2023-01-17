@@ -4,7 +4,12 @@ const port = process.env['PORT'] || 8080
 
 
 app.get('/', (req, res) => {
-    res.send('Hi there!')
+    // deserialize request context from the http header 'x-amzn-request-context'
+    let requestContext = JSON.parse(req.headers['x-amzn-request-context'])
+    res.send({
+        messagge: 'Hi there!', 
+        requestContext
+    })
 })
 
 app.listen(port, () => {

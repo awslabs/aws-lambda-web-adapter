@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Go-Gin-Zip
+
+  Sample SAM Template for Go-Gin-Zip
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  GinFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./app
+      Handler: bootstrap
+      Runtime: provided.al2
+      MemorySize: 256
+      Environment:
+        Variables:
+          PORT: 8000
+          GIN_MODE: release
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
+      Events:
+        APIEvent:
+          Type: HttpApi
+    Metadata:
+       BuildMethod: makefile
+
+Outputs:
+  GinApi:
+    Description: "API Gateway endpoint URL for Prod stage for Gin function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+

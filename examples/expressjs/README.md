@@ -10,12 +10,12 @@ The top level folder is a typical AWS SAM project. The `app` directory is an exp
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.1 /lambda-adapter /opt/extensions/lambda-adapter
 EXPOSE 8080
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
 ADD src/package-lock.json /var/task/package-lock.json
-RUN npm install --production
+RUN npm install --omit=dev
 ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
@@ -23,7 +23,7 @@ CMD ["node", "index.js"]
 Line 2 copies lambda adapter binary into /opt/extenions. This is the only change to run the express.js application on Lambda.
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.2.0 /opt/extensions/lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.1 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 ## Pre-requisites

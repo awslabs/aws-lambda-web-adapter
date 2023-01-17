@@ -9,17 +9,20 @@ To run the application we are using the run.sh script located in the resources f
 ```shell
 #!/bin/sh
 
-java -cp "./:lib/*" "-XX:TieredStopAtLevel=1" "com.amazonaws.demo.petstore.Application"
+exec java -cp "./:lib/*" "com.amazonaws.demo.petstore.Application"
 ```
 
 In the configuration we have to specify the AWS Lambda adapter as a layer and configure the script as handler:
 
 ```yaml
  Properties:
-      MemorySize: 2048
+      MemorySize: 512
       Handler: run.sh
       CodeUri: app/
       Runtime: java11
+      AutoPublishAlias: live
+      SnapStart:
+        ApplyOn: PublishedVersions      
       Environment:
         Variables:
           RUST_LOG: info
@@ -27,8 +30,10 @@ In the configuration we have to specify the AWS Lambda adapter as a layer and co
           REMOVE_BASE_PATH: /v1
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:2
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
 ```
+In this template, we enable SnapStart for this function. SnapStart drastically reduces cold start time for Java functions using Firecracker MicroVM snapshotting technology. Read more about SnapStart [here](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html).
+
 ### Remove the base path
 
 The pet store application is deployed under /v1/{proxy+}. But the application does not know that. So in the SAM template file, we configured environment variable `REMOVE_BASE_PATH=/v1`. 
