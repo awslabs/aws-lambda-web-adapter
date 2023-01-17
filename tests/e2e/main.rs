@@ -10,11 +10,11 @@ fn get_endpoints() -> Vec<Option<String>> {
         "OCI_REST_ENDPOINT",
         "OCI_HTTP_ENDPOINT",
         "OCI_ALB_ENDPOINT",
-        "OCI_FURL_ENDPOINT",
+        // "OCI_FURL_ENDPOINT",
         "ZIP_REST_ENDPOINT",
         "ZIP_HTTP_ENDPOINT",
         "ZIP_ALB_ENDPOINT",
-        "ZIP_FURL_ENDPOINT",
+        // "ZIP_FURL_ENDPOINT",
     ];
 
     configurations.iter().map(|e| env::var(e).ok()).collect()
