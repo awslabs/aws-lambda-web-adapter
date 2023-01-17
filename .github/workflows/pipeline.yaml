@@ -33,11 +33,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          components: clippy
+          components: clippy, rustfmt
       - name: linting
         run: |
           cargo fmt -- --check
@@ -50,14 +50,16 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: aws-actions/setup-sam@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
 
       - name: Build x86_64 Layer
         run: sam build --template ${SAM_TEMPLATE_X86_64} -b build-x86_64
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: aws-sam-build-x86_64
           path: build-x86_64
@@ -65,7 +67,7 @@ jobs:
       - name: Build arm64 Layer
         run: sam build --template ${SAM_TEMPLATE_ARM64} -b build-arm64
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: aws-sam-build-arm64
           path: build-arm64
@@ -77,9 +79,9 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}"
+        run: echo "name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
   load-prod-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -88,21 +90,23 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}"
+        run: echo "name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
 
   package-beta:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: aws-actions/setup-sam@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -112,7 +116,7 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-x86_64
           path: build-x86_64
@@ -126,12 +130,12 @@ jobs:
             --region ${BETA_REGION} \
             --output-template-file packaged-beta-x86_64.yaml
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: packaged-beta-x86_64.yaml
           path: packaged-beta-x86_64.yaml
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-arm64
           path: build-arm64
@@ -145,7 +149,7 @@ jobs:
             --region ${BETA_REGION} \
             --output-template-file packaged-beta-arm64.yaml
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: packaged-beta-arm64.yaml
           path: packaged-beta-arm64.yaml
@@ -158,12 +162,14 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: aws-actions/setup-sam@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
 
       - name: Assume the gamma pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -173,7 +179,7 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-x86_64
           path: build-x86_64
@@ -187,12 +193,12 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-gamma-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
           path: packaged-gamma-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-arm64
           path: build-arm64
@@ -206,7 +212,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-gamma-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: packaged-gamma-arm64-${{ matrix.region }}.yaml
           path: packaged-gamma-arm64-${{ matrix.region }}.yaml
@@ -218,12 +224,14 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: aws-actions/setup-sam@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
 
       - name: Assume the prod pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -233,7 +241,7 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-x86_64
           path: build-x86_64
@@ -247,12 +255,12 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-prod-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: packaged-prod-x86_64-${{ matrix.region }}.yaml
           path: packaged-prod-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-arm64
           path: build-arm64
@@ -266,7 +274,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-prod-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: packaged-prod-arm64-${{ matrix.region }}.yaml
           path: packaged-prod-arm64-${{ matrix.region }}.yaml
@@ -276,12 +284,14 @@ jobs:
     needs: [package-beta, package-gamma, package-prod]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: aws-actions/setup-sam@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -291,7 +301,7 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: packaged-beta-x86_64.yaml
 
@@ -306,7 +316,7 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: packaged-beta-arm64.yaml
 
@@ -326,9 +336,71 @@ jobs:
     needs: [deploy-beta]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - run: |
-          # trigger the integration tests here
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the beta pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: beta-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: deploy the oci x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e/fixtures/go-httpbin
+        run: |
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-oci-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - name: deploy the zip x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e/fixtures/go-httpbin-zip
+        run: |
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-zip-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - uses: dkershner6/aws-ssm-getparameters-action@v1
+        with:
+          parameterPairs:   "/lambda-web-adapter/e2e/oci/rest-api-endpoint = OCI_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/oci/http-api-endpoint = OCI_HTTP_ENDPOINT, 
+                             /lambda-web-adapter/e2e/oci/alb-endpoint      = OCI_ALB_ENDPOINT, 
+                             /lambda-web-adapter/e2e/oci/function-url      = OCI_FURL_ENDPOINT,
+                             /lambda-web-adapter/e2e/zip/rest-api-endpoint = ZIP_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/zip/http-api-endpoint = ZIP_HTTP_ENDPOINT, 
+                             /lambda-web-adapter/e2e/zip/alb-endpoint      = ZIP_ALB_ENDPOINT, 
+                             /lambda-web-adapter/e2e/zip/function-url      = ZIP_FURL_ENDPOINT"
+
+      - name: run e2e tests
+        run: |
+          cargo test -- --ignored
+
+      - name: remove the oci x86 integration test stacks
+        working-directory: ./tests/e2e/fixtures/go-httpbin
+        run: |
+          sam delete --no-prompts --stack-name ${BETA_STACK_NAME}-oci-x86 
+
+      - name: deploy the zip x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e/fixtures/go-httpbin-zip
+        run: |
+          sam delete --no-prompts --stack-name ${BETA_STACK_NAME}-zip-x86 
 
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -337,9 +409,9 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}"
+        run: echo "name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
   deploy-gamma:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -348,12 +420,14 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: aws-actions/setup-sam@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
 
       - name: Assume the gamma pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -363,7 +437,7 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
 
@@ -378,7 +452,7 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${{ matrix.cloudformation_execution_role }}
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: packaged-gamma-arm64-${{ matrix.region }}.yaml
 
@@ -401,9 +475,9 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "::set-output name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}"
+        run: echo "name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
 
   deploy-prod:
     if: ${{ github.event_name == 'release' }}
@@ -413,12 +487,14 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: aws-actions/setup-sam@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
 
       - name: Assume the prod pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -428,7 +504,7 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: packaged-prod-x86_64-${{ matrix.region }}.yaml
 
@@ -443,7 +519,7 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${{ matrix.cloudformation_execution_role }}
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: packaged-prod-arm64-${{ matrix.region }}.yaml
 
@@ -464,10 +540,10 @@ jobs:
     needs: [deploy-prod]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Assume the prod pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
