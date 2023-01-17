@@ -59,7 +59,7 @@ Resources:
       Runtime: provided.al2
       MemorySize: 256
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:6
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
       Events:
         HttpAPIEvent:
           Type: HttpApi
@@ -77,6 +77,8 @@ Resources:
             Path: /{proxy+}
             Method: ANY
             RestApiId: !Ref RestApi
+      FunctionUrlConfig:
+        AuthType: AWS_IAM
     Metadata:
       BuildMethod: makefile
 
@@ -136,6 +138,38 @@ Resources:
         HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
       Type: A
 
+  RestApiEndpoint:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/e2e/zip/rest-api-endpoint
+      Description: 'Rest API Endpoint for HttpBin function'
+      Type: String
+      Value: !Sub "https://httpbin-rest-zip.${Route53HostedZone}/"
+
+  HttpApiEndpoint:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/e2e/zip/http-api-endpoint
+      Description: 'Http API Endpoint for HttpBin function'
+      Type: String
+      Value: !Sub "https://httpbin-http-zip.${Route53HostedZone}/"
+
+  AlbEndpoint:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/e2e/zip/alb-endpoint
+      Description: 'ALB Endpoint for HttpBin function'
+      Type: String
+      Value: !Sub "https://${AlbDNSRecord}/"
+
+  FunctionUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/e2e/zip/function-url
+      Description: 'Function URL for HttpBin function'
+      Type: String
+      Value: !GetAtt HttpBinFunctionUrl.FunctionUrl
+
 Outputs:
   HttpBinHttpApi:
     Description: "API Gateway Http API endpoint URL for default stage for HttpBin function"
@@ -148,3 +182,8 @@ Outputs:
   HttpBinAlbDNS:
     Description: "Application Load Balancer for HttpBin function"
     Value: !Sub "https://${AlbDNSRecord}/"
+
+  HttpBinFunctionUrl:
+    Description: "Function URL for HttpBin function"
+    Value: !GetAtt HttpBinFunctionUrl.FunctionUrl
+    

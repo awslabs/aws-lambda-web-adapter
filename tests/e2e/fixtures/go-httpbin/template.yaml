@@ -73,6 +73,8 @@ Resources:
             Path: /{proxy+}
             Method: ANY
             RestApiId: !Ref RestApi
+      FunctionUrlConfig:
+        AuthType: AWS_IAM
     Metadata:
       DockerTag: v1
       DockerContext: ./app
@@ -134,6 +136,38 @@ Resources:
         HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
       Type: A
 
+  RestApiEndpoint:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/e2e/oci/rest-api-endpoint
+      Description: 'Rest API Endpoint for HttpBin function'
+      Type: String
+      Value: !Sub "https://httpbin-rest-zip.${Route53HostedZone}/"
+
+  HttpApiEndpoint:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/e2e/oci/http-api-endpoint
+      Description: 'Http API Endpoint for HttpBin function'
+      Type: String
+      Value: !Sub "https://httpbin-http-zip.${Route53HostedZone}/"
+
+  AlbEndpoint:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/e2e/oci/alb-endpoint
+      Description: 'ALB Endpoint for HttpBin function'
+      Type: String
+      Value: !Sub "https://${AlbDNSRecord}/"
+
+  FunctionUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/e2e/oci/function-url
+      Description: 'Function URL for HttpBin function'
+      Type: String
+      Value: !GetAtt HttpBinFunctionUrl.FunctionUrl
+
 Outputs:
   HttpBinHttpApi:
     Description: "API Gateway Http API endpoint URL for default stage for HttpBin function"
@@ -146,3 +180,8 @@ Outputs:
   HttpBinAlbDNS:
     Description: "Application Load Balancer for HttpBin function"
     Value: !Sub "https://${AlbDNSRecord}/"
+
+  HttpBinFunctionUrl:
+    Description: "Function URL for HttpBin function"
+    Value: !GetAtt HttpBinFunctionUrl.FunctionUrl
+    
