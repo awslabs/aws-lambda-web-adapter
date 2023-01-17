@@ -81,7 +81,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
   load-prod-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -92,7 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
 
   package-beta:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -411,7 +411,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "name=matrix::{\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
   deploy-gamma:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -477,7 +477,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "name=matrix::{\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
 
   deploy-prod:
     if: ${{ github.event_name == 'release' }}
