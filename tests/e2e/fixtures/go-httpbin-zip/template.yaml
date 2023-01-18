@@ -59,7 +59,7 @@ Resources:
       Runtime: provided.al2
       MemorySize: 256
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
+        - {{resolve:ssm:/lambda-web-adapter/layer/x86_64/latest}}
       Events:
         HttpAPIEvent:
           Type: HttpApi

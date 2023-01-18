@@ -40,6 +40,14 @@ Resources:
       LayerVersionArn: !Ref LambdaAdapterLayerX86
       Principal: '*'
 
+  LambdaAdapterLayerX86Parameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/layer/x86_64/latest
+      Description: 'Layer ARN for the latest Lambda Web Adapter X86_64 Layer'
+      Type: String
+      Value: !Ref LambdaAdapterLayerX86
+
 Outputs:
   LambdaAdapterLayerX86Arn:
     Description: "arn for LambdaAdapterLayerX86"
