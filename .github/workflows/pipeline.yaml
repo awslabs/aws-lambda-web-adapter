@@ -156,13 +156,13 @@ jobs:
 
       - name: Create and push the x86_64 docker image to beta ecr repo
         run: |
-          tar -c -C build-x86_64/LambdaAdapterLayerX86/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
+          sudo tar -c -C build-x86_64/LambdaAdapterLayerX86/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
           aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
           docker push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
 
       - name: Create and push the arm64 docker image to beta ecr repo
         run: |
-          tar -c -C build-arm64/LambdaAdapterLayerArm64/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
+          sudo tar -c -C build-arm64/LambdaAdapterLayerArm64/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
           aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
           docker push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
 
