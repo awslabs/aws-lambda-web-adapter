@@ -21,6 +21,9 @@ Parameters:
   Route53HostedZoneId:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /lambda-web-adapter/e2e/hostedzoneid
+  AdapterLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /lambda-web-adapter/layer/x86_64/latest
 
 Globals:
   Function:
@@ -59,7 +62,7 @@ Resources:
       Runtime: provided.al2
       MemorySize: 256
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
+        - !Ref AdapterLayerArn
       Events:
         HttpAPIEvent:
           Type: HttpApi

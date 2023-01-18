@@ -38,6 +38,14 @@ Resources:
       LayerVersionArn: !Ref LambdaAdapterLayerArm64
       Principal: '*'
 
+  LambdaAdapterLayerArm64Parameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /lambda-web-adapter/layer/arm64/latest
+      Description: 'Layer ARN for the latest Lambda Web Adapter Arm64 Layer'
+      Type: String
+      Value: !Ref LambdaAdapterLayerArm64
+
 Outputs:
   LambdaAdapterLayerArm64Arn:
     Description: "arn for LambdaAdapterLayerArm64"

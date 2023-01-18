@@ -154,6 +154,27 @@ jobs:
           name: packaged-beta-arm64.yaml
           path: packaged-beta-arm64.yaml
 
+      - name: Create and push the x86_64 docker image to beta ecr repo
+        run: |
+          tar -c -C build-x86_64/LambdaAdapterLayerX86 . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
+          aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
+          docker push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
+
+      - name: Create and push the arm64 docker image to beta ecr repo
+        run: |
+          tar -c -C build-arm64/LambdaAdapterLayerArm64 . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
+          aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
+          docker push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
+
+      - name: create and push the multi-arch manifest to beta ecr repo
+        run: |
+          docker manifest create 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest \
+              477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64 \
+              477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
+          docker manifest annotate --arch arm64 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest \
+              477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
+          docker manifest push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest
+
 
   package-gamma:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -397,7 +418,7 @@ jobs:
         run: |
           sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86 
 
-      - name: deploy the zip x86 integration test stacks for the beta environment
+      - name: remove the zip x86 integration test stacks
         working-directory: ./tests/e2e/fixtures/go-httpbin-zip
         run: |
           sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86 
