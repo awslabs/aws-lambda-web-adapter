@@ -352,7 +352,7 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-  integration-test:
+  e2e-test:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [deploy-beta]
     runs-on: ubuntu-latest
