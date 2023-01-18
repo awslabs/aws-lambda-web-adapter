@@ -426,7 +426,7 @@ jobs:
 
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ integration-test ]
+    needs: [ e2e-test ]
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
