@@ -33,6 +33,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1 
+        
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -50,6 +54,10 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -85,6 +93,10 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
@@ -96,6 +108,10 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
@@ -105,6 +121,10 @@ jobs:
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -195,6 +215,10 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -263,6 +287,10 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -329,6 +357,10 @@ jobs:
     needs: [package-beta, package-gamma, package-prod]
     runs-on: ubuntu-latest
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -381,6 +413,10 @@ jobs:
     needs: [deploy-beta]
     runs-on: ubuntu-latest
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -455,6 +491,10 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
@@ -466,6 +506,10 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -521,6 +565,10 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
@@ -533,6 +581,10 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -586,6 +638,10 @@ jobs:
     needs: [deploy-prod]
     runs-on: ubuntu-latest
     steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+        
       - uses: actions/checkout@v3
 
       - name: Assume the prod pipeline user role
