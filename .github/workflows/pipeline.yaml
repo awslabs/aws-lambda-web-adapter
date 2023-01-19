@@ -59,18 +59,24 @@ jobs:
       - name: Build x86_64 Layer
         run: sam build --template ${SAM_TEMPLATE_X86_64} -b build-x86_64
 
+      - name: Tar files
+        run: tar -cvf build-x86_64.tar build-x86_64
+
       - uses: actions/upload-artifact@v3
         with:
           name: aws-sam-build-x86_64
-          path: build-x86_64
+          path: build-x86_64.tar
 
       - name: Build arm64 Layer
         run: sam build --template ${SAM_TEMPLATE_ARM64} -b build-arm64
 
+      - name: Tar files
+        run: tar -cvf build-arm64.tar build-arm64
+
       - uses: actions/upload-artifact@v3
         with:
           name: aws-sam-build-arm64
-          path: build-arm64
+          path: build-arm64.tar
 
   load-gamma-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -119,7 +125,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-x86_64
-          path: build-x86_64
+
+      - name: extract build_x86_64
+        run: |
+          tar -xvf build-x86_64.tar
 
       - name: Upload x86_64 layer to beta artifact buckets
         run: |
@@ -138,7 +147,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-arm64
-          path: build-arm64
+
+      - name: extract build_arm64
+        run: |
+          tar -xvf build-arm64.tar
 
       - name: Upload arm64 layer to beta artifact buckets
         run: |
@@ -156,15 +168,13 @@ jobs:
 
       - name: Create and push the x86_64 docker image to beta ecr repo
         run: |
-          chmod +x build-x86_64/LambdaAdapterLayerX86/extensions/lambda-adapter
-          sudo tar -c -C build-x86_64/LambdaAdapterLayerX86/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
+          tar -c -C build-x86_64/LambdaAdapterLayerX86/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
           aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
           docker push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
 
       - name: Create and push the arm64 docker image to beta ecr repo
         run: |
-          chmod +x build-arm64/LambdaAdapterLayerArm64/extensions/lambda-adapter
-          sudo tar -c -C build-arm64/LambdaAdapterLayerArm64/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
+          tar -c -C build-arm64/LambdaAdapterLayerArm64/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
           aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
           docker push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
 
@@ -205,7 +215,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-x86_64
-          path: build-x86_64
+
+      - name: extract build_x86_64
+        run: |
+          tar -xvf build-x86_64.tar
 
       - name: Upload x86_64 layer to gamma artifact buckets
         run: |
@@ -224,7 +237,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-arm64
-          path: build-arm64
+
+      - name: extract build_arm64
+        run: |
+          tar -xvf build-arm64.tar
 
       - name: Upload arm64 layer to gamma artifact buckets
         run: |
@@ -267,7 +283,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-x86_64
-          path: build-x86_64
+
+      - name: extract build_x86_64
+        run: |
+          tar -xvf build-x86_64.tar
 
       - name: Upload x86_64 layer to prod artifact buckets
         run: |
@@ -286,7 +305,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: aws-sam-build-arm64
-          path: build-arm64
+
+      - name: extract build_arm64
+        run: |
+          tar -xvf build-arm64.tar
 
       - name: Upload arm64 layer to prod artifact buckets
         run: |
