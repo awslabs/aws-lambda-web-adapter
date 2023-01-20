@@ -1,10 +1,10 @@
 # deno-zip
 
-This example shows how to deploy a Deno app on Lambda with SnapStart.
+This example shows how to deploy a Deno app on Lambda with SnapStart enabled.
 
-The Deno app is compile to a single binary using `deno compile`, packaged into Zip file and deployed to Lambda with Web Adapter.
+The Deno app is compiled to a single binary using `deno compile`, packaged into Zip file and deployed to Lambda with Web Adapter.
 
-We use `java11` runtime to get SnapStart support with one cavet: no runtime hooks.
+We use `java11` runtime to get SnapStart support with one caveat: no runtime hooks.
 
 ```yaml
   DenoFunction:
