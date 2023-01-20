@@ -114,6 +114,7 @@ Lambda Web Adapter forwards this information to the web applicatioin in a Http H
 - [Rust Axum in Zip](examples/rust-axum-zip)
 - [Golang Gin](examples/gin)
 - [Golang Gin in Zip](examples/gin-zip)
+- [Deno Oak in Zip](examples/deno-zip)
 
 ## Acknowledgement
 
