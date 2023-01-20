@@ -26,6 +26,11 @@ We use `java11` runtime to get SnapStart support with one caveat: no runtime hoo
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           DENO_DIR: /tmp
           PORT: 8000
+      Events:
+        HelloWorld:
+          Type: HttpApi
+    Metadata:
+      BuildMethod: makefile
 ```
 
 ## build and deploy
