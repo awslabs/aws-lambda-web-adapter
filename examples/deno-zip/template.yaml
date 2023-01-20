@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  deno-zip
+
+  Sample SAM Template for deno-zip
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 128
+
+Resources:
+  DenoFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src
+      Handler: app
+      Runtime: java11
+      AutoPublishAlias: live
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Architectures:
+        - x86_64
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
+      MemorySize: 512
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          DENO_DIR: /tmp
+          PORT: 8000
+      Events:
+        HelloWorld:
+          Type: HttpApi
+    Metadata:
+      BuildMethod: makefile
+
+Outputs:
+  DenoFunctionApi:
+    Description: "API Gateway endpoint URL for Prod stage for Deno function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  DenoFunction:
+    Description: "Deno Lambda Function ARN"
+    Value: !GetAtt DenoFunction.Arn
+  DenoFunctionIamRole:
+    Description: "Implicit IAM Role created for Deno function"
+    Value: !GetAtt DenoFunctionRole.Arn
