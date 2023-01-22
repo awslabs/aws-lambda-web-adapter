@@ -13,6 +13,7 @@ on:
       - released
 
 env:
+  CARGO_TERM_COLOR: always
   PIPELINE_USER_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   PIPELINE_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   SAM_TEMPLATE_X86_64: template-x86_64.yaml
@@ -42,11 +43,13 @@ jobs:
         with:
           toolchain: stable
           components: clippy, rustfmt
+      - uses: taiki-e/install-action@nextest
       - name: linting
         run: |
           cargo fmt -- --check
           cargo clippy -- -Dwarnings
-      - run: cargo test
+      - name: run unit and integration tests
+        run: cargo nextest run --profile ci
 
 
   build:
@@ -416,7 +419,13 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - uses: taiki-e/install-action@nextest
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -471,8 +480,7 @@ jobs:
                              /lambda-web-adapter/e2e/zip/function-url      = ZIP_FURL_ENDPOINT"
 
       - name: run e2e tests
-        run: |
-          cargo test -- --ignored
+        run: cargo nextest run --run-ignored ignored-only --profile ci
 
       - name: remove the oci x86 integration test stacks
         working-directory: ./tests/e2e/fixtures/go-httpbin
