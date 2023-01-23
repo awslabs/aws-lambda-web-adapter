@@ -36,8 +36,8 @@ jobs:
     steps:
       - name: Collect Workflow Telemetry
         if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1 
-        
+        uses: runforesight/foresight-workflow-kit-action@v1
+
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -51,6 +51,13 @@ jobs:
       - name: run unit and integration tests
         run: cargo nextest run --profile ci
 
+      - name: Analyze Test and/or Coverage Results
+        uses: runforesight/foresight-test-kit-action@v1
+        if: ${{ always() }}
+        with:
+          test_format: JUNIT
+          test_framework: JUNIT
+          test_path: "**/junit.xml"
 
   build:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -60,7 +67,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -99,7 +106,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
@@ -114,7 +121,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
@@ -127,7 +134,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -221,7 +228,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -293,7 +300,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -363,7 +370,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -471,26 +478,34 @@ jobs:
       - uses: dkershner6/aws-ssm-getparameters-action@v1
         with:
           parameterPairs:   "/lambda-web-adapter/e2e/oci/rest-api-endpoint = OCI_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/oci/http-api-endpoint = OCI_HTTP_ENDPOINT, 
-                             /lambda-web-adapter/e2e/oci/alb-endpoint      = OCI_ALB_ENDPOINT, 
+                             /lambda-web-adapter/e2e/oci/http-api-endpoint = OCI_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/oci/alb-endpoint      = OCI_ALB_ENDPOINT,
                              /lambda-web-adapter/e2e/oci/function-url      = OCI_FURL_ENDPOINT,
                              /lambda-web-adapter/e2e/zip/rest-api-endpoint = ZIP_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/http-api-endpoint = ZIP_HTTP_ENDPOINT, 
-                             /lambda-web-adapter/e2e/zip/alb-endpoint      = ZIP_ALB_ENDPOINT, 
+                             /lambda-web-adapter/e2e/zip/http-api-endpoint = ZIP_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/zip/alb-endpoint      = ZIP_ALB_ENDPOINT,
                              /lambda-web-adapter/e2e/zip/function-url      = ZIP_FURL_ENDPOINT"
 
       - name: run e2e tests
         run: cargo nextest run --run-ignored ignored-only --profile ci
 
+      - name: Analyze Test and/or Coverage Results
+        uses: runforesight/foresight-test-kit-action@v1
+        if: ${{ always() }}
+        with:
+          test_format: JUNIT
+          test_framework: JUNIT
+          test_path: "**/junit.xml"
+
       - name: remove the oci x86 integration test stacks
         working-directory: ./tests/e2e/fixtures/go-httpbin
         run: |
-          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86 
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86
 
       - name: remove the zip x86 integration test stacks
         working-directory: ./tests/e2e/fixtures/go-httpbin-zip
         run: |
-          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86 
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
 
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -502,7 +517,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
@@ -517,7 +532,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -576,7 +591,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
@@ -592,7 +607,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -649,7 +664,7 @@ jobs:
       - name: Collect Workflow Telemetry
         if: always()
         uses: runforesight/foresight-workflow-kit-action@v1
-        
+
       - uses: actions/checkout@v3
 
       - name: Assume the prod pipeline user role
