@@ -966,7 +966,6 @@ dependencies = [
 name = "lambda_web_adapter"
 version = "0.6.1"
 dependencies = [
- "encoding_rs",
  "http",
  "http-body 0.4.5",
  "http-body-util",
@@ -974,7 +973,6 @@ dependencies = [
  "hyper",
  "hyper-tls",
  "lambda_http",
- "mime",
  "tokio",
  "tokio-retry",
  "tower",

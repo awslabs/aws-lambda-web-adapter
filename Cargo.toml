@@ -34,8 +34,6 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
     "fmt",
 ] }
 tower = "0.4.13"
-encoding_rs = "0.8.31"
-mime = "0.3.16"
 
 [dev-dependencies]
 httpmock = "0.6"
