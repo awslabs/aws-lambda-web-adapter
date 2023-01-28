@@ -225,7 +225,7 @@ dependencies = [
  "bytes",
  "chrono",
  "http",
- "http-body",
+ "http-body 0.4.5",
  "http-serde",
  "query_map",
  "serde",
@@ -678,6 +678,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-body"
+version = "1.0.0-rc.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "951dfc2e32ac02d67c90c0d65bd27009a635dc9b381a2cc7d284ab01e3a0150d"
+dependencies = [
+ "bytes",
+ "http",
+]
+
+[[package]]
+name = "http-body-util"
+version = "0.1.0-rc.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92445bc9cc14bfa0a3ce56817dc3b5bcc227a168781a356b702410789cec0d10"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "http",
+ "http-body 1.0.0-rc.2",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "http-serde"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -738,7 +761,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "http",
- "http-body",
+ "http-body 0.4.5",
  "httparse",
  "httpdate",
  "itoa",
@@ -896,7 +919,7 @@ dependencies = [
  "bytes",
  "encoding_rs",
  "http",
- "http-body",
+ "http-body 0.4.5",
  "hyper",
  "lambda_runtime",
  "mime",
@@ -943,13 +966,13 @@ dependencies = [
 name = "lambda_web_adapter"
 version = "0.6.1"
 dependencies = [
- "encoding_rs",
  "http",
+ "http-body 0.4.5",
+ "http-body-util",
  "httpmock",
  "hyper",
  "hyper-tls",
  "lambda_http",
- "mime",
  "tokio",
  "tokio-retry",
  "tower",

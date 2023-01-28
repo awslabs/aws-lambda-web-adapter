@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    borrow::Cow,
     env,
     future::Future,
-    mem,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -14,7 +12,6 @@ use std::{
     time::Duration,
 };
 
-use encoding_rs::{Encoding, UTF_8};
 use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode, Uri,
@@ -26,7 +23,7 @@ use hyper::{
 };
 use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
-use lambda_http::{Body as LambdaBody, Request, RequestExt, Response};
+use lambda_http::{Request, RequestExt, Response};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
@@ -194,7 +191,7 @@ impl Adapter {
 /// Implement a `Tower.Service` that sends the requests
 /// to the web server.
 impl Service<Request> for Adapter {
-    type Response = Response<LambdaBody>;
+    type Response = Response<Body>;
     type Error = Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
@@ -237,7 +234,7 @@ async fn fetch_response(
     healthcheck_url: Uri,
     healthcheck_protocol: Protocol,
     event: Request,
-) -> Result<Response<LambdaBody>, Error> {
+) -> Result<Response<Body>, Error> {
     if async_init && !ready_at_init.load(Ordering::SeqCst) {
         is_web_ready(&healthcheck_url, &healthcheck_protocol).await;
         ready_at_init.store(true, Ordering::SeqCst);
@@ -281,19 +278,9 @@ async fn fetch_response(
     let request = builder.body(hyper::Body::from(body.to_vec()))?;
 
     let app_response = client.request(request).await?;
-    let app_headers = app_response.headers().clone();
-    let status = app_response.status();
-
-    let body = convert_body(app_response).await?;
-    tracing::debug!(status = %status, body_size = body.size_hint().lower(), app_headers = ?app_headers, "responding to lambda event");
-
-    let mut lambda_response = Response::builder();
-    if let Some(headers) = lambda_response.headers_mut() {
-        let _ = mem::replace(headers, app_headers);
-    }
-    let resp = lambda_response.status(status).body(body).map_err(Box::new)?;
-
-    Ok(resp)
+    tracing::debug!(status = %app_response.status(), body_size = app_response.body().size_hint().lower(), 
+        app_headers = ?app_response.headers().clone(), "responding to lambda event");
+    Ok(app_response)
 }
 
 async fn is_web_ready(url: &Uri, protocol: &Protocol) -> bool {
@@ -312,58 +299,5 @@ async fn check_web_readiness(url: &Uri, protocol: &Protocol) -> Result<(), i8> {
             Ok(_) => Ok(()),
             Err(_) => Err(-1),
         },
-    }
-}
-
-async fn convert_body(app_response: hyper::Response<hyper::Body>) -> Result<LambdaBody, Error> {
-    let (parts, body) = app_response.into_parts();
-    let body = hyper::body::to_bytes(body).await?;
-
-    if parts.headers.get(http::header::CONTENT_ENCODING).is_some() {
-        return if body.is_empty() {
-            Ok(LambdaBody::Empty)
-        } else {
-            Ok(LambdaBody::Binary(body.to_vec()))
-        };
-    }
-
-    let content_type = parts
-        .headers
-        .get(http::header::CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok());
-
-    if serialize_as_text(content_type) {
-        let content_type = content_type.and_then(|value| value.parse::<mime::Mime>().ok());
-
-        let encoding_name = content_type
-            .as_ref()
-            .and_then(|mime| mime.get_param("charset").map(|charset| charset.as_str()))
-            .unwrap_or("utf-8");
-        let encoding = Encoding::for_label(encoding_name.as_bytes()).unwrap_or(UTF_8);
-
-        let (text, _, _) = encoding.decode(&body);
-        match text {
-            Cow::Owned(s) => Ok(LambdaBody::Text(s)),
-            _ => unsafe {
-                // these bytes are already valid utf8. This is the same operation that reqwest performs
-                Ok(LambdaBody::Text(String::from_utf8_unchecked(body.to_vec())))
-            },
-        }
-    } else if body.is_empty() {
-        Ok(LambdaBody::Empty)
-    } else {
-        Ok(LambdaBody::Binary(body.to_vec()))
-    }
-}
-
-fn serialize_as_text(content_type: Option<&str>) -> bool {
-    match content_type {
-        None => true,
-        Some(content_type) => {
-            content_type.starts_with("text")
-                || content_type.starts_with("application/json")
-                || content_type.starts_with("application/javascript")
-                || content_type.starts_with("application/xml")
-        }
     }
 }
