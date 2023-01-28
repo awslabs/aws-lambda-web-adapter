@@ -8,7 +8,7 @@ use httpmock::{
     Method::{DELETE, GET, POST, PUT},
     MockServer,
 };
-use lambda_http::Body;
+use hyper::{body, Body};
 use lambda_web_adapter::{Adapter, AdapterOptions, Protocol};
 use tower::Service;
 
@@ -32,7 +32,7 @@ fn test_adapter_options_from_env() {
     assert_eq!("/healthcheck", options.readiness_check_path);
     assert_eq!(Protocol::Tcp, options.readiness_check_protocol);
     assert_eq!(Some("/prod".into()), options.base_path);
-    assert_eq!(true, options.async_init);
+    assert!(options.async_init);
 }
 
 #[tokio::test]
@@ -92,7 +92,7 @@ async fn test_http_basic_request() {
 
     // and response has expected content
     assert_eq!(200, response.status());
-    assert_eq!("Hello World", body_to_string(&response));
+    assert_eq!("Hello World", body_to_string(response).await);
 }
 
 #[tokio::test]
@@ -131,9 +131,9 @@ async fn test_http_headers() {
 
     // and response has expected content
     assert_eq!(200, response.status());
-    assert_eq!("OK", body_to_string(&response));
-    assert_eq!(true, response.headers().contains_key("fizz"));
+    assert!(response.headers().contains_key("fizz"));
     assert_eq!("buzz", response.headers().get("fizz").unwrap());
+    assert_eq!("OK", body_to_string(response).await);
 }
 
 #[tokio::test]
@@ -176,7 +176,7 @@ async fn test_http_query_params() {
 
     // and response has expected content
     assert_eq!(200, response.status());
-    assert_eq!("OK", body_to_string(&response));
+    assert_eq!("OK", body_to_string(response).await);
 }
 
 #[tokio::test]
@@ -238,11 +238,12 @@ async fn test_http_post_put_delete() {
     assert_eq!(200, post_response.status());
     assert_eq!(200, put_response.status());
     assert_eq!(200, delete_response.status());
-    assert_eq!("POST Success", body_to_string(&post_response));
-    assert_eq!("PUT Success", body_to_string(&put_response));
-    assert_eq!("DELETE Success", body_to_string(&delete_response));
+    assert_eq!("POST Success", body_to_string(post_response).await);
+    assert_eq!("PUT Success", body_to_string(put_response).await);
+    assert_eq!("DELETE Success", body_to_string(delete_response).await);
 }
 
-fn body_to_string(res: &Response<Body>) -> String {
-    String::from_utf8(res.body().to_vec()).unwrap()
+async fn body_to_string(res: Response<Body>) -> String {
+    let body_bytes = body::to_bytes(res.into_body()).await.unwrap();
+    String::from_utf8(body_bytes.to_vec()).unwrap()
 }
