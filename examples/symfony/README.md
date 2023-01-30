@@ -16,10 +16,11 @@ a [Dockerfile](Dockerfile).
 FROM public.ecr.aws/awsguru/php:82-2023.1.30.1 as builder
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
-COPY app/ /var/task/
+COPY app /var/task/app
 WORKDIR /var/task/app
 
-RUN composer install --prefer-dist --optimize-autoloader --no-interaction
+RUN composer install --prefer-dist --optimize-autoloader --no-interaction \
+    && ./bin/console cache:warmup
 
 FROM public.ecr.aws/awsguru/php:82-2023.1.30.1
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.1 /lambda-adapter /opt/extensions/lambda-adapter
@@ -30,6 +31,7 @@ ADD nginx/conf/nginx.conf      /opt/nginx/conf/nginx.conf
 ADD php/php.ini                /opt/php/php.ini
 ADD php/etc/php-fpm.conf       /opt/php/etc/php-fpm.conf
 ADD php/php.d/extensions.ini   /opt/php/php.d/extensions.ini
+
 ```
 
 ## Pre-requisites

@@ -13,7 +13,7 @@ The top level folder is a typical AWS SAM project. The `app` directory is the ng
 a [Dockerfile](Dockerfile).
 
 ```dockerfile
-FROM public.ecr.aws/awsguru/nginx:1.23-amd64-v1
+FROM public.ecr.aws/awsguru/nginx:1.23-2023.1.30.1
 
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.1 /lambda-adapter /opt/extensions/lambda-adapter
 
@@ -25,7 +25,6 @@ COPY app /var/task/
 
 EXPOSE 8080
 
-CMD ["/opt/nginx/bin/nginx", "-g", "daemon off;"]
 ```
 
 Line 2 copies lambda adapter binary into /opt/extensions. This is the main change to run the nginx server on Lambda.
