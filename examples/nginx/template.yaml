@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  sam-app
+  serverless-nginx-demo
 
-  Sample SAM Template for sam-app
+  Sample SAM Template for serverless-nginx-demo
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -11,7 +11,14 @@ Globals:
     Timeout: 29
 
 Resources:
-  NginxFunction:
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      EndpointConfiguration:
+        Type: REGIONAL
+      StageName: Prod
+      TracingEnabled: True
+  Function:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
@@ -20,25 +27,33 @@ Resources:
         - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension
       Environment:
         Variables:
-          RUST_LOG: info
+          RUST_LOG: debug
+          PORT: 8080
       Events:
         Root:
-          Type: HttpApi
+          Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /
             Method: ANY
-        Petstore:
-          Type: HttpApi
+        Proxy:
+          Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /{proxy+}
             Method: ANY
     Metadata:
       DockerTag: v1
-      DockerContext: ./app
+      DockerContext: .
       Dockerfile: Dockerfile
 
 Outputs:
-  NginxApi:
-    Description: "API Gateway endpoint URL for Prod stage for Nginx function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
-
+  URL:
+    Description: "API Gateway endpoint URL for Prod stage for Nginx application"
+    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  Function:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt Function.Arn
+  FunctionRole:
+    Description: "Implicit IAM Role created for function"
+    Value: !GetAtt FunctionRole.Arn

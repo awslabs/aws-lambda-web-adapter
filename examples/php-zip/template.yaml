@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  serverless-php-demo
+
+  Sample SAM Template for serverless-php-demo
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      EndpointConfiguration:
+        Type: REGIONAL
+      StageName: Prod
+      TracingEnabled: True
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      MemorySize: 2048
+      Handler: bootstrap
+      Runtime: provided.al2
+      Environment:
+        Variables:
+          RUST_LOG: debug
+          PORT: 8080
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:10
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxX86:1
+      Events:
+        Root:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /
+            Method: ANY
+        Proxy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /{proxy+}
+            Method: ANY
+  FunctionArm64:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - arm64
+      CodeUri: .
+      MemorySize: 2048
+      Handler: bootstrap
+      Runtime: provided.al2
+      Environment:
+        Variables:
+          RUST_LOG: debug
+          PORT: 8080
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:10
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxArm:1
+      Events:
+        Root:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /arm/
+            Method: ANY
+        Proxy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayApi
+            Path: /arm/{proxy+}
+            Method: ANY
+
+Outputs:
+  URL:
+    Description: "API Gateway endpoint URL for Prod stage for PHP application"
+    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  URLArm:
+    Description: "API Gateway endpoint URL for Prod stage for PHP application"
+    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/arm/"
+  Function:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt Function.Arn
+  FunctionArm64:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt FunctionArm64.Arn

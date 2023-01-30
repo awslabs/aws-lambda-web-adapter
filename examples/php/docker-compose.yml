@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  webserver:
+    build: .
+    container_name: php
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/var/task/app
+      - ./nginx/conf/nginx.conf:/opt/nginx/conf/nginx.conf
+      - ./php/php.ini:/opt/php/php.ini
+      - ./php/etc/php-fpm.conf:/opt/php/etc/php-fpm.conf
+      - ./php/php.d/extensions.ini:/opt/php/php.d/extensions.ini
