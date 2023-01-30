@@ -1,4 +1,4 @@
-FROM public.ecr.aws/awsguru/php:82-2023.1.30.1-x86_64 as builder
+FROM public.ecr.aws/awsguru/php:82-2023.1.30.1 as builder
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 COPY app /var/task/app
@@ -11,8 +11,8 @@ RUN composer install --prefer-dist --optimize-autoloader --no-interaction \
     && php artisan view:cache \
     && php artisan optimize
 
-FROM public.ecr.aws/awsguru/php:82-2023.1.30.1-x86_64
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.0 /lambda-adapter /opt/extensions/lambda-adapter
+FROM public.ecr.aws/awsguru/php:82-2023.1.30.1
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.1 /lambda-adapter /opt/extensions/lambda-adapter
 COPY --from=builder /var/task /var/task
 
 # config files
