@@ -45,7 +45,6 @@ The following tools should be installed and configured.
 Navigate to the sample's folder and use the SAM CLI to build a container image
 
 ```shell
-$ aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
 $ sam build
 ```
 
