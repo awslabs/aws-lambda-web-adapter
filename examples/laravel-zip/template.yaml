@@ -17,6 +17,8 @@ Resources:
         Type: REGIONAL
       StageName: Prod
       TracingEnabled: True
+      BinaryMediaTypes:
+        - '*~1*'
   Function:
     Type: AWS::Serverless::Function
     Properties:
