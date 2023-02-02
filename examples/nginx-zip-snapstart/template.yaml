@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-app
+
+  Sample SAM Template for sam-app
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  PhpSnapStartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 1024
+      Handler: run.sh
+      CodeUri: app/
+      Runtime: java11
+      AutoPublishAlias: live
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Environment:
+        Variables:
+          RUST_LOG: info
+          REMOVE_BASE_PATH: /v1
+          AWS_LAMBDA_EXEC_WRAPPER: /var/task/run.sh
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
+        - !Sub arn:aws:lambda:us-west-2:753240598075:layer:bak-nginx-123-x86_64:10
+      Events:
+        Root:
+          Type: HttpApi
+          Properties:
+            Path: /v1
+            Method: ANY
+        Petstore:
+          Type: HttpApi
+          Properties:
+            Path: /v1/{proxy+}
+            Method: ANY
+
+Outputs:
+  PhpSnapStartFunction:
+    Description: "API Gateway endpoint URL for Prod stage for Petstore function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/v1/"
+
