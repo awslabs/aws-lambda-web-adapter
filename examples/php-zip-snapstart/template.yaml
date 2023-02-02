@@ -42,6 +42,6 @@ Resources:
 
 Outputs:
   PhpSnapStartFunction:
-    Description: "API Gateway endpoint URL for Prod stage for Petstore function"
+    Description: "API Gateway endpoint URL for Prod stage for PHP function"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/v1/"
 
