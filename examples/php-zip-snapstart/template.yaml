@@ -17,9 +17,9 @@ Resources:
       Handler: run.sh
       CodeUri: app/
       Runtime: java11
-#      AutoPublishAlias: live
-#      SnapStart:
-#        ApplyOn: PublishedVersions
+      AutoPublishAlias: live
+      SnapStart:
+        ApplyOn: PublishedVersions
       Environment:
         Variables:
           RUST_LOG: info

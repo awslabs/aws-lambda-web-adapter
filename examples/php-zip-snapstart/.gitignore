@@ -34,3 +34,5 @@ build/
 
 .mvn
 .aws-sam
+
+app/src/main/resources/app/vendor/
