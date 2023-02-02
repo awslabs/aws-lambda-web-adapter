@@ -1,6 +1,6 @@
-# Spring Boot 2 Zip example
+# PHP in 2 SnapStart example
 
-A basic pet store application written with the Spring Boot 2 framework. You can build and test it locally as a typical Spring Boot 2 application.
+A basic pet store application written with the PHP. You can build and test it locally as a typical PHP application.
 
 The application can be deployed in an AWS account using the [Serverless Application Model](https://github.com/awslabs/serverless-application-model). The `template.yaml` file in the root folder contains the application definition.
 
