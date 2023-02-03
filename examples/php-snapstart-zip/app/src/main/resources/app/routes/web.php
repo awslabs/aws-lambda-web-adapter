@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,12 +14,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [HomeController::class, 'home']);
 
-Route::get('/phpinfo', function () {
-    $_ENV['LAMBDA_RUNTIME_DIR2'] = '222122211';
-    putenv('LAMBDA_RUNTIME_DIR2=1');
-    return phpinfo();
-});
+Route::get('/phpinfo', [HomeController::class, 'phpinfo']);
