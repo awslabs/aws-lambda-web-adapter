@@ -1,9 +1,26 @@
 version: '3.8'
 
 services:
-  export-code:
-    build: .
-    entrypoint: /bin/cp
-    command: [ "-r", "/.out", "/.output" ]
+
+  build:
+    image: public.ecr.aws/awsguru/php:82-2023.2.3.2
+    container_name: code_build
+    working_dir: /var/task/app
+    entrypoint: /build.sh
     volumes:
-      - ./:/.output
+      - ./build.sh:/build.sh
+      - ./app/src/main/resources:/var/task
+
+  dev:
+    image: public.ecr.aws/awsguru/php:82-2023.2.3.2
+    entrypoint: /dev.sh
+    working_dir: /var/task/app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dev.sh:/dev.sh
+      - ./app/src/main/resources:/var/task
+      - ./app/src/main/resources/nginx/conf/nginx.conf:/opt/nginx/conf/nginx.conf
+      - ./app/src/main/resources/php/php.ini:/opt/php/php.ini
+      - ./app/src/main/resources/php/etc/php-fpm.conf:/opt/php/etc/php-fpm.conf
+      - ./app/src/main/resources/php/php.d:/opt/php/php.d

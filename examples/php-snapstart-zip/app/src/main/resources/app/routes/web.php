@@ -14,9 +14,11 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
+    return view('welcome');
+});
 
+Route::get('/phpinfo', function () {
+    $_ENV['LAMBDA_RUNTIME_DIR2'] = '222122211';
+    putenv('LAMBDA_RUNTIME_DIR2=1');
     return phpinfo();
-
-//    return view('welcome');
-
 });
