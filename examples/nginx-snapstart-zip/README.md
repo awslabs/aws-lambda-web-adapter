@@ -1,4 +1,4 @@
-# nginx-zip
+# nginx-snapstart-zip
 
 This example shows how to use Lambda Adapter to run a Nginx application on managed Nginx runtime.
 
