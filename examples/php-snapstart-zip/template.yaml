@@ -23,11 +23,12 @@ Resources:
       Environment:
         Variables:
           RUST_LOG: info
+          READINESS_CHECK_PATH: /
           REMOVE_BASE_PATH: /v1
           AWS_LAMBDA_EXEC_WRAPPER: /var/task/run.sh
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
-        - !Sub arn:aws:lambda:us-west-2:753240598075:layer:bak-php-beta-fpm-nginx-x86_64:4
+        - !Sub arn:aws:lambda:us-west-2:753240598075:layer:bak-php-beta-fpm-nginx-x86_64:19
       Events:
         Root:
           Type: HttpApi
