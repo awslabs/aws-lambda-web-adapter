@@ -18,12 +18,24 @@ class HomeController extends Controller
 
         $request_context = json_decode($_ENV['HTTP_X_AMZN_REQUEST_CONTEXT'], true);
 
-        $_ENV['TEST_REQUESTID']    = $request_context['requestId'];
-        $_ENV['TEST_TIME']         = $request_context['time'];
-        $_ENV['TEST_TIMEEPOCH']    = $request_context['timeEpoch'];
-        $_ENV['TEST_REQUEST_TIME'] = $this->ms($_ENV['REQUEST_TIME_FLOAT']);
-        $_ENV['TEST_MS']           = $this->ms();
-        $_ENV['TEST_COST']         = $this->ms() - $_ENV['TEST_TIMEEPOCH'];
+
+        $requestId            = $request_context['requestId'];
+        $time                 = $request_context['time'];
+        $time_api_gw          = $request_context['timeEpoch'];
+        $time_lambda          = $this->ms($_ENV['REQUEST_TIME_FLOAT']);
+        $time_lambda_instance = $this->ms();
+
+
+        $_ENV['REQUESTID'] = $requestId;
+        $_ENV['TIME']      = $time;
+
+        $_ENV['TIME_API_GW']          = $time_api_gw;
+        $_ENV['TIME_API_GW_COST']     = $time_lambda - $time_api_gw;
+        $_ENV['TIME_LAMBDA']          = $time_lambda;
+        $_ENV['TIME_LAMBDA_COST']     = $time_lambda_instance - $time_lambda;
+        $_ENV['TIME_LAMBDA_INSTANCE'] = $time_lambda_instance;
+
+        $_ENV['COST_FROM_REQUEST'] = $time_lambda_instance - $time_api_gw;
 
         return phpinfo();
     }
