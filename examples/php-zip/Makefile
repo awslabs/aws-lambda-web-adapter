@@ -1,4 +1,4 @@
-install%:
+install:
 	rm -rf .out
 	docker-compose build export-code
 	docker-compose up export-code
