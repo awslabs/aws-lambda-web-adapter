@@ -30,7 +30,7 @@ class HomeController extends Controller
         $requestId = $request_context['requestId'];
         $time      = $request_context['time'];
 
-        $time_epoch_api_gw = $request_context['timeEpoch'];
+        $time_epoch_api_gw = $this->ms($request_context['timeEpoch']);
         $time_epoch_lambda = $this->ms($_ENV['REQUEST_TIME_FLOAT']);
 
 
@@ -55,17 +55,18 @@ class HomeController extends Controller
                     'id' => ['S' => $_ENV['REQUESTID']],
                     'time' => ['S' => $_ENV['TIME']],
 
-                    'time_epoch_api_gw' => ['S' => $_ENV['TIME_EPOCH_API_GW']],
-                    'time_api_gw_duration' => ['S' => $_ENV['TIME_API_GW_DURATION']],
-                    'time_epoch_lambda' => ['S' => $_ENV['TIME_EPOCH_LAMBDA']],
-                    'time_lambda_duration' => ['S' => $_ENV['TIME_LAMBDA_DURATION']],
-                    'time_epoch_app' => ['S' => $_ENV['TIME_EPOCH_APP']],
-                    'time_app_init_duration' => ['S' => $_ENV['TIME_APP_INIT_DURATION']],
-                    'time_epoch_controller' => ['S' => $_ENV['TIME_EPOCH_CONTROLLER']],
-                    'duration_from_api_gw' => ['S' => $_ENV['DURATION_FROM_API_GW']],
+                    'time_epoch_api_gw' => ['N' => $_ENV['TIME_EPOCH_API_GW']],
+                    'time_api_gw_duration' => ['N' => $_ENV['TIME_API_GW_DURATION']],
+                    'time_epoch_lambda' => ['N' => $_ENV['TIME_EPOCH_LAMBDA']],
+                    'time_lambda_duration' => ['N' => $_ENV['TIME_LAMBDA_DURATION']],
+                    'time_epoch_app' => ['N' => $_ENV['TIME_EPOCH_APP']],
+                    'time_app_init_duration' => ['N' => $_ENV['TIME_APP_INIT_DURATION']],
+                    'time_epoch_controller' => ['N' => $_ENV['TIME_EPOCH_CONTROLLER']],
+                    'duration_from_api_gw' => ['N' => $_ENV['DURATION_FROM_API_GW']],
+
+                    'memory_get_usage' => ['N' => $_ENV['MEMORY_GET_USAGE']],
 
                     'aws_execution_env' => ['S' => $_ENV['AWS_EXECUTION_ENV']],
-                    'memory_get_usage' => ['S' => $_ENV['MEMORY_GET_USAGE']],
                     'version' => ['S' => PHP_VERSION],
                     'env' => ['S' => json_encode($_ENV)],
                 ],
@@ -77,7 +78,7 @@ class HomeController extends Controller
         return phpinfo();
     }
 
-    public function ms($string = null): string
+    public function ms($string = null): int
     {
         if ($string === null) {
             $string = (string)microtime(true);
@@ -87,7 +88,7 @@ class HomeController extends Controller
 
         $string .= "0000";
 
-        return mb_strcut($string, 0, 13);
+        return (int)mb_strcut($string, 0, 13);
     }
 
     /**
