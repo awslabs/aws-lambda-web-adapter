@@ -1,6 +1,8 @@
 #!/bin/sh
 
-#composer install --prefer-dist --optimize-autoloader --no-dev --no-interaction
+composer install --prefer-dist --optimize-autoloader --no-dev --no-interaction
+
+arch
 
 php artisan optimize:clear
 php artisan config:cache

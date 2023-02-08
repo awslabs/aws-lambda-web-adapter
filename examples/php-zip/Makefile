@@ -1,8 +1,8 @@
-install-%:
+install%:
 	rm -rf .out
-	PLATFORM=${*} docker-compose build export-code
-	PLATFORM=${*} docker-compose up export-code
-	PLATFORM=${*} docker-compose down
+	docker-compose build export-code
+	docker-compose up export-code
+	docker-compose down
 
 artifacts:
 	cp -r .out $(ARTIFACTS_DIR)/app
@@ -10,5 +10,4 @@ artifacts:
 	cp -r php $(ARTIFACTS_DIR)/php
 	cp bootstrap $(ARTIFACTS_DIR)/bootstrap
 
-build-Function: install-amd64 artifacts
-build-FunctionArm64: install-arm64 artifacts
+build-Function: install artifacts

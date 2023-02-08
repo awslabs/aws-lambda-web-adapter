@@ -48,55 +48,12 @@ Resources:
     Metadata:
       DockerTag: v1
       DockerContext: ./
-      Dockerfile: X86_64.Dockerfile
-      DockerBuildArgs:
-        platform: "x86_64"
-        adapter: "x86_64"
-  FunctionArm64:
-    Type: AWS::Serverless::Function
-    Properties:
-      Architectures:
-        - arm64
-      PackageType: Image
-      MemorySize: 2048
-      Tracing: Active
-      Policies:
-        - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension
-      Environment:
-        Variables:
-          RUST_LOG: debug
-          PORT: 8080
-      Events:
-        Root:
-          Type: Api
-          Properties:
-            RestApiId: !Ref ApiGatewayApi
-            Path: /arm/
-            Method: ANY
-        Proxy:
-          Type: Api
-          Properties:
-            RestApiId: !Ref ApiGatewayApi
-            Path: /arm/{proxy+}
-            Method: ANY
-    Metadata:
-      DockerTag: v1
-      DockerContext: ./
-      Dockerfile: arm64.Dockerfile
-      DockerBuildArgs:
-        platform: "arm64"
-        adapter: "aarch64"
+      Dockerfile: Dockerfile
 
 Outputs:
   URL:
     Description: "API Gateway endpoint URL for Prod stage for PHP application"
     Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
-  URLArm:
-    Description: "API Gateway endpoint URL for Prod stage for PHP application"
-    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/arm/"
   Function:
     Description: "Lambda Function ARN"
     Value: !GetAtt Function.Arn
-  FunctionArm64:
-    Description: "Lambda Function ARN"
-    Value: !GetAtt FunctionArm64.Arn

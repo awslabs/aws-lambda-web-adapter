@@ -28,7 +28,7 @@ Resources:
           AWS_LAMBDA_EXEC_WRAPPER: /var/task/run.sh
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
-        - !Sub arn:aws:lambda:us-west-2:753240598075:layer:bak-nginx-123-x86_64:19
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123X86:8
       Events:
         Root:
           Type: HttpApi

@@ -131,7 +131,6 @@
             "time": "2022-11-30T08:14:25+00:00"
         },
         {
-            "name": "bref/bref",
             "version": "1.7.17",
             "source": {
                 "type": "git",

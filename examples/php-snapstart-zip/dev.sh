@@ -12,4 +12,4 @@ php artisan view:clear
 
 php-fpm --force-stderr --fpm-config /var/task/php/etc/php-fpm.conf
 
-exec nginx -c /var/task/nginx/conf/nginx.conf -g "daemon off;"
+exec /opt/nginx/bin/nginx -c /var/task/nginx/conf/nginx.conf -g "daemon off;"

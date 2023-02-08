@@ -25,7 +25,6 @@ class HomeController extends Controller
         $time_lambda          = $this->ms($_ENV['REQUEST_TIME_FLOAT']);
         $time_lambda_instance = $this->ms();
 
-
         $_ENV['REQUESTID'] = $requestId;
         $_ENV['TIME']      = $time;
 

@@ -13,7 +13,7 @@ The top level folder is a typical AWS SAM project. The `app` directory is the ng
 a [Dockerfile](Dockerfile).
 
 ```dockerfile
-FROM public.ecr.aws/awsguru/nginx:1.23-2023.1.30.1
+FROM public.ecr.aws/awsguru/nginx:1.23-2023.2.3.4
 
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.1 /lambda-adapter /opt/extensions/lambda-adapter
 

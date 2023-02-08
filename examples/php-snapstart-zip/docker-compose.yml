@@ -3,7 +3,7 @@ version: '3.8'
 services:
 
   build:
-    image: public.ecr.aws/awsguru/php:82-2023.2.3.2
+    image: public.ecr.aws/awsguru/php:devel-82-2023.2.8.4
     container_name: code_build
     working_dir: /var/task/app
     entrypoint: /build.sh
@@ -12,7 +12,7 @@ services:
       - ./app/src/main/resources:/var/task
 
   dev:
-    image: public.ecr.aws/awsguru/php:82-2023.2.3.2
+    image: public.ecr.aws/awsguru/php:devel-82-2023.2.8.4
     entrypoint: /dev.sh
     working_dir: /var/task/app
     ports:

@@ -7,8 +7,8 @@ This example shows how to use PHP Runtime to run a PHP application on managed PH
 We add PHP Runtime layer to the function and configure wrapper script.
 
 1. attach PHP Runtime layer to your function. This layer containers PHP Runtime binary and a wrapper script.
-    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxX86:1`
-    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxArm:1`
+    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxX86:8`
+    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxArm:8`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. This is a wrapper script
    included in the layer.
 3. set function handler to a startup command: `bootstrap`. The wrapper script will execute this command to boot up your

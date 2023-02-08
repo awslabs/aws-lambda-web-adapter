@@ -3,7 +3,7 @@ version: '3.8'
 services:
   export-code:
     build: .
-    platform: linux/${PLATFORM}
+    platform: linux/amd64
     entrypoint: /bin/cp
     command: [ "-r", "/.out", "/.output" ]
     volumes:
