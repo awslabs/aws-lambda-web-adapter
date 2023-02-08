@@ -150,7 +150,7 @@ Resources:
             Method: ANY
     Metadata:
       DockerTag: v1
-      DockerContext: ./app/src/main/resources
+      DockerContext: .
       Dockerfile: Dockerfile
 
 Outputs:
