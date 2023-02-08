@@ -85,7 +85,7 @@ Resources:
           Properties:
             Path: /82/java11/{proxy+}
             Method: ANY
-  Php74Java11Function:
+  Php80Java11Function:
     Type: AWS::Serverless::Function
     Properties:
       MemorySize: 1024
@@ -106,7 +106,7 @@ Resources:
           AWS_LAMBDA_EXEC_WRAPPER: /var/task/run.sh
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Php74FpmNginxX86:8
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Php80FpmNginxX86:8
       Events:
         Root:
           Type: HttpApi
@@ -159,6 +159,6 @@ Outputs:
   Php82Java11Function:
     Description: "API Gateway endpoint URL for Prod stage for PHP function"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/82/java11/phpinfo"
-  Php74Function:
+  Php80Java11Function:
     Description: "API Gateway endpoint URL for Prod stage for PHP function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/74/java11/phpinfo"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/80/java11/phpinfo"

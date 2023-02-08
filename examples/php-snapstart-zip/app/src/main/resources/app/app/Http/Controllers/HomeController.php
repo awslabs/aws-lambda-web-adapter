@@ -103,6 +103,7 @@ class HomeController extends Controller
                         'php_start_at' => ['S' => $this->ms($_ENV['REQUEST_TIME_FLOAT'])],
                         'php_started_at' => ['S' => $this->ms()],
                         'aws_execution_env' => ['S' => $_ENV['AWS_EXECUTION_ENV']],
+                        'version' => ['S' => PHP_VERSION],
                         'env' => ['S' => json_encode($_ENV)],
                     ],
                 ],
