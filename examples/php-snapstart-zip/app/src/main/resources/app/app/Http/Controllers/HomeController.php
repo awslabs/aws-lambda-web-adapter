@@ -91,7 +91,7 @@ class HomeController extends Controller
         $count = 0;
 
         $region = 'us-west-2';
-        $table  = 'prod-lambda-runtimes-tests-DdbTestCost';
+        $table  = 'prod-lambda-runtimes-tests-cost';
 
         for ($i = 0; $i < 1; $i++) {
             $count++;
