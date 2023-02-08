@@ -21,7 +21,7 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
-  PhpAl282Function:
+  Php82Al2Function:
     Type: AWS::Serverless::Function
     Properties:
       MemorySize: 1024
@@ -34,10 +34,9 @@ Resources:
             TableName: !Ref Items
       Environment:
         Variables:
-          SOURCE_FUNCTION: zip
           RUST_LOG: info
           READINESS_CHECK_PATH: /
-          REMOVE_BASE_PATH: /al282
+          REMOVE_BASE_PATH: /82/al2
           AWS_LAMBDA_EXEC_WRAPPER: /var/task/run.sh
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
@@ -46,14 +45,14 @@ Resources:
         Root:
           Type: HttpApi
           Properties:
-            Path: /al282
+            Path: /82/al2
             Method: ANY
         Petstore:
           Type: HttpApi
           Properties:
-            Path: /al282/{proxy+}
+            Path: /82/al2/{proxy+}
             Method: ANY
-  Php82Function:
+  Php82Java11Function:
     Type: AWS::Serverless::Function
     Properties:
       MemorySize: 1024
@@ -68,10 +67,9 @@ Resources:
         ApplyOn: PublishedVersions
       Environment:
         Variables:
-          SOURCE_FUNCTION: zip
           RUST_LOG: info
           READINESS_CHECK_PATH: /
-          REMOVE_BASE_PATH: /82
+          REMOVE_BASE_PATH: /82/java11
           AWS_LAMBDA_EXEC_WRAPPER: /var/task/run.sh
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
@@ -80,14 +78,14 @@ Resources:
         Root:
           Type: HttpApi
           Properties:
-            Path: /82
+            Path: /82/java11
             Method: ANY
         Petstore:
           Type: HttpApi
           Properties:
-            Path: /82/{proxy+}
+            Path: /82/java11/{proxy+}
             Method: ANY
-  Php74Function:
+  Php74Java11Function:
     Type: AWS::Serverless::Function
     Properties:
       MemorySize: 1024
@@ -102,10 +100,9 @@ Resources:
         ApplyOn: PublishedVersions
       Environment:
         Variables:
-          SOURCE_FUNCTION: zip
           RUST_LOG: info
           READINESS_CHECK_PATH: /
-          REMOVE_BASE_PATH: /74
+          REMOVE_BASE_PATH: /74/java11
           AWS_LAMBDA_EXEC_WRAPPER: /var/task/run.sh
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
@@ -114,14 +111,14 @@ Resources:
         Root:
           Type: HttpApi
           Properties:
-            Path: /74
+            Path: /74/java11
             Method: ANY
         Petstore:
           Type: HttpApi
           Properties:
-            Path: /74/{proxy+}
+            Path: /74/java11/{proxy+}
             Method: ANY
-  PhpDocker82Function:
+  Php82DockerFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
@@ -133,20 +130,19 @@ Resources:
             TableName: !Ref Items
       Environment:
         Variables:
-          SOURCE_FUNCTION: docker
           RUST_LOG: debug
           PORT: 8080
-          REMOVE_BASE_PATH: /docker82
+          REMOVE_BASE_PATH: /82/docker
       Events:
         Root:
           Type: HttpApi
           Properties:
-            Path: /docker82
+            Path: /82/docker
             Method: ANY
         Petstore:
           Type: HttpApi
           Properties:
-            Path: /docker82/{proxy+}
+            Path: /82/docker/{proxy+}
             Method: ANY
     Metadata:
       DockerTag: v1
@@ -154,15 +150,15 @@ Resources:
       Dockerfile: Dockerfile
 
 Outputs:
-  PhpDocker82Function:
+  Php82DockerFunction:
     Description: "API Gateway endpoint URL for Prod stage for PHP function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/docker82/phpinfo"
-  PhpAl282Function:
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/82/docker/phpinfo"
+  Php82Al2Function:
     Description: "API Gateway endpoint URL for Prod stage for PHP function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/al282/phpinfo"
-  Php82Function:
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/82/al2/phpinfo"
+  Php82Java11Function:
     Description: "API Gateway endpoint URL for Prod stage for PHP function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/82/phpinfo"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/82/java11/phpinfo"
   Php74Function:
     Description: "API Gateway endpoint URL for Prod stage for PHP function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/74/phpinfo"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/74/java11/phpinfo"
