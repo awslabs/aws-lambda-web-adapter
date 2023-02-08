@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use Aws\DynamoDb\DynamoDbClient;
+use Aws\Result;
+use Ramsey\Uuid\Uuid;
+
 class HomeController extends Controller
 {
 
@@ -15,6 +19,8 @@ class HomeController extends Controller
         if (!isset($_ENV['HTTP_X_AMZN_REQUEST_CONTEXT'])) {
             return phpinfo();
         }
+
+        $this->handle();
 
         $request_context = json_decode($_ENV['HTTP_X_AMZN_REQUEST_CONTEXT'], true);
 
@@ -50,6 +56,73 @@ class HomeController extends Controller
         $string .= "0000";
 
         return mb_strcut($string, 0, 13);
+    }
+
+    /**
+     * @param $region
+     * @param $table
+     * @param $data
+     * @return Result
+     */
+    protected function batchWriteItem($region, $table, $data): Result
+    {
+        $client = new DynamoDbClient([
+            'version' => '2012-08-10',
+            'region' => $region,
+        ]);
+
+        return $client->batchWriteItem([
+            'RequestItems' => [
+                $table => $data,
+            ],
+        ]);
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle(): int
+    {
+
+        $events = [];
+
+        $count = 0;
+
+        $region = 'us-west-2';
+        $table  = 'prod-lambda-runtimes-tests-DdbTestCost';
+
+        for ($i = 0; $i < 1; $i++) {
+            $count++;
+            $item = [
+                'PutRequest' => [
+                    'Item' => [
+                        'id' => ['S' => Uuid::uuid4()],
+                        'request_at_ms' => ['S' => $_GET['request_at_ms'] ?? $this->ms()],
+                        'php_start_at' => ['S' => $this->ms($_ENV['REQUEST_TIME_FLOAT'])],
+                        'php_started_at' => ['S' => $this->ms()],
+                        'source_function' => ['S' => $_ENV['SOURCE_FUNCTION']],
+                        'env' => ['S' => json_encode($_ENV)],
+                    ],
+                ],
+            ];
+
+            $events[] = $item;
+
+            if (count($events) === 10) {
+                $this->batchWriteItem($region, $table, $events);
+                $events = [];
+            }
+        }
+
+        if (count($events)) {
+            $this->batchWriteItem($region, $table, $events);
+        }
+
+//			dump("$count items was written in $region.");
+
+        return 0;
     }
 
 }
