@@ -26,7 +26,7 @@ Resources:
     Properties:
       MemorySize: 1024
       Handler: run.sh
-      CodeUri: app/src/main/resources
+      CodeUri: .
       Runtime: provided.al2
       AutoPublishAlias: live
       Policies:
