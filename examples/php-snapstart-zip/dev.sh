@@ -1,9 +1,5 @@
 #!/bin/sh
 
-if [ ! -d '/tmp/session' ]; then
-  mkdir -p /tmp/session
-fi
-
 php artisan optimize:clear
 php artisan config:clear
 php artisan event:clear

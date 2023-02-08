@@ -13,6 +13,7 @@
         "laravel/framework": "^9.19",
         "laravel/sanctum": "^3.0",
         "laravel/tinker": "^2.7",
+        "aws/aws-sdk-php": "^3.257",
         "ext-mbstring": "*"
     },
     "require-dev": {
