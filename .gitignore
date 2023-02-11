@@ -3,3 +3,4 @@
 samconfig.toml
 /.idea/
 .aws-sam
+.DS_Store
