@@ -25,10 +25,7 @@ Resources:
       Events:
         ApiEvent:
           Type: HttpApi
-    Metadata:
-      BuildMethod: makefile
  
-
 Outputs:
   FlaskApi:
     Description: "API Gateway endpoint URL for Prod stage for Flask function"
