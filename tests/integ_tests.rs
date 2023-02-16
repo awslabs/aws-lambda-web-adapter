@@ -343,54 +343,51 @@ async fn test_http_compress_disallowed_type() {
 
 #[tokio::test]
 async fn test_http_compress_already_compressed() {
-    unsafe {
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder
-            .write_all(b"Hello World Hello World Hello World Hello World Hello World")
-            .unwrap();
-        let gzipped_body = encoder.finish();
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder
+        .write_all(b"Hello World Hello World Hello World Hello World Hello World")
+        .unwrap();
+    let gzipped_body = encoder.finish();
 
-        // Turn the vector into a fake string
-        let gzipped_body = String::from_utf8_unchecked(gzipped_body.unwrap());
+    // Start app server
+    let app_server = MockServer::start();
+    let hello = app_server.mock(|when, then| {
+        when.method(GET).path("/hello");
+        then.status(200)
+            .header("content-encoding", "gzip")
+            .body(&gzipped_body.unwrap());
+    });
 
-        // Start app server
-        let app_server = MockServer::start();
-        let hello = app_server.mock(|when, then| {
-            when.method(GET).path("/hello");
-            then.status(200).header("content-encoding", "gzip").body(gzipped_body);
-        });
+    // Initialize adapter
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        readiness_check_protocol: Protocol::Http,
+        async_init: false,
+        base_path: None,
+        compression: true,
+    });
 
-        // Initialize adapter
-        let mut adapter = Adapter::new(&AdapterOptions {
-            host: app_server.host(),
-            port: app_server.port().to_string(),
-            readiness_check_port: app_server.port().to_string(),
-            readiness_check_path: "/healthcheck".to_string(),
-            readiness_check_protocol: Protocol::Http,
-            async_init: false,
-            base_path: None,
-            compression: true,
-        });
+    // Call the adapter service with basic request
+    let req = LambdaEventBuilder::new()
+        .with_path("/hello")
+        .with_header("accept-encoding", "gzip")
+        .build();
+    let response = adapter.call(req.into()).await.expect("Request failed");
 
-        // Call the adapter service with basic request
-        let req = LambdaEventBuilder::new()
-            .with_path("/hello")
-            .with_header("accept-encoding", "gzip")
-            .build();
-        let response = adapter.call(req.into()).await.expect("Request failed");
+    // Assert endpoint was called once
+    hello.assert();
 
-        // Assert endpoint was called once
-        hello.assert();
-
-        // and response has expected content
-        assert_eq!(200, response.status());
-        assert_eq!(response.headers().get("content-length").unwrap(), "48"); // uncompressed: 59
-        assert_eq!(response.headers().get("content-encoding").unwrap(), "gzip");
-        assert_eq!(
-            "Hello World Hello World Hello World Hello World Hello World",
-            compressed_body_to_string(response).await
-        );
-    }
+    // and response has expected content
+    assert_eq!(200, response.status());
+    assert_eq!(response.headers().get("content-length").unwrap(), "48"); // uncompressed: 59
+    assert_eq!(response.headers().get("content-encoding").unwrap(), "gzip");
+    assert_eq!(
+        "Hello World Hello World Hello World Hello World Hello World",
+        compressed_body_to_string(response).await
+    );
 }
 
 async fn body_to_string(res: Response<Body>) -> String {
