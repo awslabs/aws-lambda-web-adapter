@@ -84,7 +84,7 @@ impl AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            compression: env::var("COMPRESSION")
+            compression: env::var("AWS_LWA_ENABLE_COMPRESSION")
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
@@ -264,8 +264,9 @@ impl Adapter {
 
         let compressable_content_type = content_type.starts_with("text/")
             || content_type.starts_with("application/json")
+            || content_type.starts_with("application/ld+json")
             || content_type.starts_with("application/javascript")
-            || content_type.starts_with("application/xml")
+            || content_type.starts_with("image/svg+xml")
             || content_type.starts_with("application/xhtml+xml")
             || content_type.starts_with("application/x-javascript")
             || content_type.starts_with("application/xml");

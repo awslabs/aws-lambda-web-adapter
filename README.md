@@ -69,14 +69,15 @@ After passing readiness check, Lambda Web Adapter will start Lambda Runtime and 
 
 The readiness check port/path and traffic port can be configured using environment variables. These environment variables can be defined either within docker file or as Lambda function configuration.
 
-| Environment Variable     | Description                                                          | Default |
-|--------------------------|----------------------------------------------------------------------|---------|
-| PORT                     | traffic port                                                         | "8080"  |
-| READINESS_CHECK_PORT     | readiness check port, default to the traffic port                    | PORT    |
-| READINESS_CHECK_PATH     | readiness check path                                                 | "/"     |
-| READINESS_CHECK_PROTOCOL | readiness check protocol: "http" or "tcp", default is "http"         | "http"  |
-| ASYNC_INIT               | enable asynchronous initialization for long initialization functions | "false" |
-| REMOVE_BASE_PATH         | (optional) the base path to be removed from request path             | None    |
+| Environment Variable       | Description                                                          | Default |
+| -------------------------- | -------------------------------------------------------------------- | ------- |
+| PORT                       | traffic port                                                         | "8080"  |
+| READINESS_CHECK_PORT       | readiness check port, default to the traffic port                    | PORT    |
+| READINESS_CHECK_PATH       | readiness check path                                                 | "/"     |
+| READINESS_CHECK_PROTOCOL   | readiness check protocol: "http" or "tcp", default is "http"         | "http"  |
+| ASYNC_INIT                 | enable asynchronous initialization for long initialization functions | "false" |
+| REMOVE_BASE_PATH           | (optional) the base path to be removed from request path             | None    |
+| AWS_LWA_ENABLE_COMPRESSION | (optional) enable gzip compression for response body                 | "false" |
 
 **ASYNC_INIT** Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization, and it is free. 
 If a lambda function couldn't complete the initialization within 10 seconds, Lambda will restart the function, and bill for the initialization. 
@@ -84,6 +85,10 @@ To help functions to use this 10 seconds free initialization time and avoid the 
 When this feature is enabled, Lambda Web Adapter performs readiness check up to 9.8 seconds. If the web app is not ready by then, 
 Lambda Web Adapter signals to Lambda service that the init is completed, and continues readiness check in the handler. 
 This feature is disabled by default. Enable it by setting environment variable `ASYNC_INIT` to `true`. 
+
+**LAMBDA_ADAPTER_COMPRESSION** Lambda Web Adapter supports gzip compression for response body. This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ENABLE_COMPRESSION` to `true`.
+When enabled, Lambda Web Adapter will check the `Accept-Encoding` header in the request, and compress the response body if the header contains `gzip`, if the response body is not already compressed, and if the `Content-Type` starts with `text/` or is `application/javascript`, `application/json`, `application/json+ld`, `application/xml`, `application/xhtml+xml`, `application/x-javascript`, or `image/svg+xml`.
+Note that the `Content-Length` header will be set to the compressed size, not the original size.
 
 **REMOVE_BASE_PATH** - The value of this environment variable tells the adapter whether the application is running under a base path.
 For example, you could have configured your API Gateway to have a /orders/{proxy+} and a /catalog/{proxy+} resource.
