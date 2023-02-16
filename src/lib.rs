@@ -4,15 +4,17 @@
 use std::{
     env,
     future::Future,
+    io::prelude::*,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
     time::Duration,
-    io::prelude::*,
 };
 
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode, Uri,
@@ -26,8 +28,6 @@ use hyper::{
 use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
-use flate2::write::GzEncoder;
-use flate2::Compression;
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
@@ -262,8 +262,7 @@ impl Adapter {
             ""
         };
 
-        let compressable_content_type =
-            content_type.starts_with("text/")
+        let compressable_content_type = content_type.starts_with("text/")
             || content_type.starts_with("application/json")
             || content_type.starts_with("application/javascript")
             || content_type.starts_with("application/xml")
@@ -285,7 +284,7 @@ impl Adapter {
                 headers.extend(clean_headers);
             }
             let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-            encoder.write_all(& body::to_bytes(body).await.unwrap())?;
+            encoder.write_all(&body::to_bytes(body).await.unwrap())?;
             let gzipped_body = encoder.finish()?;
 
             builder

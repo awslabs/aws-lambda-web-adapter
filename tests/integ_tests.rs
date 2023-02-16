@@ -280,7 +280,9 @@ async fn test_http_compress() {
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new()
-        .with_path("/hello").with_header("accept-encoding", "gzip").build();
+        .with_path("/hello")
+        .with_header("accept-encoding", "gzip")
+        .build();
     let response = adapter.call(req.into()).await.expect("Request failed");
 
     // Assert endpoint was called once
@@ -290,8 +292,10 @@ async fn test_http_compress() {
     assert_eq!(200, response.status());
     assert_eq!(response.headers().get("content-length").unwrap(), "48"); // uncompressed: 59
     assert_eq!(response.headers().get("content-encoding").unwrap(), "gzip");
-    assert_eq!("Hello World Hello World Hello World Hello World Hello World",
-        compressed_body_to_string(response).await);
+    assert_eq!(
+        "Hello World Hello World Hello World Hello World Hello World",
+        compressed_body_to_string(response).await
+    );
 }
 
 #[tokio::test]
@@ -319,7 +323,9 @@ async fn test_http_compress_disallowed_type() {
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new()
-        .with_path("/hello").with_header("accept-encoding", "gzip").build();
+        .with_path("/hello")
+        .with_header("accept-encoding", "gzip")
+        .build();
     let response = adapter.call(req.into()).await.expect("Request failed");
 
     // Assert endpoint was called once
@@ -329,14 +335,19 @@ async fn test_http_compress_disallowed_type() {
     assert_eq!(200, response.status());
     assert_eq!(response.headers().get("content-length").unwrap(), "59"); // uncompressed: 59
     assert_eq!(response.headers().contains_key("content-encoding"), false);
-    assert_eq!("Hello World Hello World Hello World Hello World Hello World", body_to_string(response).await);
+    assert_eq!(
+        "Hello World Hello World Hello World Hello World Hello World",
+        body_to_string(response).await
+    );
 }
 
 #[tokio::test]
 async fn test_http_compress_already_compressed() {
     unsafe {
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(b"Hello World Hello World Hello World Hello World Hello World").unwrap();
+        encoder
+            .write_all(b"Hello World Hello World Hello World Hello World Hello World")
+            .unwrap();
         let gzipped_body = encoder.finish();
 
         // Turn the vector into a fake string
@@ -346,9 +357,7 @@ async fn test_http_compress_already_compressed() {
         let app_server = MockServer::start();
         let hello = app_server.mock(|when, then| {
             when.method(GET).path("/hello");
-            then.status(200)
-                .header("content-encoding", "gzip")
-                .body(gzipped_body);
+            then.status(200).header("content-encoding", "gzip").body(gzipped_body);
         });
 
         // Initialize adapter
@@ -365,7 +374,9 @@ async fn test_http_compress_already_compressed() {
 
         // Call the adapter service with basic request
         let req = LambdaEventBuilder::new()
-            .with_path("/hello").with_header("accept-encoding", "gzip").build();
+            .with_path("/hello")
+            .with_header("accept-encoding", "gzip")
+            .build();
         let response = adapter.call(req.into()).await.expect("Request failed");
 
         // Assert endpoint was called once
@@ -375,8 +386,10 @@ async fn test_http_compress_already_compressed() {
         assert_eq!(200, response.status());
         assert_eq!(response.headers().get("content-length").unwrap(), "48"); // uncompressed: 59
         assert_eq!(response.headers().get("content-encoding").unwrap(), "gzip");
-        assert_eq!("Hello World Hello World Hello World Hello World Hello World",
-            compressed_body_to_string(response).await);
+        assert_eq!(
+            "Hello World Hello World Hello World Hello World Hello World",
+            compressed_body_to_string(response).await
+        );
     }
 }
 
@@ -395,4 +408,4 @@ fn decode_reader(bytes: &Vec<u8>) -> io::Result<String> {
     let mut s = String::new();
     gz.read_to_string(&mut s)?;
     Ok(s)
- }
+}
