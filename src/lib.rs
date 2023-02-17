@@ -4,6 +4,7 @@
 use std::{
     env,
     future::Future,
+    io::prelude::*,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -12,11 +13,14 @@ use std::{
     time::Duration,
 };
 
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode, Uri,
 };
 use hyper::{
+    body,
     body::HttpBody,
     client::{Client, HttpConnector},
     Body,
@@ -60,6 +64,7 @@ pub struct AdapterOptions {
     pub readiness_check_protocol: Protocol,
     pub base_path: Option<String>,
     pub async_init: bool,
+    pub compression: bool,
 }
 
 impl AdapterOptions {
@@ -79,6 +84,10 @@ impl AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
+            compression: env::var("AWS_LWA_ENABLE_COMPRESSION")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse()
+                .unwrap_or(false),
         }
     }
 }
@@ -92,6 +101,7 @@ pub struct Adapter {
     ready_at_init: Arc<AtomicBool>,
     domain: Uri,
     base_path: Option<String>,
+    compression: bool,
 }
 
 impl Adapter {
@@ -120,6 +130,7 @@ impl Adapter {
             base_path: options.base_path.clone(),
             async_init: options.async_init,
             ready_at_init: Arc::new(AtomicBool::new(false)),
+            compression: options.compression,
         }
     }
 
@@ -206,6 +217,12 @@ impl Adapter {
             path = path.trim_start_matches(base_path);
         }
 
+        let accepts_gzip = parts
+            .headers
+            .get("accept-encoding")
+            .map(|v| v.to_str().unwrap_or_default().contains("gzip"))
+            .unwrap_or_default();
+
         let mut req_headers = parts.headers;
 
         // include request context in http header "x-amzn-request-context"
@@ -236,6 +253,49 @@ impl Adapter {
         let app_response = self.client.request(request).await?;
         tracing::debug!(status = %app_response.status(), body_size = app_response.body().size_hint().lower(),
             app_headers = ?app_response.headers().clone(), "responding to lambda event");
+
+        let response_compressed = app_response.headers().get("content-encoding").is_some();
+
+        let content_type = if let Some(content_type) = app_response.headers().get("content-type") {
+            content_type.to_str().unwrap()
+        } else {
+            ""
+        };
+
+        let compressable_content_type = content_type.starts_with("text/")
+            || content_type.starts_with("application/json")
+            || content_type.starts_with("application/ld+json")
+            || content_type.starts_with("application/javascript")
+            || content_type.starts_with("image/svg+xml")
+            || content_type.starts_with("application/xhtml+xml")
+            || content_type.starts_with("application/x-javascript")
+            || content_type.starts_with("application/xml");
+
+        // Gzip the response if the client accepts it
+        let app_response = if !self.compression {
+            app_response
+        } else if accepts_gzip && !response_compressed && compressable_content_type {
+            let (parts, body) = app_response.into_parts();
+            let mut builder = hyper::Response::builder().status(parts.status).version(parts.version);
+            if let Some(headers) = builder.headers_mut() {
+                // Remove the content-length header as we can't overwrite it after setting it
+                let mut clean_headers = parts.headers.clone();
+                clean_headers.remove(http::header::CONTENT_LENGTH);
+
+                headers.extend(clean_headers);
+            }
+            let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+            encoder.write_all(&body::to_bytes(body).await.unwrap())?;
+            let gzipped_body = encoder.finish()?;
+
+            builder
+                // Write the new content-length header
+                .header(http::header::CONTENT_LENGTH, gzipped_body.len().to_string())
+                .header("content-encoding", "gzip")
+                .body(hyper::Body::from(gzipped_body))?
+        } else {
+            app_response
+        };
 
         Ok(app_response)
     }

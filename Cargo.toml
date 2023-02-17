@@ -20,6 +20,7 @@ exclude = ["examples"]
 http = "0.2"
 hyper = { version = "0.14", features = ["client"] }
 lambda_http = "0.7.3"
+flate2 = "1.0.25"
 tokio = { version = "1.24", features = [
     "macros",
     "io-util",

@@ -61,6 +61,9 @@ Resources:
       Handler: bootstrap
       Runtime: provided.al2
       MemorySize: 256
+      Environment:
+        Variables:
+          AWS_LWA_ENABLE_COMPRESSION: 'true'
       Layers:
         - !Ref AdapterLayerArn
       Events:
