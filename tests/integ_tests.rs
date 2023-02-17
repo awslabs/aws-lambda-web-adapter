@@ -347,15 +347,13 @@ async fn test_http_compress_already_compressed() {
     encoder
         .write_all(b"Hello World Hello World Hello World Hello World Hello World")
         .unwrap();
-    let gzipped_body = encoder.finish();
+    let gzipped_body = encoder.finish().unwrap();
 
     // Start app server
     let app_server = MockServer::start();
     let hello = app_server.mock(|when, then| {
         when.method(GET).path("/hello");
-        then.status(200)
-            .header("content-encoding", "gzip")
-            .body(&gzipped_body.unwrap());
+        then.status(200).header("content-encoding", "gzip").body(&gzipped_body);
     });
 
     // Initialize adapter

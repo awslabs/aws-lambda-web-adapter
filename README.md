@@ -86,7 +86,7 @@ When this feature is enabled, Lambda Web Adapter performs readiness check up to 
 Lambda Web Adapter signals to Lambda service that the init is completed, and continues readiness check in the handler. 
 This feature is disabled by default. Enable it by setting environment variable `ASYNC_INIT` to `true`. 
 
-**LAMBDA_ADAPTER_COMPRESSION** Lambda Web Adapter supports gzip compression for response body. This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ENABLE_COMPRESSION` to `true`.
+**AWS_LWA_ENABLE_COMPRESSION** Lambda Web Adapter supports gzip compression for response body. This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ENABLE_COMPRESSION` to `true`.
 When enabled, Lambda Web Adapter will check the `Accept-Encoding` header in the request, and compress the response body if the header contains `gzip`, if the response body is not already compressed, and if the `Content-Type` starts with `text/` or is `application/javascript`, `application/json`, `application/json+ld`, `application/xml`, `application/xhtml+xml`, `application/x-javascript`, or `image/svg+xml`.
 Note that the `Content-Length` header will be set to the compressed size, not the original size.
 
