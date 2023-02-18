@@ -22,21 +22,14 @@ Resources:
       Environment:
         Variables:
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          AWS_LWA_ENABLE_COMPRESSION: true
           RUST_LOG: info
           PORT: 8000
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:13
       Events:
-        Root:
+        HttpEvent:
           Type: HttpApi
-          Properties:
-            Path: /
-            Method: ANY
-        Proxy:
-          Type: HttpApi
-          Properties:
-            Path: /{proxy+}
-            Method: ANY
     Metadata:
       BuildMethod: makefile
 
