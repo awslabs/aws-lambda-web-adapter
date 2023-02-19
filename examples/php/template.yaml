@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  sam-app
+  serverless-php-demo
 
-  Sample SAM Template for sam-app
+  Sample SAM Template for serverless-php-demo
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -18,18 +18,20 @@ Resources:
         Type: REGIONAL
       StageName: Prod
       TracingEnabled: True
-
-  PhpFunction:
+      BinaryMediaTypes:
+        - '*~1*'
+  Function:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      MemorySize: 256
+      MemorySize: 1024
       Tracing: Active
       Policies:
         - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension
       Environment:
         Variables:
           RUST_LOG: debug
+          PORT: 8080
       Events:
         Root:
           Type: Api
@@ -45,11 +47,13 @@ Resources:
             Method: ANY
     Metadata:
       DockerTag: v1
-      DockerContext: ./app
+      DockerContext: ./
       Dockerfile: Dockerfile
 
 Outputs:
-  NginxApi:
-    Description: "API Gateway endpoint URL for Prod stage for Php application"
+  URL:
+    Description: "API Gateway endpoint URL for Prod stage for PHP application"
     Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
-
+  Function:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt Function.Arn
