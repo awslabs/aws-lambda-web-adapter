@@ -147,6 +147,43 @@ async fn test_http_headers() {
 }
 
 #[tokio::test]
+async fn test_http_path_encoding() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // An endpoint that expects and returns headers
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/A%C3%B1o_1234");
+        then.status(200).body("Ok");
+    });
+
+    // Initialize adapter and do readiness check
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        readiness_check_protocol: Protocol::Http,
+        async_init: false,
+        base_path: None,
+        compression: false,
+    });
+
+    // Prepare request
+    let req = LambdaEventBuilder::new().with_path("/Año_1234").build();
+
+    // Call the adapter service with request
+    let response = adapter.call(req.into()).await.expect("Request failed");
+
+    // Assert endpoint was called once
+    test_endpoint.assert();
+
+    // and response has expected content
+    assert_eq!(200, response.status());
+    assert_eq!("Ok", body_to_string(response).await);
+}
+
+#[tokio::test]
 async fn test_http_query_params() {
     // Start app server
     let app_server = MockServer::start();
@@ -390,7 +427,7 @@ async fn test_http_compress_already_compressed() {
 
 async fn body_to_string(res: Response<Body>) -> String {
     let body_bytes = body::to_bytes(res.into_body()).await.unwrap();
-    String::from_utf8(body_bytes.to_vec()).unwrap()
+    String::from_utf8_lossy(&*body_bytes).to_string()
 }
 
 async fn compressed_body_to_string(res: Response<Body>) -> String {

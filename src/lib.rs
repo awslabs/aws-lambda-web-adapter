@@ -17,7 +17,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use http::{
     header::{HeaderName, HeaderValue},
-    Method, StatusCode, Uri,
+    Method, StatusCode,
 };
 use hyper::{
     body,
@@ -32,6 +32,7 @@ use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
+use url::Url;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Protocol {
@@ -95,11 +96,11 @@ impl AdapterOptions {
 #[derive(Clone)]
 pub struct Adapter {
     client: Arc<Client<HttpConnector>>,
-    healthcheck_url: Uri,
+    healthcheck_url: Url,
     healthcheck_protocol: Protocol,
     async_init: bool,
     ready_at_init: Arc<AtomicBool>,
-    domain: Uri,
+    domain: Url,
     base_path: Option<String>,
     compression: bool,
 }
@@ -231,19 +232,13 @@ impl Adapter {
             HeaderValue::from_bytes(serde_json::to_string(&request_context)?.as_bytes())?,
         );
 
-        let mut pq = path.to_string();
-        if let Some(q) = parts.uri.query() {
-            pq.push('?');
-            pq.push_str(q);
-        }
-
-        let mut app_parts = self.domain.clone().into_parts();
-        app_parts.path_and_query = Some(pq.parse()?);
-        let app_url = Uri::from_parts(app_parts)?;
+        let mut app_url = self.domain.clone();
+        app_url.set_path(path);
+        app_url.set_query(parts.uri.query());
 
         tracing::debug!(app_url = %app_url, req_headers = ?req_headers, "sending request to app server");
 
-        let mut builder = hyper::Request::builder().method(parts.method).uri(app_url);
+        let mut builder = hyper::Request::builder().method(parts.method).uri(app_url.to_string());
         if let Some(headers) = builder.headers_mut() {
             headers.extend(req_headers);
         }
@@ -318,15 +313,15 @@ impl Service<Request> for Adapter {
     }
 }
 
-async fn is_web_ready(url: &Uri, protocol: &Protocol) -> bool {
+async fn is_web_ready(url: &Url, protocol: &Protocol) -> bool {
     Retry::spawn(FixedInterval::from_millis(10), || check_web_readiness(url, protocol))
         .await
         .is_ok()
 }
 
-async fn check_web_readiness(url: &Uri, protocol: &Protocol) -> Result<(), i8> {
+async fn check_web_readiness(url: &Url, protocol: &Protocol) -> Result<(), i8> {
     match protocol {
-        Protocol::Http => match Client::new().get(url.clone()).await {
+        Protocol::Http => match Client::new().get(url.to_string().parse().unwrap()).await {
             Ok(_) => Ok(()),
             Err(_) => Err(-1),
         },
