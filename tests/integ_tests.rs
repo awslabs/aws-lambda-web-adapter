@@ -170,9 +170,7 @@ async fn test_http_path_encoding() {
     });
 
     // Prepare request
-    let req = LambdaEventBuilder::new()
-        .with_path("/Año_1234")
-        .build();
+    let req = LambdaEventBuilder::new().with_path("/Año_1234").build();
 
     // Call the adapter service with request
     let response = adapter.call(req.into()).await.expect("Request failed");
