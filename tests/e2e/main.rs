@@ -1,7 +1,8 @@
 use flate2::read::GzDecoder;
 use http::Uri;
+use hyper::client::HttpConnector;
 use hyper::{Body, Client, Method, Request};
-use hyper_tls::HttpsConnector;
+use hyper_rustls::HttpsConnector;
 use lambda_http::aws_lambda_events::serde_json;
 use lambda_http::aws_lambda_events::serde_json::Value;
 use std::env;
@@ -30,12 +31,20 @@ fn decode_reader(bytes: &Vec<u8>) -> io::Result<String> {
     Ok(s)
 }
 
+fn get_https_connector() -> HttpsConnector<HttpConnector> {
+    hyper_rustls::HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .https_or_http()
+        .enable_http1()
+        .build()
+}
+
 #[ignore]
 #[tokio::test]
 async fn test_http_basic_request() {
     for endpoint in get_endpoints().iter() {
         if let Some(endpoint) = endpoint {
-            let client = Client::builder().build::<_, hyper::Body>(HttpsConnector::new());
+            let client = Client::builder().build::<_, hyper::Body>(get_https_connector());
             let response = client.get(endpoint.parse().unwrap()).await.unwrap();
 
             assert_eq!(200, response.status());
@@ -48,7 +57,7 @@ async fn test_http_basic_request() {
 async fn test_http_headers() {
     for endpoint in get_endpoints().iter() {
         if let Some(endpoint) = endpoint {
-            let client = Client::builder().build::<_, hyper::Body>(HttpsConnector::new());
+            let client = Client::builder().build::<_, hyper::Body>(get_https_connector());
             let uri = endpoint.to_string() + "get";
             let req = Request::builder()
                 .method(Method::GET)
@@ -73,7 +82,7 @@ async fn test_http_headers() {
 async fn test_http_query_params() {
     for endpoint in get_endpoints().iter() {
         if let Some(endpoint) = endpoint {
-            let client = Client::builder().build::<_, hyper::Body>(HttpsConnector::new());
+            let client = Client::builder().build::<_, hyper::Body>(get_https_connector());
             let parts = endpoint.parse::<Uri>().unwrap().into_parts();
             let uri = Uri::builder()
                 .scheme(parts.scheme.unwrap())
@@ -104,7 +113,7 @@ async fn test_http_query_params() {
 async fn test_http_compress() {
     for endpoint in get_endpoints().iter() {
         if let Some(endpoint) = endpoint {
-            let client = Client::builder().build::<_, hyper::Body>(HttpsConnector::new());
+            let client = Client::builder().build::<_, hyper::Body>(get_https_connector());
             let parts = endpoint.parse::<Uri>().unwrap().into_parts();
             let uri = Uri::builder()
                 .scheme(parts.scheme.unwrap())
