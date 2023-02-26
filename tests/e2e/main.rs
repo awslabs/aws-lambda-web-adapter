@@ -35,7 +35,7 @@ fn get_https_connector() -> HttpsConnector<HttpConnector> {
     hyper_rustls::HttpsConnectorBuilder::new()
         .with_native_roots()
         .https_or_http()
-        .with_server_name("localhost".to_string())
+        .with_server_name("api.example.com".to_string())
         .enable_http1()
         .build()
 }

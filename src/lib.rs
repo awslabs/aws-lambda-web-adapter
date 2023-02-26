@@ -68,7 +68,7 @@ pub struct AdapterOptions {
     pub async_init: bool,
     pub compression: bool,
     pub enable_https: bool,
-    pub server_name: String,
+    pub server_name: Option<String>,
 }
 
 impl AdapterOptions {
@@ -96,7 +96,7 @@ impl AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            server_name: env::var("AWS_LWA_SERVER_NAME").unwrap_or_else(|_| "localhost".to_string()),
+            server_name: env::var("AWS_LWA_SERVER_NAME").ok(),
         }
     }
 }
@@ -121,7 +121,7 @@ impl Adapter {
         let https = hyper_rustls::HttpsConnectorBuilder::new()
             .with_native_roots()
             .https_or_http()
-            .with_server_name(options.server_name.clone())
+            .with_server_name(options.server_name.clone().unwrap_or_else(|| "localhost".to_string()))
             .enable_http1()
             .build();
 

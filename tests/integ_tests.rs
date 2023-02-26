@@ -61,7 +61,7 @@ async fn test_http_readiness_check() {
         base_path: None,
         compression: false,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     };
 
     // Initialize adapter and do readiness check
@@ -92,7 +92,7 @@ async fn test_http_basic_request() {
         base_path: None,
         compression: false,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     });
 
     // // Call the adapter service with basic request
@@ -130,7 +130,7 @@ async fn test_http_headers() {
         base_path: None,
         compression: false,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     });
 
     // Prepare request
@@ -174,7 +174,7 @@ async fn test_http_path_encoding() {
         base_path: None,
         compression: false,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     });
 
     // Prepare request
@@ -216,7 +216,7 @@ async fn test_http_query_params() {
         base_path: None,
         compression: false,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     });
 
     // Prepare request
@@ -267,7 +267,7 @@ async fn test_http_post_put_delete() {
         base_path: None,
         compression: false,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     });
 
     // Prepare requests
@@ -326,7 +326,7 @@ async fn test_http_compress() {
         base_path: None,
         compression: true,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     });
 
     // // Call the adapter service with basic request
@@ -371,7 +371,7 @@ async fn test_http_compress_disallowed_type() {
         base_path: None,
         compression: true,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     });
 
     // // Call the adapter service with basic request
@@ -420,7 +420,7 @@ async fn test_http_compress_already_compressed() {
         base_path: None,
         compression: true,
         enable_https: false,
-        server_name: "".to_string(),
+        server_name: None,
     });
 
     // Call the adapter service with basic request
