@@ -116,6 +116,7 @@ Lambda Web Adapter forwards this information to the web applicatioin in a Http H
 - [SpringBoot in Zip](examples/springboot-zip)
 - [Nginx](examples/nginx)
 - [PHP](examples/php)
+- [Rust Actix Web in Zip](examples/rust-actix-web-zip)
 - [Rust Axum in Zip](examples/rust-axum-zip)
 - [Golang Gin](examples/gin)
 - [Golang Gin in Zip](examples/gin-zip)
