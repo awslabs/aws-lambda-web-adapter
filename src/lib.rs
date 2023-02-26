@@ -25,6 +25,7 @@ use hyper::{
     client::{Client, HttpConnector},
     Body,
 };
+use hyper_rustls::HttpsConnector;
 use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
@@ -65,6 +66,8 @@ pub struct AdapterOptions {
     pub base_path: Option<String>,
     pub async_init: bool,
     pub compression: bool,
+    pub enable_https: bool,
+    pub server_name: String,
 }
 
 impl AdapterOptions {
@@ -88,13 +91,18 @@ impl AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
+            enable_https: env::var("AWS_LWA_ENABLE_HTTPS")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse()
+                .unwrap_or(false),
+            server_name: env::var("AWS_LWA_SERVER_NAME").unwrap_or_else(|_| "localhost".to_string()),
         }
     }
 }
 
 #[derive(Clone)]
 pub struct Adapter {
-    client: Arc<Client<HttpConnector>>,
+    client: Arc<Client<HttpsConnector<HttpConnector>>>,
     healthcheck_url: Uri,
     healthcheck_protocol: Protocol,
     async_init: bool,
@@ -109,16 +117,28 @@ impl Adapter {
     /// This function initializes a new HTTP client
     /// to talk with the web server.
     pub fn new(options: &AdapterOptions) -> Adapter {
-        let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build_http();
+        let https = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .https_or_http()
+            .with_server_name(options.server_name.clone())
+            .enable_http1()
+            .build();
+
+        let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build(https);
+
+        let schema = match options.enable_https {
+            true => "https",
+            false => "http",
+        };
 
         let healthcheck_url = format!(
             "{}://{}:{}{}",
-            "http", options.host, options.readiness_check_port, options.readiness_check_path
+            schema, options.host, options.readiness_check_port, options.readiness_check_path
         )
         .parse()
         .unwrap();
 
-        let domain = format!("{}://{}:{}", "http", options.host, options.port)
+        let domain = format!("{}://{}:{}", schema, options.host, options.port)
             .parse()
             .unwrap();
 
@@ -135,7 +155,7 @@ impl Adapter {
     }
 
     /// Switch the default HTTP client with a different one.
-    pub fn with_client(self, client: Client<HttpConnector>) -> Self {
+    pub fn with_client(self, client: Client<HttpsConnector<HttpConnector>>) -> Self {
         Adapter {
             client: Arc::new(client),
             ..self
