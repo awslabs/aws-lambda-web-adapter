@@ -214,7 +214,32 @@ impl Adapter {
     async fn check_readiness(&self) -> bool {
         let url = self.healthcheck_url.clone();
         let protocol = self.healthcheck_protocol;
-        is_web_ready(&url, &protocol).await
+        self.is_web_ready(&url, &protocol).await
+    }
+
+    async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
+        Retry::spawn(FixedInterval::from_millis(10), || {
+            self.check_web_readiness(url, protocol)
+        })
+        .await
+        .is_ok()
+    }
+
+    async fn check_web_readiness(&self, url: &Url, protocol: &Protocol) -> Result<(), i8> {
+        match protocol {
+            Protocol::Http => match self.client.get(url.to_string().parse().unwrap()).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    tracing::debug!(err =?e, "app is not ready");
+                    Err(-1)
+                }
+            },
+            Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await
+            {
+                Ok(_) => Ok(()),
+                Err(_) => Err(-1),
+            },
+        }
     }
 
     /// Run the adapter to take events from Lambda.
@@ -224,7 +249,8 @@ impl Adapter {
 
     async fn fetch_response(&self, event: Request) -> Result<Response<Body>, Error> {
         if self.async_init && !self.ready_at_init.load(Ordering::SeqCst) {
-            is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol).await;
+            self.is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol)
+                .await;
             self.ready_at_init.store(true, Ordering::SeqCst);
         }
 
@@ -330,24 +356,5 @@ impl Service<Request> for Adapter {
     fn call(&mut self, event: Request) -> Self::Future {
         let adapter = self.clone();
         Box::pin(async move { adapter.fetch_response(event).await })
-    }
-}
-
-async fn is_web_ready(url: &Url, protocol: &Protocol) -> bool {
-    Retry::spawn(FixedInterval::from_millis(10), || check_web_readiness(url, protocol))
-        .await
-        .is_ok()
-}
-
-async fn check_web_readiness(url: &Url, protocol: &Protocol) -> Result<(), i8> {
-    match protocol {
-        Protocol::Http => match Client::new().get(url.to_string().parse().unwrap()).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(-1),
-        },
-        Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(-1),
-        },
     }
 }

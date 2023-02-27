@@ -40,7 +40,6 @@ url = "2.3.1"
 
 [dev-dependencies]
 httpmock = "0.6"
-hyper-rustls = "0.23.2"
 http-body-util = "0.1.0-rc.2"
 http-body = "0.4.5"
 
