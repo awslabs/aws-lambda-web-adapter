@@ -5,5 +5,5 @@ COPY requirements.txt ./
 RUN python -m pip install -r requirements.txt
 COPY *.py *.pem ./
 ENV PORT=8000 READINESS_CHECK_PROTOCOL=http RUST_LOG=info
-ENV AWS_LWA_ENABLE_HTTPS=true AWS_LWA_SERVER_NAME=api.example.com SSL_CERT_FILE=/var/task/cert.pem
+ENV AWS_LWA_ENABLE_TLS=true AWS_LWA_TLS_SERVER_NAME=api.example.com AWS_LWA_TLS_CERT_FILE=/var/task/cert.pem
 CMD exec uvicorn --port=$PORT --ssl-keyfile key.pem --ssl-certfile cert.pem --log-level info main:app
