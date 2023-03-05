@@ -67,8 +67,9 @@ pub struct AdapterOptions {
     pub base_path: Option<String>,
     pub async_init: bool,
     pub compression: bool,
-    pub enable_https: bool,
-    pub server_name: Option<String>,
+    pub enable_tls: bool,
+    pub tls_server_name: Option<String>,
+    pub tls_cert_file: Option<String>,
 }
 
 impl AdapterOptions {
@@ -92,11 +93,12 @@ impl AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            enable_https: env::var("AWS_LWA_ENABLE_HTTPS")
+            enable_tls: env::var("AWS_LWA_ENABLE_TLS")
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            server_name: env::var("AWS_LWA_SERVER_NAME").ok(),
+            tls_server_name: env::var("AWS_LWA_TLS_SERVER_NAME").ok(),
+            tls_cert_file: env::var("AWS_LWA_TLS_CERT_FILE").ok(),
         }
     }
 }
@@ -118,16 +120,25 @@ impl Adapter {
     /// This function initializes a new HTTP client
     /// to talk with the web server.
     pub fn new(options: &AdapterOptions) -> Adapter {
+        if let Some(cert_file) = &options.tls_cert_file {
+            env::set_var("SSL_CERT_FILE", cert_file);
+        }
+
         let https = hyper_rustls::HttpsConnectorBuilder::new()
             .with_native_roots()
             .https_or_http()
-            .with_server_name(options.server_name.clone().unwrap_or_else(|| "localhost".to_string()))
+            .with_server_name(
+                options
+                    .tls_server_name
+                    .clone()
+                    .unwrap_or_else(|| "localhost".to_string()),
+            )
             .enable_http1()
             .build();
 
         let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build(https);
 
-        let schema = match options.enable_https {
+        let schema = match options.enable_tls {
             true => "https",
             false => "http",
         };
