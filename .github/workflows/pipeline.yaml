@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
   pull_request:
     branches:
       - main
@@ -60,7 +59,6 @@ jobs:
           test_path: "**/junit.xml"
 
   build:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [test]
     runs-on: ubuntu-latest
     steps:
@@ -127,7 +125,6 @@ jobs:
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
 
   package-beta:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
@@ -363,8 +360,7 @@ jobs:
           path: packaged-prod-arm64-${{ matrix.region }}.yaml
 
   deploy-beta:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [package-beta, package-gamma, package-prod]
+    needs: [package-beta]
     runs-on: ubuntu-latest
     steps:
       - name: Collect Workflow Telemetry
@@ -419,7 +415,6 @@ jobs:
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
   e2e-test:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [deploy-beta]
     runs-on: ubuntu-latest
     steps:
@@ -451,7 +446,7 @@ jobs:
           role-skip-session-tagging: true
 
       - name: deploy the oci x86 integration test stacks for the beta environment
-        working-directory: ./tests/e2e/fixtures/go-httpbin
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin
         run: |
           aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
           sam build
@@ -464,7 +459,7 @@ jobs:
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
       - name: deploy the zip x86 integration test stacks for the beta environment
-        working-directory: ./tests/e2e/fixtures/go-httpbin-zip
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
         run: |
           sam build
           sam deploy --stack-name ${BETA_STACK_NAME}-zip-x86 \
@@ -475,19 +470,47 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
+      - name: deploy the tls zip x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-tls-zip
+        run: |
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-tls-zip-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
       - uses: dkershner6/aws-ssm-getparameters-action@v1
         with:
-          parameterPairs:   "/lambda-web-adapter/e2e/oci/rest-api-endpoint = OCI_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/oci/http-api-endpoint = OCI_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/oci/alb-endpoint      = OCI_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/oci/function-url      = OCI_FURL_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/rest-api-endpoint = ZIP_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/http-api-endpoint = ZIP_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/alb-endpoint      = ZIP_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/function-url      = ZIP_FURL_ENDPOINT"
+          parameterPairs:   "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint      = HTTPBIN_OCI_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint      = HTTPBIN_OCI_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/oci/alb-endpoint           = HTTPBIN_OCI_ALB_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/oci/function-url           = HTTPBIN_OCI_FURL_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint      = HTTPBIN_ZIP_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint           = HTTPBIN_ZIP_ALB_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin-tls/zip/rest-api-endpoint  = HTTPBIN_TLS_ZIP_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin-tls/zip/http-api-endpoint  = HTTPBIN_TLS_ZIP_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin-tls/zip/alb-endpoint       = HTTPBIN_TLS_ZIP_ALB_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin-tls/zip/function-url       = HTTPBIN_TLS_ZIP_FURL_ENDPOINT"
 
       - name: run e2e tests
-        run: cargo nextest run --run-ignored ignored-only --profile ci
+        run: |
+          API_ENDPOINT=${HTTPBIN_OCI_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_OCI_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_OCI_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_OCI_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_TLS_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_TLS_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_TLS_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_TLS_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
       - name: Analyze Test and/or Coverage Results
         uses: runforesight/foresight-test-kit-action@v1
@@ -498,18 +521,23 @@ jobs:
           test_path: "**/junit.xml"
 
       - name: remove the oci x86 integration test stacks
-        working-directory: ./tests/e2e/fixtures/go-httpbin
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin
         run: |
           sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86
 
       - name: remove the zip x86 integration test stacks
-        working-directory: ./tests/e2e/fixtures/go-httpbin-zip
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
         run: |
           sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
 
+      - name: remove the tls zip x86 integration test stacks
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-tls-zip
+        run: |
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-tls-zip-x86
+
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test ]
+    needs: [ e2e-test, package-gamma ]
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -583,7 +611,7 @@ jobs:
 
   load-prod-matrix2:
     if: ${{ github.event_name == 'release' }}
-    needs: [ deploy-gamma ]
+    needs: [ deploy-gamma, package-prod ]
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
