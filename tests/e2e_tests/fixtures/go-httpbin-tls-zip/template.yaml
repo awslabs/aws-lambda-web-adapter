@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Go-HttpBin-Zip
+  Go-HttpBin-tls-Zip
 
-  Sample SAM Template for Go-HttpBin-Zip
+  Sample SAM Template for Go-HttpBin-tls-Zip
 
 Parameters:
   Subnets:
@@ -38,7 +38,7 @@ Resources:
         - '*~1*'
       Domain:
         CertificateArn: !Ref CertificateArn
-        DomainName: !Sub httpbin-rest-zip.${Route53HostedZone}
+        DomainName: !Sub httpbin-tls-rest-zip.${Route53HostedZone}
         EndpointConfiguration: REGIONAL
         Route53:
           HostedZoneId: !Ref Route53HostedZoneId
@@ -50,20 +50,26 @@ Resources:
     Properties:
       Domain:
         CertificateArn: !Ref CertificateArn
-        DomainName: !Sub httpbin-http-zip.${Route53HostedZone}
+        DomainName: !Sub httpbin-tls-http-zip.${Route53HostedZone}
         Route53:
           HostedZoneId: !Ref Route53HostedZoneId
 
   HttpBinFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Architectures:
+        - x86_64
       CodeUri: ./app
       Handler: bootstrap
       Runtime: provided.al2
       MemorySize: 256
       Environment:
         Variables:
+          PORT: 8443
           AWS_LWA_ENABLE_COMPRESSION: 'true'
+          AWS_LWA_ENABLE_TLS: true
+          AWS_LWA_TLS_SERVER_NAME: api.example.com
+          AWS_LWA_TLS_CERT_FILE: /var/task/certs/cert.pem
       Layers:
         - !Ref AdapterLayerArn
       Events:
@@ -138,7 +144,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId : !Ref Route53HostedZoneId
-      Name: !Sub httpbin-alb-zip.${Route53HostedZone}
+      Name: !Sub httpbin-tls-alb-zip.${Route53HostedZone}
       AliasTarget:
         DNSName: !GetAtt LoadBalancer.DNSName
         HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
@@ -147,23 +153,23 @@ Resources:
   RestApiEndpoint:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint
+      Name: /lambda-web-adapter/e2e/httpbin-tls/zip/rest-api-endpoint
       Description: 'Rest API Endpoint for HttpBin function'
       Type: String
-      Value: !Sub "https://httpbin-rest-zip.${Route53HostedZone}/"
+      Value: !Sub "https://httpbin-tls-rest-zip.${Route53HostedZone}/"
 
   HttpApiEndpoint:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint
+      Name: /lambda-web-adapter/e2e/httpbin-tls/zip/http-api-endpoint
       Description: 'Http API Endpoint for HttpBin function'
       Type: String
-      Value: !Sub "https://httpbin-http-zip.${Route53HostedZone}/"
+      Value: !Sub "https://httpbin-tls-http-zip.${Route53HostedZone}/"
 
   AlbEndpoint:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint
+      Name: /lambda-web-adapter/e2e/httpbin-tls/zip/alb-endpoint
       Description: 'ALB Endpoint for HttpBin function'
       Type: String
       Value: !Sub "https://${AlbDNSRecord}/"
@@ -171,7 +177,7 @@ Resources:
   FunctionUrl:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /lambda-web-adapter/e2e/httpbin/zip/function-url
+      Name: /lambda-web-adapter/e2e/httpbin-tls/zip/function-url
       Description: 'Function URL for HttpBin function'
       Type: String
       Value: !GetAtt HttpBinFunctionUrl.FunctionUrl
@@ -179,17 +185,16 @@ Resources:
 Outputs:
   HttpBinHttpApi:
     Description: "API Gateway Http API endpoint URL for default stage for HttpBin function"
-    Value: !Sub "https://httpbin-http-zip.${Route53HostedZone}/"
+    Value: !GetAtt HttpApiEndpoint.Value
 
   HttpBinRestApi:
     Description: "API Gateway Rest API endpoint URL for Prod stage for HttpBin function"
-    Value: !Sub "https://httpbin-rest-zip.${Route53HostedZone}/"
+    Value: !GetAtt RestApiEndpoint.Value
 
   HttpBinAlbDNS:
     Description: "Application Load Balancer for HttpBin function"
-    Value: !Sub "https://${AlbDNSRecord}/"
+    Value: !GetAtt AlbEndpoint.Value
 
   HttpBinFunctionUrl:
     Description: "Function URL for HttpBin function"
-    Value: !GetAtt HttpBinFunctionUrl.FunctionUrl
-    
+    Value: !GetAtt FunctionUrl.Value

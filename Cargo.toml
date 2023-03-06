@@ -42,6 +42,7 @@ url = "2.3.1"
 httpmock = "0.6"
 http-body-util = "0.1.0-rc.2"
 http-body = "0.4.5"
+aws-sigv4 = "0.54"
 
 [[bin]]
 name = "lambda-adapter"
