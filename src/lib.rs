@@ -35,16 +35,11 @@ use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
 use url::Url;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Protocol {
+    #[default]
     Http,
     Tcp,
-}
-
-impl Default for Protocol {
-    fn default() -> Self {
-        Protocol::Http
-    }
 }
 
 impl From<&str> for Protocol {
