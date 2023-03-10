@@ -82,6 +82,11 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_TLS_SERVER_NAME    | override server name for TLS SNI                                     | "localhost" |
 | AWS_LWA_TLS_CERT_FILE      | override server certificate file                                     | None        |
 
+**PORT** - Lambda Web Adapter will send traffic to this port. This is the port your web application listening on. Inside Lambda execution environment, 
+the web application runs as a non-root user, and not allowed to listen on ports lower than 1024. Please also avoid port 9001 and 3000. 
+Lambda Runtime API is on port 9001. CloudWatch Lambda Insight extension uses port 3000.  
+
+
 **ASYNC_INIT** - Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization, and it is free. 
 If a lambda function couldn't complete the initialization within 10 seconds, Lambda will restart the function, and bill for the initialization. 
 To help functions to use this 10 seconds free initialization time and avoid the restart, Lambda Web Adapter supports asynchronous initialization. 
