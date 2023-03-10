@@ -1,10 +1,10 @@
-# FastAPI Https example
+# FastAPI HTTPS example
 
-A FastAPI over Https example application. You can build and test it locally as a typical FastAPI application.
+A FastAPI over HTTPS example application. You can build and test it locally as a typical FastAPI application.
 
 ## Generate self-signed certificate
 
-To run FastAPI over Https, we need to obtain an x.509 v3 certificate. You can obtain the certificate from a Certificate Authority or generate a self-signed certificate.
+To run FastAPI over HTTPS, we need to obtain an x.509 v3 certificate. You can obtain the certificate from a Certificate Authority or generate a self-signed certificate.
 
 Here is a command to generate a self-signed certificate with `openssl`. The cert has two Subject Alt Names (SAN): `localhost` and `api.example.com`.
 ```bash
