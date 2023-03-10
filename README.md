@@ -53,7 +53,7 @@ AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to 
 
 For details, please check out [the example nodejs application](examples/expressjs-zip).
 
-### Readiness Check
+## Readiness Check
 
 When a new Lambda Execution Environment starts up, Lambda Web Adapter will boot up as a Lambda Extension, followed by the web application. 
 
@@ -65,7 +65,7 @@ In addition, you can configure the adapter to preform readiness check with TCP c
 
 After passing readiness check, Lambda Web Adapter will start Lambda Runtime and forward the invokes to the web application. 
 
-### Configurations
+## Configurations
 
 The readiness check port/path and traffic port can be configured using environment variables. These environment variables can be defined either within docker file or as Lambda function configuration.
 
@@ -113,12 +113,21 @@ It supports TLS1.2 and TLS1.3 with safe defaults. To see the supported TLS featu
 Please check out [FastAPI with Https](examples/fastapi-https/) example for more details.
 
 
-### Request Context
+## Request Context
 
 **Request Context** is metadata API Gateway sends to Lambda for a request. It usually contains requestId, requestTime, apiId, identity, and authorizer. Identity and authorizer are useful to get client identity for authorization. API Gateway Developer Guide contains more details [here](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format).  
 
-Lambda Web Adapter forwards this information to the web applicatioin in a Http Header named "x-amzn-request-context". In the web application, you can retrieve the value of this http header and deserialize it into a JSON object. Check out [Express.js in Zip](examples/expressjs-zip) on how to use it.
+Lambda Web Adapter forwards this information to the web application in a Http Header named "x-amzn-request-context". In the web application, you can retrieve the value of this http header and deserialize it into a JSON object. Check out [Express.js in Zip](examples/expressjs-zip) on how to use it.
 
+## Local Debugging
+
+Lambda Web Adapter allows developers to develop web applications locally with familiar tools and debuggers. If you want to simulate Lambda Runtime environment locally, you can use AWS SAM CLI. The following command starts a local api gateway endpoint and simulate the Lambda runtime execution environment.  
+
+```bash
+sam local start-api
+```
+
+Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 8080. So your web application should avoid port `8080` if you plan to use `sam local`. 
 
 ## Examples
 
