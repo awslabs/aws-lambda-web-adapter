@@ -1,10 +1,10 @@
-pub mod events;
+pub mod common;
 
 use std::env;
 use std::io;
 use std::io::prelude::*;
 
-use crate::events::LambdaEventBuilder;
+use crate::common::LambdaEventBuilder;
 use http::{Method, Response};
 use httpmock::{
     Method::{DELETE, GET, POST, PUT},
@@ -27,6 +27,10 @@ fn test_adapter_options_from_env() {
     env::set_var("READINESS_CHECK_PATH", "/healthcheck");
     env::set_var("REMOVE_BASE_PATH", "/prod");
     env::set_var("ASYNC_INIT", "true");
+    env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
+    env::set_var("AWS_LWA_ENABLE_TLS", "true");
+    env::set_var("AWS_LWA_TLS_SERVER_NAME", "api.example.com");
+    env::remove_var("AWS_LWA_TLS_CERT_FILE");
 
     // Initialize adapter with env options
     let options = AdapterOptions::from_env();
@@ -39,6 +43,10 @@ fn test_adapter_options_from_env() {
     assert_eq!(Protocol::Tcp, options.readiness_check_protocol);
     assert_eq!(Some("/prod".into()), options.base_path);
     assert!(options.async_init);
+    assert!(options.compression);
+    assert!(options.enable_tls);
+    assert_eq!(Some("api.example.com".into()), options.tls_server_name);
+    assert_eq!(None, options.tls_cert_file);
 }
 
 #[tokio::test]
@@ -60,6 +68,9 @@ async fn test_http_readiness_check() {
         async_init: false,
         base_path: None,
         compression: false,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     };
 
     // Initialize adapter and do readiness check
@@ -89,6 +100,9 @@ async fn test_http_basic_request() {
         async_init: false,
         base_path: None,
         compression: false,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     });
 
     // // Call the adapter service with basic request
@@ -125,6 +139,9 @@ async fn test_http_headers() {
         async_init: false,
         base_path: None,
         compression: false,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     });
 
     // Prepare request
@@ -167,6 +184,9 @@ async fn test_http_path_encoding() {
         async_init: false,
         base_path: None,
         compression: false,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     });
 
     // Prepare request
@@ -207,6 +227,9 @@ async fn test_http_query_params() {
         async_init: false,
         base_path: None,
         compression: false,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     });
 
     // Prepare request
@@ -256,6 +279,9 @@ async fn test_http_post_put_delete() {
         async_init: false,
         base_path: None,
         compression: false,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     });
 
     // Prepare requests
@@ -313,6 +339,9 @@ async fn test_http_compress() {
         async_init: false,
         base_path: None,
         compression: true,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     });
 
     // // Call the adapter service with basic request
@@ -356,6 +385,9 @@ async fn test_http_compress_disallowed_type() {
         async_init: false,
         base_path: None,
         compression: true,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     });
 
     // // Call the adapter service with basic request
@@ -371,7 +403,7 @@ async fn test_http_compress_disallowed_type() {
     // and response has expected content
     assert_eq!(200, response.status());
     assert_eq!(response.headers().get("content-length").unwrap(), "59"); // uncompressed: 59
-    assert_eq!(response.headers().contains_key("content-encoding"), false);
+    assert!(!response.headers().contains_key("content-encoding"));
     assert_eq!(
         "Hello World Hello World Hello World Hello World Hello World",
         body_to_string(response).await
@@ -403,6 +435,9 @@ async fn test_http_compress_already_compressed() {
         async_init: false,
         base_path: None,
         compression: true,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
     });
 
     // Call the adapter service with basic request
@@ -427,16 +462,16 @@ async fn test_http_compress_already_compressed() {
 
 async fn body_to_string(res: Response<Body>) -> String {
     let body_bytes = body::to_bytes(res.into_body()).await.unwrap();
-    String::from_utf8_lossy(&*body_bytes).to_string()
+    String::from_utf8_lossy(&body_bytes).to_string()
 }
 
 async fn compressed_body_to_string(res: Response<Body>) -> String {
     let body_bytes = body::to_bytes(res.into_body()).await.unwrap();
-    decode_reader(&body_bytes.to_vec()).unwrap()
+    decode_reader(&body_bytes).unwrap()
 }
 
-fn decode_reader(bytes: &Vec<u8>) -> io::Result<String> {
-    let mut gz = GzDecoder::new(&bytes[..]);
+fn decode_reader(bytes: &[u8]) -> io::Result<String> {
+    let mut gz = GzDecoder::new(bytes);
     let mut s = String::new();
     gz.read_to_string(&mut s)?;
     Ok(s)

@@ -25,6 +25,7 @@ use hyper::{
     client::{Client, HttpConnector},
     Body,
 };
+use hyper_rustls::HttpsConnector;
 use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
@@ -34,16 +35,11 @@ use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::Service;
 use url::Url;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Protocol {
+    #[default]
     Http,
     Tcp,
-}
-
-impl Default for Protocol {
-    fn default() -> Self {
-        Protocol::Http
-    }
 }
 
 impl From<&str> for Protocol {
@@ -66,6 +62,9 @@ pub struct AdapterOptions {
     pub base_path: Option<String>,
     pub async_init: bool,
     pub compression: bool,
+    pub enable_tls: bool,
+    pub tls_server_name: Option<String>,
+    pub tls_cert_file: Option<String>,
 }
 
 impl AdapterOptions {
@@ -89,13 +88,19 @@ impl AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
+            enable_tls: env::var("AWS_LWA_ENABLE_TLS")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse()
+                .unwrap_or(false),
+            tls_server_name: env::var("AWS_LWA_TLS_SERVER_NAME").ok(),
+            tls_cert_file: env::var("AWS_LWA_TLS_CERT_FILE").ok(),
         }
     }
 }
 
 #[derive(Clone)]
 pub struct Adapter {
-    client: Arc<Client<HttpConnector>>,
+    client: Arc<Client<HttpsConnector<HttpConnector>>>,
     healthcheck_url: Url,
     healthcheck_protocol: Protocol,
     async_init: bool,
@@ -110,16 +115,37 @@ impl Adapter {
     /// This function initializes a new HTTP client
     /// to talk with the web server.
     pub fn new(options: &AdapterOptions) -> Adapter {
-        let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build_http();
+        if let Some(cert_file) = &options.tls_cert_file {
+            env::set_var("SSL_CERT_FILE", cert_file);
+        }
+
+        let https = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .https_or_http()
+            .with_server_name(
+                options
+                    .tls_server_name
+                    .clone()
+                    .unwrap_or_else(|| "localhost".to_string()),
+            )
+            .enable_http1()
+            .build();
+
+        let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build(https);
+
+        let schema = match options.enable_tls {
+            true => "https",
+            false => "http",
+        };
 
         let healthcheck_url = format!(
             "{}://{}:{}{}",
-            "http", options.host, options.readiness_check_port, options.readiness_check_path
+            schema, options.host, options.readiness_check_port, options.readiness_check_path
         )
         .parse()
         .unwrap();
 
-        let domain = format!("{}://{}:{}", "http", options.host, options.port)
+        let domain = format!("{}://{}:{}", schema, options.host, options.port)
             .parse()
             .unwrap();
 
@@ -136,7 +162,7 @@ impl Adapter {
     }
 
     /// Switch the default HTTP client with a different one.
-    pub fn with_client(self, client: Client<HttpConnector>) -> Self {
+    pub fn with_client(self, client: Client<HttpsConnector<HttpConnector>>) -> Self {
         Adapter {
             client: Arc::new(client),
             ..self
@@ -194,7 +220,32 @@ impl Adapter {
     async fn check_readiness(&self) -> bool {
         let url = self.healthcheck_url.clone();
         let protocol = self.healthcheck_protocol;
-        is_web_ready(&url, &protocol).await
+        self.is_web_ready(&url, &protocol).await
+    }
+
+    async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
+        Retry::spawn(FixedInterval::from_millis(10), || {
+            self.check_web_readiness(url, protocol)
+        })
+        .await
+        .is_ok()
+    }
+
+    async fn check_web_readiness(&self, url: &Url, protocol: &Protocol) -> Result<(), i8> {
+        match protocol {
+            Protocol::Http => match self.client.get(url.to_string().parse().unwrap()).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    tracing::debug!(err =?e, "app is not ready");
+                    Err(-1)
+                }
+            },
+            Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await
+            {
+                Ok(_) => Ok(()),
+                Err(_) => Err(-1),
+            },
+        }
     }
 
     /// Run the adapter to take events from Lambda.
@@ -204,7 +255,8 @@ impl Adapter {
 
     async fn fetch_response(&self, event: Request) -> Result<Response<Body>, Error> {
         if self.async_init && !self.ready_at_init.load(Ordering::SeqCst) {
-            is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol).await;
+            self.is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol)
+                .await;
             self.ready_at_init.store(true, Ordering::SeqCst);
         }
 
@@ -310,24 +362,5 @@ impl Service<Request> for Adapter {
     fn call(&mut self, event: Request) -> Self::Future {
         let adapter = self.clone();
         Box::pin(async move { adapter.fetch_response(event).await })
-    }
-}
-
-async fn is_web_ready(url: &Url, protocol: &Protocol) -> bool {
-    Retry::spawn(FixedInterval::from_millis(10), || check_web_readiness(url, protocol))
-        .await
-        .is_ok()
-}
-
-async fn check_web_readiness(url: &Url, protocol: &Protocol) -> Result<(), i8> {
-    match protocol {
-        Protocol::Http => match Client::new().get(url.to_string().parse().unwrap()).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(-1),
-        },
-        Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(-1),
-        },
     }
 }
