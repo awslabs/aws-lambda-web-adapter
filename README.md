@@ -100,8 +100,11 @@ Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the a
 
 **AWS_LWA_ENABLE_TLS** - With TLS support enabled, Lambda Web Adapter uses HTTPS to communicate with the web application. Lambda Web Adapter use
 [hyper-rustls](https://crates.io/crates/hyper-rustls) with [rustls-native-certs](https://crates.io/crates/rustls-native-certs) to implement TLS support. 
-It supports TLS1.2 and TLS1.3 with safe defaults. For see what is supported and what is not, please check out [rustls](https://crates.io/crates/rustls). **AWS_LWA_TLS_SERVER_NAME** allows you to override the server name for TLS Server Name Indication. This should match the SAN name of the server certificate. The default is "localhost".
-**AWS_LWA_TLS_CERT_FILE** Lambda Web Adapter uses the platform's native certificate store to find trusted certificates. You can use this environment variable to use your own certificate file.
+It supports TLS1.2 and TLS1.3 with safe defaults. To see the supported TLS features, please check out [rustls](https://docs.rs/rustls/latest/rustls/). 
+
+**AWS_LWA_TLS_SERVER_NAME** - allows you to override the server name for TLS Server Name Indication. This should match one of the SAN names on the server certificate. The default is "localhost".
+
+**AWS_LWA_TLS_CERT_FILE** - Lambda Web Adapter uses the platform's native certificate store to find trusted certificates. You can configure this environment variable to use your own certificate.
 Please check out [FastAPI with Https](examples/fastapi-https/) example for more details.
 
 
