@@ -5,9 +5,18 @@ A tool to run web applications on AWS Lambda
 AWS Lambda Web Adapter allows developers to build web apps (http api) with familiar frameworks (e.g. Express.js, Next.js, Flask, SpringBoot, and Laravel, anything speaks HTTP 1.1/1.0) and run it on AWS Lambda.
 The same docker image can run on AWS Lambda, Amazon EC2, AWS Fargate, and local computers.
 
-AWS Lambda Web Adapter is developed as a Lambda extension (since v0.2.0). For details, checkout its [design](docs/design.md) and [development](docs/development.md) documents.
-
 ![Lambda Web Adapter](docs/images/lambda-adapter-overview.png)
+
+## Features
+
+- Run web applications on AWS Lambda
+- Supports Amazon API Gateway Rest API and Http API endpoints, Lambda Function URLs, and Application Load Balancer
+- Supports Lambda managed runtimes, custom runtimes and docker OCI images
+- Supports any web frameworks and languages, no new code dependency to include
+- Automatic encode binary response
+- Enables graceful shutdown
+- Supports response payload compression
+- Supports web applications running over both HTTP and HTTPS
 
 ## Usage
 
