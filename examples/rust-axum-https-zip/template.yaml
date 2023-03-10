@@ -46,4 +46,4 @@ Resources:
 Outputs:
   AxumHttpApi:
     Description: "API Gateway Http API endpoint URL for default stage for Axum function"
-    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
