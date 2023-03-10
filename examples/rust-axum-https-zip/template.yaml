@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  rust-axum-https-zip
+
+  Sample SAM Template for rust-axum-https-zip
+
+Parameters:
+  Subnets:
+    Type: AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>
+    Default: /lambda-web-adapter/e2e/subnets
+  VpcId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::VPC::Id>
+    Default: /lambda-web-adapter/e2e/vpcid
+  AdapterLayerArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /lambda-web-adapter/layer/arm64/latest
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  AxumFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: rust_app
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+        - arm64
+      Layers:
+        - !Ref AdapterLayerArn
+      Environment:
+        Variables:
+          PORT: 8443
+          READINESS_CHECK_PROTOCOL: http
+          AWS_LWA_ENABLE_TLS: true
+          AWS_LWA_TLS_SERVER_NAME: api.example.com
+          AWS_LWA_TLS_CERT_FILE: /var/task/certs/cert.pem
+      Events:
+        HttpAPIEvent:
+          Type: HttpApi
+
+Outputs:
+  AxumHttpApi:
+    Description: "API Gateway Http API endpoint URL for default stage for Axum function"
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
