@@ -94,36 +94,6 @@ jobs:
           name: aws-sam-build-arm64
           path: build-arm64.tar
 
-  load-gamma-matrix:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ test ]
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
-      - uses: actions/checkout@v3
-      - id: set-matrix
-        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
-
-  load-prod-matrix:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ test ]
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
-      - uses: actions/checkout@v3
-      - id: set-matrix
-        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
-
   package-beta:
     needs: [ build ]
     runs-on: ubuntu-latest
@@ -213,151 +183,6 @@ jobs:
           docker manifest annotate --arch arm64 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest \
               477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
           docker manifest push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest
-
-
-  package-gamma:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ build, load-gamma-matrix ]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
-    steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8"
-      - uses: aws-actions/setup-sam@v2
-
-      - name: Assume the gamma pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
-          aws-region: ${{ matrix.region }}
-          role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: gamma-packaging
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: aws-sam-build-x86_64
-
-      - name: extract build_x86_64
-        run: |
-          tar -xvf build-x86_64.tar
-
-      - name: Upload x86_64 layer to gamma artifact buckets
-        run: |
-          sam package \
-            --template build-x86_64/template.yaml \
-            --s3-bucket ${{ matrix.artifacts_bucket }} \
-            --image-repository ${{ matrix.image_repository }} \
-            --region ${{ matrix.region }} \
-            --output-template-file packaged-gamma-x86_64-${{ matrix.region }}.yaml
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
-          path: packaged-gamma-x86_64-${{ matrix.region }}.yaml
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: aws-sam-build-arm64
-
-      - name: extract build_arm64
-        run: |
-          tar -xvf build-arm64.tar
-
-      - name: Upload arm64 layer to gamma artifact buckets
-        run: |
-          sam package \
-            --template build-arm64/template.yaml \
-            --s3-bucket ${{ matrix.artifacts_bucket }} \
-            --image-repository ${{ matrix.image_repository }} \
-            --region ${{ matrix.region }} \
-            --output-template-file packaged-gamma-arm64-${{ matrix.region }}.yaml
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: packaged-gamma-arm64-${{ matrix.region }}.yaml
-          path: packaged-gamma-arm64-${{ matrix.region }}.yaml
-
-  package-prod:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ build, load-prod-matrix ]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
-    steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8"
-      - uses: aws-actions/setup-sam@v2
-
-      - name: Assume the prod pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
-          aws-region: ${{ matrix.region }}
-          role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: prod-packaging
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: aws-sam-build-x86_64
-
-      - name: extract build_x86_64
-        run: |
-          tar -xvf build-x86_64.tar
-
-      - name: Upload x86_64 layer to prod artifact buckets
-        run: |
-          sam package \
-            --template build-x86_64/template.yaml \
-            --s3-bucket ${{ matrix.artifacts_bucket }} \
-            --image-repository ${{ matrix.image_repository }} \
-            --region ${{ matrix.region }} \
-            --output-template-file packaged-prod-x86_64-${{ matrix.region }}.yaml
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: packaged-prod-x86_64-${{ matrix.region }}.yaml
-          path: packaged-prod-x86_64-${{ matrix.region }}.yaml
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: aws-sam-build-arm64
-
-      - name: extract build_arm64
-        run: |
-          tar -xvf build-arm64.tar
-
-      - name: Upload arm64 layer to prod artifact buckets
-        run: |
-          sam package \
-            --template build-arm64/template.yaml \
-            --s3-bucket ${{ matrix.artifacts_bucket }} \
-            --image-repository ${{ matrix.image_repository }} \
-            --region ${{ matrix.region }} \
-            --output-template-file packaged-prod-arm64-${{ matrix.region }}.yaml
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: packaged-prod-arm64-${{ matrix.region }}.yaml
-          path: packaged-prod-arm64-${{ matrix.region }}.yaml
 
   deploy-beta:
     needs: [package-beta]
@@ -534,6 +359,180 @@ jobs:
         working-directory: ./tests/e2e_tests/fixtures/go-httpbin-tls-zip
         run: |
           sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-tls-zip-x86
+
+  load-gamma-matrix:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ e2e-test ]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+
+      - uses: actions/checkout@v3
+      - id: set-matrix
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
+
+  load-prod-matrix:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ e2e-test ]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+
+      - uses: actions/checkout@v3
+      - id: set-matrix
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
+
+  package-gamma:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ build, load-gamma-matrix ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
+    steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the gamma pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ matrix.pipeline_execution_role }}
+          role-session-name: gamma-packaging
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: aws-sam-build-x86_64
+
+      - name: extract build_x86_64
+        run: |
+          tar -xvf build-x86_64.tar
+
+      - name: Upload x86_64 layer to gamma artifact buckets
+        run: |
+          sam package \
+            --template build-x86_64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-gamma-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
+          path: packaged-gamma-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: aws-sam-build-arm64
+
+      - name: extract build_arm64
+        run: |
+          tar -xvf build-arm64.tar
+
+      - name: Upload arm64 layer to gamma artifact buckets
+        run: |
+          sam package \
+            --template build-arm64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-gamma-arm64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: packaged-gamma-arm64-${{ matrix.region }}.yaml
+          path: packaged-gamma-arm64-${{ matrix.region }}.yaml
+
+  package-prod:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ build, load-prod-matrix ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
+    steps:
+      - name: Collect Workflow Telemetry
+        if: always()
+        uses: runforesight/foresight-workflow-kit-action@v1
+
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the prod pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ matrix.pipeline_execution_role }}
+          role-session-name: prod-packaging
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: aws-sam-build-x86_64
+
+      - name: extract build_x86_64
+        run: |
+          tar -xvf build-x86_64.tar
+
+      - name: Upload x86_64 layer to prod artifact buckets
+        run: |
+          sam package \
+            --template build-x86_64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-prod-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: packaged-prod-x86_64-${{ matrix.region }}.yaml
+          path: packaged-prod-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: aws-sam-build-arm64
+
+      - name: extract build_arm64
+        run: |
+          tar -xvf build-arm64.tar
+
+      - name: Upload arm64 layer to prod artifact buckets
+        run: |
+          sam package \
+            --template build-arm64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-prod-arm64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: packaged-prod-arm64-${{ matrix.region }}.yaml
+          path: packaged-prod-arm64-${{ matrix.region }}.yaml
 
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
