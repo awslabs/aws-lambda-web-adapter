@@ -1,29 +1,50 @@
-# FastAPI example
+# FastAPI Https example
 
-A basic FastAPI application example. You can build and test it locally as a typical FastAPI application.
+A FastAPI over Https example application. You can build and test it locally as a typical FastAPI application.
 
-Using AWS Lambda Web Adapter, You can package this web application into Docker image, push to ECR, and deploy to Lambda, ECS/EKS, or EC2.
+## Generate self-signed certificate
 
-The application can be deployed in an AWS account using the [Serverless Application Model](https://github.com/awslabs/serverless-application-model). The `template.yaml` file in the root folder contains the application definition.
+To run FastAPI over Https, we need to obtain an x.509 v3 certificate. You can obtain the certificate from a Certificate Authority or generate a self-signed certificate.
 
-The top level folder is a typical AWS SAM project. The `app` directory is a FastAPI application with a [Dockerfile](app/Dockerfile).
+Here is a command to generate a self-signed certificate with `openssl`. The cert has two Subject Alt Names (SAN): `localhost` and `api.example.com`.
+```bash
+openssl req -nodes -x509 -sha256 -newkey rsa:4096 \
+  -keyout key.pem \
+  -out cert.pem \
+  -days 3560 \
+  -subj "/C=US/ST=Washington/L=Seattle/O=Example Co/OU=Engineering/CN=api.example.com" \
+  -extensions san \
+  -config <( \
+  echo '[req]'; \
+  echo 'distinguished_name=req'; \
+  echo '[san]'; \
+  echo 'subjectAltName=DNS:localhost,DNS:api.example.com')
+```
+
+Below is a Dockerfile to package FastAPI with Lambda Web Adapter. 
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/python:3.8.12-slim-buster
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.0 /lambda-adapter /opt/extensions/lambda-adapter
-ENV PORT=8000 READINESS_CHECK_PROTOCOL=http RUST_LOG=info
-ENV AWS_LWA_ENABLE_HTTPS=true AWS_LWA_SERVER_NAME=api.example.com SSL_CERT_FILE=/var/task/cert.pem 
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
 WORKDIR /var/task
 COPY requirements.txt ./
 RUN python -m pip install -r requirements.txt
 COPY *.py *.pem ./
+ENV PORT=8443 READINESS_CHECK_PROTOCOL=http RUST_LOG=info
+ENV AWS_LWA_ENABLE_TLS=true AWS_LWA_TLS_SERVER_NAME=api.example.com AWS_LWA_TLS_CERT_FILE=/var/task/cert.pem
 CMD exec uvicorn --port=$PORT --ssl-keyfile key.pem --ssl-certfile cert.pem --log-level info main:app
 ```
 
-Line 2 copies lambda web adapter binary into /opt/extensions. This is the change to run the FastAPI application on Lambda.
+This line of CMD start up FastAPI app using `uvicorn` with HTTPS on `$PORT`. 
+```bash
+CMD exec uvicorn --port=$PORT --ssl-keyfile key.pem --ssl-certfile cert.pem --log-level info main:app
+```
 
-```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.2 /lambda-adapter /opt/extensions/lambda-adapter
+These 3 environment variables configure Lambda Web Adapter to use HTTPS to call FastAPI, override server name as `api.example.com`, and use self-signed cert file `/var/task/cert.pem`.
+```toml
+AWS_LWA_ENABLE_TLS="true"
+AWS_LWA_TLS_SERVER_NAME="api.example.com" 
+AWS_LWA_TLS_CERT_FILE="/var/task/cert.pem"
 ```
 
 ## Pre-requisites
@@ -68,12 +89,12 @@ $ curl https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/
 We can run the same docker image locally, so that we know it can be deployed to ECS Fargate and EKS EC2 without code changes.
 
 ```shell
-$ docker run -d -p 8000:8000 {ECR Image}
+$ docker run -d -p 8443:8443 {ECR Image}
 
 ```
 
 Use curl to verify the docker container works.
 
 ```shell
-$ curl localhost:8000/ 
+$ curl https://localhost:8443/ 
 ```
