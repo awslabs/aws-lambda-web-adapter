@@ -1,14 +1,14 @@
 # symfony-zip
 
-This example shows how to use PHP Runtime to run a Symfony application on managed PHP runtime.
+This example shows how to use PHP Runtime to run a Symfony application on PHP runtime.
 
 ### How does it work?
 
 We add PHP Runtime layer to the function and configure wrapper script.
 
 1. attach PHP Runtime layer to your function. This layer containers PHP Runtime binary and a wrapper script.
-    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxX86:8`
-    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxArm:8`
+    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxX86:12`
+    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxArm:12`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. This is a wrapper script
    included in the layer.
 
