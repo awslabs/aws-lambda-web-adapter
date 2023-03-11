@@ -1,6 +1,6 @@
 [package]
 name = "lambda_web_adapter"
-version = "0.6.2"
+version = "0.6.3"
 authors = [
     "Harold Sun <sunhua@amazon.com>",
     "David Calavera <dcalaver@amazon.com>",
@@ -19,6 +19,7 @@ exclude = ["examples"]
 [dependencies]
 http = "0.2"
 hyper = { version = "0.14", features = ["client"] }
+hyper-rustls = "0.23.2"
 lambda_http = "0.7.3"
 flate2 = "1.0.25"
 tokio = { version = "1.24", features = [
@@ -35,12 +36,13 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
     "fmt",
 ] }
 tower = "0.4.13"
+url = "2.3.1"
 
 [dev-dependencies]
 httpmock = "0.6"
-hyper-tls = "0.5.0"
 http-body-util = "0.1.0-rc.2"
 http-body = "0.4.5"
+aws-sigv4 = "0.54"
 
 [[bin]]
 name = "lambda-adapter"
@@ -48,3 +50,5 @@ path = "src/main.rs"
 
 [profile.release]
 strip = true
+lto = true
+opt-level = 'z'
