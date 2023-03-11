@@ -15,7 +15,7 @@ a [Dockerfile](Dockerfile).
 ```dockerfile
 FROM public.ecr.aws/awsguru/nginx
 
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.2 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
 
 # config files
 ADD nginx/conf/nginx.conf /opt/nginx/conf/nginx.conf
@@ -29,7 +29,7 @@ EXPOSE 8080
 Line 2 copies lambda adapter binary into /opt/extensions. This is the main change to run the nginx server on Lambda.
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.2 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 ## Pre-requisites
