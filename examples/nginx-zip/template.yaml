@@ -24,6 +24,8 @@ Resources:
     Properties:
       CodeUri: .
       MemorySize: 2048
+      Architectures:
+        - x86_64
       Handler: bootstrap
       Runtime: provided.al2
       Environment:
@@ -32,8 +34,8 @@ Resources:
           PORT: 8080
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:11
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123X86:8
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:14
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123X86:12
       Events:
         Root:
           Type: Api
