@@ -6,7 +6,6 @@ COPY app /var/task/app
 
 WORKDIR /var/task/app
 
-RUN composer install --prefer-dist --optimize-autoloader --no-interaction \
-        && ./bin/console cache:warmup
+RUN composer install --prefer-dist --optimize-autoloader --no-interaction
 
 RUN mv /var/task/app /.out

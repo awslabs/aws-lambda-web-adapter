@@ -15,6 +15,15 @@ We add PHP Runtime layer to the function and configure wrapper script.
 To get more information of Wrapper script, please read Lambda
 documentation [here](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper).
 
+## Symfony Configuration
+
+Set up your `.env` file.
+
+```shell
+$ cd app
+$ cp .env.test .env
+```
+
 ### Build and Deploy
 
 Run the following commands to build and deploy the application to lambda.
