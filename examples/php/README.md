@@ -22,7 +22,7 @@ WORKDIR /var/task/app
 RUN composer install --prefer-dist --optimize-autoloader --no-dev --no-interaction
 
 FROM public.ecr.aws/awsguru/php
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.1 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
 COPY --from=builder /var/task /var/task
 
 # config files
