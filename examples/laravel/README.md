@@ -45,6 +45,46 @@ The following tools should be installed and configured.
 * [SAM CLI](https://github.com/awslabs/aws-sam-cli)
 * [Docker](https://www.docker.com/products/docker-desktop)
 
+## Laravel Configuration
+
+Set up your `.env` file.
+
+```shell
+$ cd app
+$ cp .env.example .env
+$ composer install --prefer-dist --optimize-autoloader --no-interaction
+$ php artisan key:generate
+```
+
+Use S3 as Filesystem:
+
+```dotenv
+FILESYSTEM_DISK=s3
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=
+AWS_BUCKET=
+```
+
+Use stdout as Log:
+```dotenv
+LOG_CHANNEL=single
+```
+
+Edit `config/logging.php` -> `single`
+```php
+'path' => 'php://stdout',
+```
+
+Use `redis` as Cache and Session driver:
+```dotenv
+CACHE_DRIVER=redis
+SESSION_DRIVER=redis
+REDIS_HOST=
+REDIS_PASSWORD=
+REDIS_PORT=6379
+```
+
 ## Deploy to Lambda
 
 Navigate to the sample's folder and use the SAM CLI to build a container image
