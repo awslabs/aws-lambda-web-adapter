@@ -1,6 +1,6 @@
 # php-zip
 
-This example shows how to use PHP Runtime to run a PHP application on managed PHP runtime.
+This example shows how to use PHP Runtime to run a PHP application on PHP runtime.
 
 ### How does it work?
 
