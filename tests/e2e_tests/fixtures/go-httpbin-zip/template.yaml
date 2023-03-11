@@ -147,7 +147,7 @@ Resources:
   RestApiEndpoint:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /lambda-web-adapter/e2e/zip/rest-api-endpoint
+      Name: /lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint
       Description: 'Rest API Endpoint for HttpBin function'
       Type: String
       Value: !Sub "https://httpbin-rest-zip.${Route53HostedZone}/"
@@ -155,7 +155,7 @@ Resources:
   HttpApiEndpoint:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /lambda-web-adapter/e2e/zip/http-api-endpoint
+      Name: /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint
       Description: 'Http API Endpoint for HttpBin function'
       Type: String
       Value: !Sub "https://httpbin-http-zip.${Route53HostedZone}/"
@@ -163,7 +163,7 @@ Resources:
   AlbEndpoint:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /lambda-web-adapter/e2e/zip/alb-endpoint
+      Name: /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint
       Description: 'ALB Endpoint for HttpBin function'
       Type: String
       Value: !Sub "https://${AlbDNSRecord}/"
@@ -171,7 +171,7 @@ Resources:
   FunctionUrl:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /lambda-web-adapter/e2e/zip/function-url
+      Name: /lambda-web-adapter/e2e/httpbin/zip/function-url
       Description: 'Function URL for HttpBin function'
       Type: String
       Value: !GetAtt HttpBinFunctionUrl.FunctionUrl
