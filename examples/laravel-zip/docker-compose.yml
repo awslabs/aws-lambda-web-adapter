@@ -7,3 +7,39 @@ services:
     command: [ "-r", "/.out", "/.output" ]
     volumes:
       - ./:/.output
+  dev:
+    image: public.ecr.aws/awsguru/php:devel.82.2023.3.11.1
+    working_dir: /var/task
+    entrypoint: /opt/bootstrap
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/var/task/app
+      - ./nginx/conf/nginx.conf:/opt/nginx/conf/nginx.conf
+      - ./php/php.ini:/opt/php/php.ini
+      - ./php/etc/php-fpm.conf:/opt/php/etc/php-fpm.conf
+      - ./php/php.d/extensions.ini:/opt/php/php.d/extensions.ini
+    links:
+      - mysql
+      - redis
+    depends_on:
+      - mysql
+      - redis
+  mysql:
+    image: mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - /tmp/mysql:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: root
+      MYSQL_ROOT_PASSWORD: root
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - /tmp/redis:/data
+    command: redis-server --appendonly yes
