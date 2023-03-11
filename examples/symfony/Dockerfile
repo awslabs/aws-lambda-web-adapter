@@ -4,8 +4,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 COPY app /var/task/app
 WORKDIR /var/task/app
 
-RUN composer install --prefer-dist --optimize-autoloader --no-interaction \
-    && ./bin/console cache:warmup
+RUN composer install --prefer-dist --optimize-autoloader --no-interaction
 
 FROM public.ecr.aws/awsguru/php
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter

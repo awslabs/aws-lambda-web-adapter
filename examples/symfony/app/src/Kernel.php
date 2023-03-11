@@ -7,5 +7,15 @@ use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 
 class Kernel extends BaseKernel
 {
-    use MicroKernelTrait;
+	use MicroKernelTrait;
+	
+	public function getCacheDir(): string
+	{
+		return "/tmp/cache";
+	}
+	
+	public function getLogDir(): string
+	{
+		return "/tmp/logs";
+	}
 }

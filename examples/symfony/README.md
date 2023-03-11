@@ -41,6 +41,15 @@ The following tools should be installed and configured.
 * [SAM CLI](https://github.com/awslabs/aws-sam-cli)
 * [Docker](https://www.docker.com/products/docker-desktop)
 
+## Symfony Configuration
+
+Set up your `.env` file.
+
+```shell
+$ cd app
+$ cp .env.test .env
+```
+
 ## Deploy to Lambda
 
 Navigate to the sample's folder and use the SAM CLI to build a container image

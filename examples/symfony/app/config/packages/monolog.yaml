@@ -7,7 +7,7 @@ when@dev:
         handlers:
             main:
                 type: stream
-                path: "%kernel.logs_dir%/%kernel.environment%.log"
+                path: php://stdout
                 level: debug
                 channels: ["!event"]
             # uncomment to get logging in your browser
@@ -20,6 +20,7 @@ when@dev:
             #    level: info
             console:
                 type: console
+                path: php://stdout
                 process_psr_3_messages: false
                 channels: ["!event", "!doctrine", "!console"]
 
@@ -28,13 +29,14 @@ when@test:
         handlers:
             main:
                 type: fingers_crossed
+                path: php://stdout
                 action_level: error
                 handler: nested
                 excluded_http_codes: [404, 405]
                 channels: ["!event"]
             nested:
                 type: stream
-                path: "%kernel.logs_dir%/%kernel.environment%.log"
+                path: php://stdout
                 level: debug
 
 when@prod:
@@ -42,13 +44,14 @@ when@prod:
         handlers:
             main:
                 type: fingers_crossed
+                path: php://stdout
                 action_level: error
                 handler: nested
                 excluded_http_codes: [404, 405]
                 buffer_size: 50 # How many messages should be saved? Prevent memory leaks
             nested:
                 type: stream
-                path: php://stderr
+                path: php://stdout
                 level: debug
                 formatter: monolog.formatter.json
             console:
@@ -58,4 +61,4 @@ when@prod:
             deprecation:
                 type: stream
                 channels: [deprecation]
-                path: php://stderr
+                path: php://stdout
