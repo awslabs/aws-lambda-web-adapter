@@ -29,18 +29,18 @@ sam deploy --guided
 ---------------------------------------------------------------------------------------------------------
 OutputKey-Description              OutputValue
 ---------------------------------------------------------------------------------------------------------
-URL - URL for application          https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/Prod/
+URL - URL for application          https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/
 ---------------------------------------------------------------------------------------------------------
 ...
 
-$ curl https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/Prod/
+$ curl https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/
 ```
 
 When the deployment completes, take note of URL's Value. It is the API Gateway endpoint URL.
 
 Lambda Adapter also automatic encode/decode binary data for you. Open the output link in your browser, add "images/space.jpeg" to the url, you will see a picture of the space.
 
-https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/Prod/images/space.jpeg
+https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/images/space.jpeg
 
 ![space](app/public/images/space.jpeg)
 
