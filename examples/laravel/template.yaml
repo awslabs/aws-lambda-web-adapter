@@ -24,6 +24,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      Architectures:
+        - x86_64
       MemorySize: 2048
       Tracing: Active
       Policies:

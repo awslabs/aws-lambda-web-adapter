@@ -2,8 +2,7 @@
 
 A basic Laravel application runs inside AWS Lambda.
 
-Using PHP Runtime, you can package this php application into Docker image, push to ECR, and deploy to Lambda, ECS/EKS,
-or EC2.
+You can package this PHP application into Docker image, push to ECR, and deploy to Lambda, ECS/EKS, or EC2.
 
 The application can be deployed in an AWS account using
 the [Serverless Application Model](https://github.com/awslabs/serverless-application-model). The `template.yaml` file in
@@ -13,7 +12,7 @@ The top level folder is a typical AWS SAM project. The `app` directory is the ng
 a [Dockerfile](Dockerfile).
 
 ```dockerfile
-FROM public.ecr.aws/awsguru/php as builder
+FROM public.ecr.aws/awsguru/php:82.2023.3.11.1 AS builder
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 COPY app /var/task/app
@@ -26,7 +25,7 @@ RUN composer install --prefer-dist --optimize-autoloader --no-interaction \
     && php artisan view:cache \
     && php artisan optimize
 
-FROM public.ecr.aws/awsguru/php
+FROM public.ecr.aws/awsguru/php:82.2023.3.11.1
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
 COPY --from=builder /var/task /var/task
 
