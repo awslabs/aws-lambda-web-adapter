@@ -24,6 +24,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      Architectures:
+        - x86_64
       MemorySize: 1024
       Policies:
         - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension

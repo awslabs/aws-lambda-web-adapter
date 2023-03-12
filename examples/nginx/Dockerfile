@@ -1,4 +1,4 @@
-FROM public.ecr.aws/awsguru/nginx
+FROM public.ecr.aws/awsguru/nginx:1.23.2023.3.11.1
 
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
 

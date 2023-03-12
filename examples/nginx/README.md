@@ -1,9 +1,8 @@
-# nginx example
+# Nginx example
 
-A basic nginx web server runs inside AWS Lambda.
+A basic Nginx web server runs inside AWS Lambda.
 
-Using Nginx Runtime, you can package this web server into Docker image, push to ECR, and deploy to Lambda, ECS/EKS, or
-EC2.
+You can package this web server into Docker image, push to ECR, and deploy to Lambda, ECS/EKS, or EC2.
 
 The application can be deployed in an AWS account using
 the [Serverless Application Model](https://github.com/awslabs/serverless-application-model). The `template.yaml` file in
@@ -13,7 +12,7 @@ The top level folder is a typical AWS SAM project. The `app` directory is the ng
 a [Dockerfile](Dockerfile).
 
 ```dockerfile
-FROM public.ecr.aws/awsguru/nginx
+FROM public.ecr.aws/awsguru/nginx:1.23.2023.3.11.1
 
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
 
@@ -26,7 +25,7 @@ COPY app /var/task/
 EXPOSE 8080
 ```
 
-Line 2 copies lambda adapter binary into /opt/extensions. This is the main change to run the nginx server on Lambda.
+Line 2 copies lambda adapter binary into /opt/extensions. This is the main change to run the Nginx server on Lambda.
 
 ```dockerfile
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
@@ -66,16 +65,17 @@ can use `curl` or a web browser to make a call to the URL
 ---------------------------------------------------------------------------------------------------------
 OutputKey-Description                        OutputValue
 ---------------------------------------------------------------------------------------------------------
-PetStoreApi - URL for application            https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/
+URL for application                          https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/Prod/
 ---------------------------------------------------------------------------------------------------------
 ...
 
-$ curl https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/
+$ curl https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/Prod/
 ```
 
-Lambda Adapter also automatic encode/decode binary data for you. Open the output link in your browser, add "images/space.jpeg" to the url, you will see a picture of the space.
+Lambda Adapter also automatic encode/decode binary data for you. Open the output link in your browser, add "
+images/space.jpeg" to the url, you will see a picture of the space.
 
-https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/images/space.jpeg
+https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/Prod/images/space.jpeg
 
 ![space](app/public/images/space.jpeg)
 
