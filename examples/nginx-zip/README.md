@@ -10,9 +10,6 @@ We add Nginx layer to the function and configure wrapper script.
     1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123X86:12`
     2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123Arm:12`
 
-To get more information of Wrapper script, please read Lambda
-documentation [here](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper).
-
 ### Build and Deploy
 
 Run the following commands to build and deploy the application to lambda.
