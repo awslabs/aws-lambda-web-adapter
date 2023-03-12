@@ -15,5 +15,3 @@ target/
 
 .mvn
 .aws-sam
-
-/app/vendor/

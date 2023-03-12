@@ -5,40 +5,30 @@ Description: >
 
   Sample SAM Template for serverless-nginx-demo
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 29
+    Timeout: 10
 
 Resources:
   Function:
     Type: AWS::Serverless::Function
     Properties:
-      PackageType: Image
+      CodeUri: .
+      MemorySize: 2048
       Architectures:
         - x86_64
-      MemorySize: 1024
-      Policies:
-        - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension
+      Handler: bootstrap
+      Runtime: provided.al2
       Environment:
         Variables:
           RUST_LOG: debug
           PORT: 8080
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:14
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123X86:12
       Events:
         Root:
           Type: HttpApi
-          Properties:
-            Path: /
-            Method: ANY
-        Petstore:
-          Type: HttpApi
-          Properties:
-            Path: /{proxy+}
-            Method: ANY
-    Metadata:
-      DockerTag: v1
-      DockerContext: .
-      Dockerfile: Dockerfile
 
 Outputs:
   URL:
