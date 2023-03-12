@@ -23,6 +23,8 @@ Resources:
   Function:
     Type: AWS::Serverless::Function
     Properties:
+      Architectures:
+        - arm64
       PackageType: Image
       MemorySize: 1024
       Tracing: Active
