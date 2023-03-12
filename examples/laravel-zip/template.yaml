@@ -26,6 +26,8 @@ Resources:
       MemorySize: 2048
       Handler: bootstrap
       Runtime: provided.al2
+      Architectures:
+        - x86_64
       Environment:
         Variables:
           RUST_LOG: debug

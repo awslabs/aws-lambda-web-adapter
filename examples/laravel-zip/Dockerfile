@@ -1,4 +1,4 @@
-FROM public.ecr.aws/awsguru/php
+FROM public.ecr.aws/awsguru/php:82.2023.3.11.1
 
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
