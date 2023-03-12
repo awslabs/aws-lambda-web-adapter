@@ -9,11 +9,6 @@ We add PHP layer to the function and configure wrapper script.
 1. attach PHP layer to your function. This layer containers PHP binary and a wrapper script.
     1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxX86:12`
     2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxArm:12`
-2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. This is a wrapper script
-   included in the layer.
-
-To get more information of Wrapper script, please read Lambda
-documentation [here](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper).
 
 ### Build and Deploy
 
