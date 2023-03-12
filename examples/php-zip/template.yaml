@@ -24,6 +24,8 @@ Resources:
     Properties:
       CodeUri: .
       MemorySize: 2048
+      Architectures:
+        - x86_64
       Handler: bootstrap
       Runtime: provided.al2
       Environment:
