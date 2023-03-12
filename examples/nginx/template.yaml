@@ -11,19 +11,12 @@ Globals:
     Timeout: 29
 
 Resources:
-  ApiGatewayApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      EndpointConfiguration:
-        Type: REGIONAL
-      StageName: Prod
-      TracingEnabled: True
-      BinaryMediaTypes:
-        - '*~1*'
   Function:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      Architectures:
+        - x86_64
       MemorySize: 1024
       Policies:
         - CloudWatchLambdaInsightsExecutionRolePolicy # Add IAM Permission for Lambda Insight Extension
@@ -33,15 +26,13 @@ Resources:
           PORT: 8080
       Events:
         Root:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref ApiGatewayApi
             Path: /
             Method: ANY
-        Proxy:
-          Type: Api
+        Petstore:
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref ApiGatewayApi
             Path: /{proxy+}
             Method: ANY
     Metadata:
@@ -52,7 +43,7 @@ Resources:
 Outputs:
   URL:
     Description: "API Gateway endpoint URL for Prod stage for Nginx application"
-    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
   Function:
     Description: "Lambda Function ARN"
     Value: !GetAtt Function.Arn
