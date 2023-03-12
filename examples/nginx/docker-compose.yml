@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  webserver:
+    build: .
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/var/task/app
+      - ./nginx/conf/nginx.conf:/opt/nginx/conf/nginx.conf
