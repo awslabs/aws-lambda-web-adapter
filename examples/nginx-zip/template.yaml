@@ -29,9 +29,6 @@ Resources:
       Events:
         Root:
           Type: HttpApi
-          Properties:
-            Path: /{proxy+}
-            Method: ANY
 
 Outputs:
   URL:
