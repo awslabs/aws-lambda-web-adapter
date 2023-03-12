@@ -30,11 +30,6 @@ Resources:
         Root:
           Type: HttpApi
           Properties:
-            Path: /
-            Method: ANY
-        Petstore:
-          Type: HttpApi
-          Properties:
             Path: /{proxy+}
             Method: ANY
 
