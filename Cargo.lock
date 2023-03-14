@@ -1116,7 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "lambda_web_adapter"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "aws-sigv4",
  "flate2",
