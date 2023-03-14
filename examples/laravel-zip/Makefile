@@ -1,8 +1,8 @@
 install:
 	rm -rf .out
-	docker-compose build export-code
-	docker-compose up export-code
-	docker-compose down
+	docker compose build export-code
+	docker compose up export-code
+	docker compose down
 
 artifacts:
 	cp -r .out $(ARTIFACTS_DIR)/app
