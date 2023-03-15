@@ -26,7 +26,7 @@ RUN composer install --prefer-dist --optimize-autoloader --no-interaction \
     && php artisan optimize
 
 FROM public.ecr.aws/awsguru/php:82.2023.3.11.1
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.4 /lambda-adapter /opt/extensions/lambda-adapter
 COPY --from=builder /var/task /var/task
 
 # config files
