@@ -1,10 +1,8 @@
-FROM public.ecr.aws/awsguru/php:82.2023.3.11.1
+FROM public.ecr.aws/awsguru/php:82.2023.3.13.1
 
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 COPY app /var/task/app
-
-RUN ls /var/task/
 
 WORKDIR /var/task/app
 
@@ -15,5 +13,3 @@ RUN composer install --prefer-dist --optimize-autoloader --no-dev --no-interacti
     && php artisan route:cache \
     && php artisan view:cache \
     && php artisan optimize
-
-RUN mv /var/task/app /.out

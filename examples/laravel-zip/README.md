@@ -7,8 +7,8 @@ This example shows how to run a Laravel application on AWS Lambda.
 We add PHP layer to the function and configure wrapper script.
 
 1. attach PHP layer to your function. This layer containers PHP binary and a wrapper script.
-    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxX86:12`
-    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxArm:12`
+    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxX86:13`
+    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Php82FpmNginxArm:13`
 
 ## Laravel Configuration
 
