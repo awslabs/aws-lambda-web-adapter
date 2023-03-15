@@ -22,7 +22,7 @@ use http::{
 use hyper::{
     body,
     body::HttpBody,
-    client::{Client, HttpConnector},
+    client::{connect::Connect, Client, HttpConnector},
     Body,
 };
 use hyper_rustls::HttpsConnector;
@@ -99,8 +99,8 @@ impl AdapterOptions {
 }
 
 #[derive(Clone)]
-pub struct Adapter {
-    client: Arc<Client<HttpsConnector<HttpConnector>>>,
+pub struct Adapter<C> {
+    client: Arc<Client<C>>,
     healthcheck_url: Url,
     healthcheck_protocol: Protocol,
     async_init: bool,
@@ -110,11 +110,11 @@ pub struct Adapter {
     compression: bool,
 }
 
-impl Adapter {
-    /// Create a new Adapter instance.
-    /// This function initializes a new HTTP client
+impl Adapter<HttpsConnector<HttpConnector>> {
+    /// Create a new HTTPS Adapter instance.
+    /// This function initializes a new HTTPS client
     /// to talk with the web server.
-    pub fn new(options: &AdapterOptions) -> Adapter {
+    pub fn new_https(options: &AdapterOptions) -> Adapter<HttpsConnector<HttpConnector>> {
         if let Some(cert_file) = &options.tls_cert_file {
             env::set_var("SSL_CERT_FILE", cert_file);
         }
@@ -133,10 +133,7 @@ impl Adapter {
 
         let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build(https);
 
-        let schema = match options.enable_tls {
-            true => "https",
-            false => "http",
-        };
+        let schema = "https";
 
         let healthcheck_url = format!(
             "{}://{}:{}{}",
@@ -160,15 +157,47 @@ impl Adapter {
             compression: options.compression,
         }
     }
+}
 
-    /// Switch the default HTTP client with a different one.
-    pub fn with_client(self, client: Client<HttpsConnector<HttpConnector>>) -> Self {
+impl Adapter<HttpConnector> {
+    /// Create a new HTTP Adapter instance.
+    /// This function initializes a new HTTP client
+    /// to talk with the web server.
+    pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector> {
+        let client = Client::builder()
+            .pool_idle_timeout(Duration::from_secs(4))
+            .build(HttpConnector::new());
+
+        let schema = "http";
+
+        let healthcheck_url = format!(
+            "{}://{}:{}{}",
+            schema, options.host, options.readiness_check_port, options.readiness_check_path
+        )
+        .parse()
+        .unwrap();
+
+        let domain = format!("{}://{}:{}", schema, options.host, options.port)
+            .parse()
+            .unwrap();
+
         Adapter {
             client: Arc::new(client),
-            ..self
+            healthcheck_url,
+            healthcheck_protocol: options.readiness_check_protocol,
+            domain,
+            base_path: options.base_path.clone(),
+            async_init: options.async_init,
+            ready_at_init: Arc::new(AtomicBool::new(false)),
+            compression: options.compression,
         }
     }
+}
 
+impl<C> Adapter<C>
+where
+    C: Connect + Clone + Send + Sync + 'static,
+{
     /// Register a Lambda Extension to ensure
     /// that the adapter is loaded before any Lambda function
     /// associated with it.
@@ -350,7 +379,10 @@ impl Adapter {
 
 /// Implement a `Tower.Service` that sends the requests
 /// to the web server.
-impl Service<Request> for Adapter {
+impl<C> Service<Request> for Adapter<C>
+where
+    C: Connect + Clone + Send + Sync + 'static,
+{
     type Response = Response<Body>;
     type Error = Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
