@@ -28,7 +28,7 @@ To use Lambda Web Adapter with docker images, package your web app (http api) in
 By default, Lambda Web Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#Configurations).
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.4 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 Pre-compiled Lambda Web Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
@@ -38,7 +38,7 @@ Below is a Dockerfile for [an example nodejs application](examples/expressjs).
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.3 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.4 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=7000
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
@@ -55,8 +55,8 @@ This works with any base images except AWS managed base images. To use AWS manag
 AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to do three things:
 
 1. attach Lambda Web Adapter layer to your function.
-   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:14`
-   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:14`
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:15`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:15`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 

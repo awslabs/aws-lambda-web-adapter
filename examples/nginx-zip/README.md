@@ -7,8 +7,8 @@ This example shows how to use Lambda Adapter to run a Nginx application on AWS L
 We add Nginx layer to the function and configure wrapper script.
 
 1. attach Nginx layer to your function. This layer containers Nginx binary and a wrapper script.
-    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123X86:12`
-    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123Arm:12`
+    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123X86:15`
+    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123Arm:15`
 
 ### Build and Deploy
 
