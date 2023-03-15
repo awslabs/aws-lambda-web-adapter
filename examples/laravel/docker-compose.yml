@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   dev:
-    image: public.ecr.aws/awsguru/php:devel.82.2023.3.11.1
+    image: public.ecr.aws/awsguru/php:devel.82.2023.3.13.1
     working_dir: /var/task
     entrypoint: /opt/bootstrap
     ports:
