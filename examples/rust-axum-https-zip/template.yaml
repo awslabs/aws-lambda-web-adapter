@@ -5,17 +5,6 @@ Description: >
 
   Sample SAM Template for rust-axum-https-zip
 
-Parameters:
-  Subnets:
-    Type: AWS::SSM::Parameter::Value<List<AWS::EC2::Subnet::Id>>
-    Default: /lambda-web-adapter/e2e/subnets
-  VpcId:
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::VPC::Id>
-    Default: /lambda-web-adapter/e2e/vpcid
-  AdapterLayerArn:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /lambda-web-adapter/layer/arm64/latest
-
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
@@ -31,7 +20,7 @@ Resources:
       Architectures:
         - arm64
       Layers:
-        - !Ref AdapterLayerArn
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:15
       Environment:
         Variables:
           PORT: 8443
