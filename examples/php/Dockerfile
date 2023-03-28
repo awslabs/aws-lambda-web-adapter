@@ -16,4 +16,6 @@ ADD php/php.ini                /opt/php/php.ini
 ADD php/etc/php-fpm.conf       /opt/php/etc/php-fpm.conf
 ADD php/php.d/extensions.ini   /opt/php/php.d/extensions.ini
 
+COPY bootstrap /opt/bootstrap
+
 ENTRYPOINT /opt/bootstrap
