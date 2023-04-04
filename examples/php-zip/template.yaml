@@ -30,7 +30,6 @@ Resources:
       Runtime: provided.al2
       Environment:
         Variables:
-          AWS_LAMBDA_EXEC_WRAPPER: /var/task/bootstrap
           RUST_LOG: debug
           PORT: 8080
       Layers:
