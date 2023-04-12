@@ -31,7 +31,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Collect Workflow Telemetry
         if: always()
@@ -60,7 +60,7 @@ jobs:
 
   build:
     needs: [test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Collect Workflow Telemetry
         if: always()
@@ -97,7 +97,7 @@ jobs:
   package-beta:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Collect Workflow Telemetry
         if: always()
@@ -188,7 +188,7 @@ jobs:
   deploy-beta:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [package-beta]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Collect Workflow Telemetry
         if: always()
@@ -244,7 +244,7 @@ jobs:
   e2e-test:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [deploy-beta]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Collect Workflow Telemetry
         if: always()
@@ -366,7 +366,7 @@ jobs:
   load-gamma-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -381,7 +381,7 @@ jobs:
   load-prod-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -396,7 +396,7 @@ jobs:
   package-gamma:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-gamma-matrix ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
     steps:
@@ -468,7 +468,7 @@ jobs:
   package-prod:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-prod-matrix ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
     steps:
@@ -540,7 +540,7 @@ jobs:
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test, package-gamma ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -555,7 +555,7 @@ jobs:
   deploy-gamma:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [load-gamma-matrix2]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
     steps:
@@ -614,7 +614,7 @@ jobs:
   load-prod-matrix2:
     if: ${{ github.event_name == 'release' }}
     needs: [ deploy-gamma, package-prod ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -629,7 +629,7 @@ jobs:
   deploy-prod:
     if: ${{ github.event_name == 'release' }}
     needs: [load-prod-matrix2]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     environment: prod
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
@@ -689,7 +689,7 @@ jobs:
   publish-to-public-ecr:
     if: ${{ github.event_name == 'release' }}
     needs: [deploy-prod]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Collect Workflow Telemetry
         if: always()
