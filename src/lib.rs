@@ -1,10 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::fmt::Debug;
 use std::{
     env,
     future::Future,
-    io::prelude::*,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -13,14 +13,11 @@ use std::{
     time::Duration,
 };
 
-use flate2::write::GzEncoder;
-use flate2::Compression;
 use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode,
 };
 use hyper::{
-    body,
     body::HttpBody,
     client::{connect::Connect, Client, HttpConnector},
     Body,
@@ -32,7 +29,8 @@ use lambda_http::{Request, RequestExt, Response};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
-use tower::Service;
+use tower::{Service, ServiceBuilder};
+use tower_http::compression::CompressionLayer;
 use url::Url;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -52,6 +50,23 @@ impl From<&str> for Protocol {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum LambdaInvokeMode {
+    #[default]
+    Buffered,
+    ResponseStream,
+}
+
+impl From<&str> for LambdaInvokeMode {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "buffered" => LambdaInvokeMode::Buffered,
+            "response_stream" => LambdaInvokeMode::ResponseStream,
+            _ => LambdaInvokeMode::Buffered,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct AdapterOptions {
     pub host: String,
@@ -65,6 +80,7 @@ pub struct AdapterOptions {
     pub enable_tls: bool,
     pub tls_server_name: Option<String>,
     pub tls_cert_file: Option<String>,
+    pub invoke_mode: LambdaInvokeMode,
 }
 
 impl AdapterOptions {
@@ -94,6 +110,10 @@ impl AdapterOptions {
                 .unwrap_or(false),
             tls_server_name: env::var("AWS_LWA_TLS_SERVER_NAME").ok(),
             tls_cert_file: env::var("AWS_LWA_TLS_CERT_FILE").ok(),
+            invoke_mode: env::var("AWS_LWA_INVOKE_MODE")
+                .unwrap_or("buffered".to_string())
+                .as_str()
+                .into(),
         }
     }
 }
@@ -108,6 +128,7 @@ pub struct Adapter<C> {
     domain: Url,
     base_path: Option<String>,
     compression: bool,
+    invoke_mode: LambdaInvokeMode,
 }
 
 impl Adapter<HttpsConnector<HttpConnector>> {
@@ -155,6 +176,7 @@ impl Adapter<HttpsConnector<HttpConnector>> {
             async_init: options.async_init,
             ready_at_init: Arc::new(AtomicBool::new(false)),
             compression: options.compression,
+            invoke_mode: options.invoke_mode,
         }
     }
 }
@@ -190,6 +212,7 @@ impl Adapter<HttpConnector> {
             async_init: options.async_init,
             ready_at_init: Arc::new(AtomicBool::new(false)),
             compression: options.compression,
+            invoke_mode: options.invoke_mode,
         }
     }
 }
@@ -279,7 +302,21 @@ where
 
     /// Run the adapter to take events from Lambda.
     pub async fn run(self) -> Result<(), Error> {
-        lambda_http::run(self).await
+        let compression = self.compression;
+        let invoke_mode = self.invoke_mode;
+
+        if compression {
+            let svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(self);
+            match invoke_mode {
+                LambdaInvokeMode::Buffered => lambda_http::run(svc).await,
+                LambdaInvokeMode::ResponseStream => lambda_http::run_with_streaming_response(svc).await,
+            }
+        } else {
+            match invoke_mode {
+                LambdaInvokeMode::Buffered => lambda_http::run(self).await,
+                LambdaInvokeMode::ResponseStream => lambda_http::run_with_streaming_response(self).await,
+            }
+        }
     }
 
     async fn fetch_response(&self, event: Request) -> Result<Response<Body>, Error> {
@@ -290,7 +327,7 @@ where
         }
 
         let request_context = event.request_context();
-        let path = event.raw_http_path();
+        let path = event.raw_http_path().to_string();
         let mut path = path.as_str();
         let (parts, body) = event.into_parts();
 
@@ -298,12 +335,6 @@ where
         if let Some(base_path) = self.base_path.as_deref() {
             path = path.trim_start_matches(base_path);
         }
-
-        let accepts_gzip = parts
-            .headers
-            .get("accept-encoding")
-            .map(|v| v.to_str().unwrap_or_default().contains("gzip"))
-            .unwrap_or_default();
 
         let mut req_headers = parts.headers;
 
@@ -329,49 +360,6 @@ where
         let app_response = self.client.request(request).await?;
         tracing::debug!(status = %app_response.status(), body_size = app_response.body().size_hint().lower(),
             app_headers = ?app_response.headers().clone(), "responding to lambda event");
-
-        let response_compressed = app_response.headers().get("content-encoding").is_some();
-
-        let content_type = if let Some(content_type) = app_response.headers().get("content-type") {
-            content_type.to_str().unwrap()
-        } else {
-            ""
-        };
-
-        let compressable_content_type = content_type.starts_with("text/")
-            || content_type.starts_with("application/json")
-            || content_type.starts_with("application/ld+json")
-            || content_type.starts_with("application/javascript")
-            || content_type.starts_with("image/svg+xml")
-            || content_type.starts_with("application/xhtml+xml")
-            || content_type.starts_with("application/x-javascript")
-            || content_type.starts_with("application/xml");
-
-        // Gzip the response if the client accepts it
-        let app_response = if !self.compression {
-            app_response
-        } else if accepts_gzip && !response_compressed && compressable_content_type {
-            let (parts, body) = app_response.into_parts();
-            let mut builder = hyper::Response::builder().status(parts.status).version(parts.version);
-            if let Some(headers) = builder.headers_mut() {
-                // Remove the content-length header as we can't overwrite it after setting it
-                let mut clean_headers = parts.headers.clone();
-                clean_headers.remove(http::header::CONTENT_LENGTH);
-
-                headers.extend(clean_headers);
-            }
-            let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-            encoder.write_all(&body::to_bytes(body).await.unwrap())?;
-            let gzipped_body = encoder.finish()?;
-
-            builder
-                // Write the new content-length header
-                .header(http::header::CONTENT_LENGTH, gzipped_body.len().to_string())
-                .header("content-encoding", "gzip")
-                .body(hyper::Body::from(gzipped_body))?
-        } else {
-            app_response
-        };
 
         Ok(app_response)
     }

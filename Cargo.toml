@@ -19,8 +19,8 @@ exclude = ["examples"]
 [dependencies]
 http = "0.2"
 hyper = { version = "0.14", features = ["client"] }
-hyper-rustls = "0.23.2"
-lambda_http = "0.7.3"
+hyper-rustls = "0.24"
+lambda_http = "0.8"
 flate2 = "1.0.25"
 tokio = { version = "1.24", features = [
     "macros",
@@ -35,8 +35,9 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
     "env-filter",
     "fmt",
 ] }
-tower = "0.4.13"
-url = "2.3.1"
+tower = "0.4"
+tower-http = { version = "0.4", features = ["compression-gzip"] }
+url = "2.3"
 
 [dev-dependencies]
 httpmock = "0.6"
