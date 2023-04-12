@@ -11,12 +11,13 @@ use httpmock::{
     MockServer,
 };
 use hyper::{body, Body};
-use lambda_web_adapter::{Adapter, AdapterOptions, Protocol};
-use tower::Service;
+use lambda_web_adapter::{Adapter, AdapterOptions, LambdaInvokeMode, Protocol};
+use tower::{Service, ServiceBuilder};
 
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use tower_http::compression::{CompressionBody, CompressionLayer};
 
 #[test]
 fn test_adapter_options_from_env() {
@@ -71,6 +72,7 @@ async fn test_http_readiness_check() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     };
 
     // Initialize adapter and do readiness check
@@ -103,6 +105,7 @@ async fn test_http_basic_request() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     });
 
     // // Call the adapter service with basic request
@@ -142,6 +145,7 @@ async fn test_http_headers() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     });
 
     // Prepare request
@@ -187,6 +191,7 @@ async fn test_http_path_encoding() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     });
 
     // Prepare request
@@ -230,6 +235,7 @@ async fn test_http_query_params() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     });
 
     // Prepare request
@@ -282,6 +288,7 @@ async fn test_http_post_put_delete() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     });
 
     // Prepare requests
@@ -330,7 +337,7 @@ async fn test_http_compress() {
     });
 
     // Initialize adapter
-    let mut adapter = Adapter::new(&AdapterOptions {
+    let adapter = Adapter::new(&AdapterOptions {
         host: app_server.host(),
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
@@ -342,21 +349,23 @@ async fn test_http_compress() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     });
+
+    let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new()
         .with_path("/hello")
         .with_header("accept-encoding", "gzip")
         .build();
-    let response = adapter.call(req.into()).await.expect("Request failed");
+    let response = svc.call(req.into()).await.expect("Request failed");
 
     // Assert endpoint was called once
     hello.assert();
 
     // and response has expected content
     assert_eq!(200, response.status());
-    assert_eq!(response.headers().get("content-length").unwrap(), "48"); // uncompressed: 59
     assert_eq!(response.headers().get("content-encoding").unwrap(), "gzip");
     assert_eq!(
         "Hello World Hello World Hello World Hello World Hello World",
@@ -388,6 +397,7 @@ async fn test_http_compress_disallowed_type() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     });
 
     // // Call the adapter service with basic request
@@ -426,7 +436,7 @@ async fn test_http_compress_already_compressed() {
     });
 
     // Initialize adapter
-    let mut adapter = Adapter::new(&AdapterOptions {
+    let adapter = Adapter::new(&AdapterOptions {
         host: app_server.host(),
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
@@ -438,14 +448,17 @@ async fn test_http_compress_already_compressed() {
         enable_tls: false,
         tls_server_name: None,
         tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
     });
+
+    let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
 
     // Call the adapter service with basic request
     let req = LambdaEventBuilder::new()
         .with_path("/hello")
         .with_header("accept-encoding", "gzip")
         .build();
-    let response = adapter.call(req.into()).await.expect("Request failed");
+    let response = svc.call(req.into()).await.expect("Request failed");
 
     // Assert endpoint was called once
     hello.assert();
@@ -465,7 +478,7 @@ async fn body_to_string(res: Response<Body>) -> String {
     String::from_utf8_lossy(&body_bytes).to_string()
 }
 
-async fn compressed_body_to_string(res: Response<Body>) -> String {
+async fn compressed_body_to_string(res: Response<CompressionBody<Body>>) -> String {
     let body_bytes = body::to_bytes(res.into_body()).await.unwrap();
     decode_reader(&body_bytes).unwrap()
 }
