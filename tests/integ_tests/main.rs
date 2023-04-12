@@ -408,7 +408,7 @@ async fn test_http_compress_disallowed_type() {
     let response = adapter.call(req.into()).await.expect("Request failed");
 
     // Assert endpoint was called once
-    hello.assert(); 
+    hello.assert();
 
     // and response has expected content
     assert_eq!(200, response.status());
