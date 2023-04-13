@@ -286,9 +286,9 @@ where
     async fn check_web_readiness(&self, url: &Url, protocol: &Protocol) -> Result<(), i8> {
         match protocol {
             Protocol::Http => match self.client.get(url.to_string().parse().unwrap()).await {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    tracing::debug!(err =?e, "app is not ready");
+                Ok(response) if { 500 > response.status().as_u16() && response.status().as_u16() >= 100 } => Ok(()),
+                _ => {
+                    tracing::debug!("app is not ready");
                     Err(-1)
                 }
             },
