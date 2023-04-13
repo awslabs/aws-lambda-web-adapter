@@ -86,18 +86,21 @@ pub struct AdapterOptions {
 impl AdapterOptions {
     pub fn from_env() -> Self {
         AdapterOptions {
-            host: env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string()),
-            port: env::var("PORT").unwrap_or_else(|_| "8080".to_string()),
-            readiness_check_port: env::var("READINESS_CHECK_PORT")
-                .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
-            readiness_check_path: env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string()),
-            readiness_check_protocol: env::var("READINESS_CHECK_PROTOCOL")
-                .unwrap_or_else(|_| "HTTP".to_string())
+            host: env::var("AWS_LWA_HOST").unwrap_or(env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string())),
+            port: env::var("AWS_LWA_PORT").unwrap_or(env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
+            readiness_check_port: env::var("AWS_LWA_READINESS_CHECK_PORT").unwrap_or(
+                env::var("READINESS_CHECK_PORT")
+                    .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
+            ),
+            readiness_check_path: env::var("AWS_LWA_READINESS_CHECK_PATH")
+                .unwrap_or(env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())),
+            readiness_check_protocol: env::var("AWS_LWA_READINESS_CHECK_PROTOCOL")
+                .unwrap_or(env::var("READINESS_CHECK_PROTOCOL").unwrap_or_else(|_| "HTTP".to_string()))
                 .as_str()
                 .into(),
-            base_path: env::var("REMOVE_BASE_PATH").ok(),
-            async_init: env::var("ASYNC_INIT")
-                .unwrap_or_else(|_| "false".to_string())
+            base_path: env::var("AWS_LWA_REMOVE_BASE_PATH").map_or_else(|_| env::var("REMOVE_BASE_PATH").ok(), Some),
+            async_init: env::var("AWS_LWA_ASYNC_INIT")
+                .unwrap_or(env::var("ASYNC_INIT").unwrap_or_else(|_| "false".to_string()))
                 .parse()
                 .unwrap_or(false),
             compression: env::var("AWS_LWA_ENABLE_COMPRESSION")
