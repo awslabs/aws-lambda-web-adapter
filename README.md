@@ -121,10 +121,10 @@ It supports TLS1.2 and TLS1.3 with safe defaults. To see the supported TLS featu
 **AWS_LWA_TLS_SERVER_NAME** - allows you to override the server name for TLS Server Name Indication. This should match one of the SAN names on the server certificate. The default is "localhost".
 
 **AWS_LWA_TLS_CERT_FILE** - Lambda Web Adapter uses the platform's native certificate store to find trusted certificates. You can configure this environment variable to use your own certificate.
-Please check out [FastAPI with HTTPS](examples/fastapi-https/) example for more details.
+Please check out [FastAPI with HTTPS](examples/fastapi-https) example for more details.
 
 **AWS_LWA_INVOKE_MODE** - Lambda function invoke mode. The default is "buffered". When configured as "response_stream", Lambda Web Adapter will stream response to Lambda service [blog](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/). 
-Please check out [FastAPI with Response Streaming](examples/fastapi-response-streaming/) example. 
+Please check out [FastAPI with Response Streaming](examples/fastapi-response-streaming) example. 
 
 ## Request Context
 
@@ -150,10 +150,10 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 
 ## Examples
 
-- [FastAPI](examples/fastapi/)
-- [FastAPI with HTTPS](examples/fastapi-https/)
-- [FastAPI with Response Streaming](examples/fastapi-response-streaming/)
-- [FastAPI in Zip](examples/fastapi-zip/)
+- [FastAPI](examples/fastapi)
+- [FastAPI with HTTPS](examples/fastapi-https)
+- [FastAPI with Response Streaming](examples/fastapi-response-streaming)
+- [FastAPI in Zip](examples/fastapi-zip)
 - [Flask](examples/flask)
 - [Flask in Zip](examples/flask-zip)
 - [Serverless Django by @efi-mk](https://github.com/aws-hebrew-book/serverless-django)
