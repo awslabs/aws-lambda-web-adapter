@@ -66,11 +66,11 @@ For details, please check out [the example nodejs application](examples/expressj
 
 When a new Lambda Execution Environment starts up, Lambda Web Adapter will boot up as a Lambda Extension, followed by the web application. 
 
-By default, Lambda Web Adapter will send HTTP GET requests to the web application at `http://127.0.0.1:8080/`. The port and path can be customized with two environment variables: `READINESS_CHECK_PORT` and `READINESS_CHECK_PATH`.  
+By default, Lambda Web Adapter will send HTTP GET requests to the web application at `http://127.0.0.1:8080/`. The port and path can be customized with two environment variables: `AWS_LWA_READINESS_CHECK_PORT` and `AWS_LWA_READINESS_CHECK_PATH`.  
 
 Lambda Web Adapter will retry this request every 10 milliseconds until the web application returns an HTTP response (**status code >= 100 and < 500**) or the function times out. 
 
-In addition, you can configure the adapter to preform readiness check with TCP connect, by setting `READINESS_CHECK_PROTOCOL` to `tcp`. 
+In addition, you can configure the adapter to preform readiness check with TCP connect, by setting `AWS_LWA_READINESS_CHECK_PROTOCOL` to `tcp`. 
 
 After passing readiness check, Lambda Web Adapter will start Lambda Runtime and forward the invokes to the web application. 
 
@@ -136,7 +136,7 @@ Lambda Web Adapter forwards this information to the web application in a Http He
 
 For a function with Lambda Extensions registered, Lambda enables shutdown phase for the function. When Lambda service is about to shut down a Lambda execution environment, 
 it sends a SIGTERM signal to the runtime and then a SHUTDOWN event to each registered external extensions. Developers could catch the SIGTERM signal in the lambda functions and perform graceful shutdown tasks.
-More details in [this repo](https://github.com/aws-samples/graceful-shutdown-with-aws-lambda).
+The [Express.js](examples/expressjs) gives a simple example. More details in [this repo](https://github.com/aws-samples/graceful-shutdown-with-aws-lambda). 
 
 ## Local Debugging
 
