@@ -11,7 +11,7 @@ Here is a command to generate a self-signed certificate with `openssl`. The cert
 openssl req -nodes -x509 -sha256 -newkey rsa:4096 \
   -keyout key.pem \
   -out cert.pem \
-  -days 3560 \
+  -days 3650 \
   -subj "/C=US/ST=Washington/L=Seattle/O=Example Co/OU=Engineering/CN=api.example.com" \
   -extensions san \
   -config <( \
@@ -25,12 +25,12 @@ Below is a Dockerfile to package FastAPI with Lambda Web Adapter.
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/python:3.8.12-slim-buster
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.4 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.0 /lambda-adapter /opt/extensions/lambda-adapter
 WORKDIR /var/task
 COPY requirements.txt ./
 RUN python -m pip install -r requirements.txt
 COPY *.py *.pem ./
-ENV PORT=8443 READINESS_CHECK_PROTOCOL=http RUST_LOG=info
+ENV PORT=8443 AWS_LWA_READINESS_CHECK_PROTOCOL=http RUST_LOG=info
 ENV AWS_LWA_ENABLE_TLS=true AWS_LWA_TLS_SERVER_NAME=api.example.com AWS_LWA_TLS_CERT_FILE=/var/task/cert.pem
 CMD exec uvicorn --port=$PORT --ssl-keyfile key.pem --ssl-certfile cert.pem --log-level info main:app
 ```

@@ -28,7 +28,7 @@ To use Lambda Web Adapter with docker images, package your web app (http api) in
 By default, Lambda Web Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#Configurations).
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.4 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.0 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 Pre-compiled Lambda Web Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
@@ -38,7 +38,7 @@ Below is a Dockerfile for [an example nodejs application](examples/expressjs).
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:16.13.2-stretch-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.6.4 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.0 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=7000
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
@@ -55,8 +55,8 @@ This works with any base images except AWS managed base images. To use AWS manag
 AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to do three things:
 
 1. attach Lambda Web Adapter layer to your function.
-   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:15`
-   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:15`
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:16`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:16`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 
@@ -104,7 +104,7 @@ If a lambda function couldn't complete the initialization within 10 seconds, Lam
 To help functions to use this 10 seconds free initialization time and avoid the restart, Lambda Web Adapter supports asynchronous initialization. 
 When this feature is enabled, Lambda Web Adapter performs readiness check up to 9.8 seconds. If the web app is not ready by then, 
 Lambda Web Adapter signals to Lambda service that the init is completed, and continues readiness check in the handler. 
-This feature is disabled by default. Enable it by setting environment variable `ASYNC_INIT` to `true`. 
+This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ASYNC_INIT` to `true`. 
 
 **AWS_LWA_REMOVE_BASE_PATH / REMOVE_BASE_PATH** - The value of this environment variable tells the adapter whether the application is running under a base path.
 For example, you could have configured your API Gateway to have a /orders/{proxy+} and a /catalog/{proxy+} resource.
@@ -136,7 +136,7 @@ Lambda Web Adapter forwards this information to the web application in a Http He
 
 For a function with Lambda Extensions registered, Lambda enables shutdown phase for the function. When Lambda service is about to shut down a Lambda execution environment, 
 it sends a SIGTERM signal to the runtime and then a SHUTDOWN event to each registered external extensions. Developers could catch the SIGTERM signal in the lambda functions and perform graceful shutdown tasks.
-The [Express.js](examples/expressjs) gives a simple example. More details in [this repo](https://github.com/aws-samples/graceful-shutdown-with-aws-lambda). 
+The [Express.js](examples/expressjs/app/src/index.js) gives a simple example. More details in [this repo](https://github.com/aws-samples/graceful-shutdown-with-aws-lambda). 
 
 ## Local Debugging
 
@@ -156,7 +156,7 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 - [FastAPI in Zip](examples/fastapi-zip)
 - [Flask](examples/flask)
 - [Flask in Zip](examples/flask-zip)
-- [Serverless Django by @efi-mk](https://github.com/aws-hebrew-book/serverless-django)
+- [Serverless Django](https://github.com/aws-hebrew-book/serverless-django)  by [@efi-mk](https://github.com/efi-mk)
 - [Express.js](examples/expressjs)
 - [Express.js in Zip](examples/expressjs-zip)
 - [Next.js](examples/nextjs)

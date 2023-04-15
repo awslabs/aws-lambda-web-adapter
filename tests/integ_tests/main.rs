@@ -32,6 +32,7 @@ fn test_adapter_options_from_env() {
     env::set_var("AWS_LWA_ENABLE_TLS", "true");
     env::set_var("AWS_LWA_TLS_SERVER_NAME", "api.example.com");
     env::remove_var("AWS_LWA_TLS_CERT_FILE");
+    env::set_var("AWS_LWA_INVOKE_MODE", "buffered");
 
     // Initialize adapter with env options
     let options = AdapterOptions::from_env();
@@ -48,6 +49,40 @@ fn test_adapter_options_from_env() {
     assert!(options.enable_tls);
     assert_eq!(Some("api.example.com".into()), options.tls_server_name);
     assert_eq!(None, options.tls_cert_file);
+    assert_eq!(LambdaInvokeMode::Buffered, options.invoke_mode);
+}
+
+#[test]
+fn test_adapter_options_from_namespaced_env() {
+    env::set_var("AWS_LWA_PORT", "3000");
+    env::set_var("AWS_LWA_HOST", "localhost");
+    env::set_var("AWS_LWA_READINESS_CHECK_PORT", "8000");
+    env::set_var("AWS_LWA_READINESS_CHECK_PROTOCOL", "TCP");
+    env::set_var("AWS_LWA_READINESS_CHECK_PATH", "/healthcheck");
+    env::set_var("AWS_LWA_REMOVE_BASE_PATH", "/prod");
+    env::set_var("AWS_LWA_ASYNC_INIT", "true");
+    env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
+    env::set_var("AWS_LWA_ENABLE_TLS", "true");
+    env::set_var("AWS_LWA_TLS_SERVER_NAME", "api.example.com");
+    env::remove_var("AWS_LWA_TLS_CERT_FILE");
+    env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
+
+    // Initialize adapter with env options
+    let options = AdapterOptions::from_env();
+    Adapter::new(&options);
+
+    assert_eq!("3000", options.port);
+    assert_eq!("localhost", options.host);
+    assert_eq!("8000", options.readiness_check_port);
+    assert_eq!("/healthcheck", options.readiness_check_path);
+    assert_eq!(Protocol::Tcp, options.readiness_check_protocol);
+    assert_eq!(Some("/prod".into()), options.base_path);
+    assert!(options.async_init);
+    assert!(options.compression);
+    assert!(options.enable_tls);
+    assert_eq!(Some("api.example.com".into()), options.tls_server_name);
+    assert_eq!(None, options.tls_cert_file);
+    assert_eq!(LambdaInvokeMode::ResponseStream, options.invoke_mode);
 }
 
 #[tokio::test]
