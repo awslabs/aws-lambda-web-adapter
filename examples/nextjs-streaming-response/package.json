@@ -1,0 +1,50 @@
+{
+  "name": "lwa-streaming-response-demo-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@heroicons/react": "1.0.6",
+    "@tailwindcss/forms": "0.5.3",
+    "@tailwindcss/line-clamp": "0.4.2",
+    "@types/node": "18.15.11",
+    "@types/react": "18.0.33",
+    "@types/react-dom": "18.0.11",
+    "autoprefixer": "10.4.14",
+    "clsx": "1.2.1",
+    "date-fns": "2.29.3",
+    "dinero.js": "2.0.0-alpha.8",
+    "eslint": "8.37.0",
+    "eslint-config-next": "13.3.0",
+    "ms": "3.0.0-canary.1",
+    "next": "13.3.0",
+    "postcss": "8.4.21",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "sharp": "^0.32.0",
+    "tailwindcss": "3.3.1",
+    "typescript": "5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "0.5.9",
+    "@types/ms": "0.7.31",
+    "@types/node": "18.15.11",
+    "@types/react": "18.0.33",
+    "@types/react-dom": "18.0.11",
+    "@vercel/git-hooks": "1.0.0",
+    "autoprefixer": "10.4.13",
+    "eslint": "8.30.0",
+    "eslint-config-next": "13.1.0",
+    "lint-staged": "13.1.0",
+    "postcss": "8.4.20",
+    "prettier": "2.8.1",
+    "prettier-plugin-tailwindcss": "0.2.1",
+    "tailwindcss": "3.3.1",
+    "typescript": "5.0.3"
+  }
+}
