@@ -1,9 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  lwa-streaming-response-demo-nextjs
-
-  Sample SAM template for lwa-streaming-response-demo-nextjs
+Description: "Sample lambda streaming response SAM template using nextjs"
 Globals:
   Function:
     Timeout: 60
