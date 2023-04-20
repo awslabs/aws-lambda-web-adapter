@@ -1,0 +1,10 @@
+.vscode
+.next
+.git
+.gitignore
+
+node_modules
+
+# aws sam
+.aws-sam
+samconfig.toml
