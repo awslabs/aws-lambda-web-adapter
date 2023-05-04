@@ -20,3 +20,8 @@ When you open the Function URL in a browser:
 - Primary product information will be loaded first at part of the initial response
 
 - Secondary, more personalized details (that might be slower) like recommended products and customer reviews are progressively streamed in.
+
+
+### Thanks 
+
+Page content and styles are powered by the [Next.js App Router Playground - Streaming with Suspense](https://app-dir.vercel.app/streaming). 
