@@ -8,25 +8,18 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 29
+    Timeout: 10
 
 Resources:
   FlaskFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      MemorySize: 1024
+      MemorySize: 256
       Events:
-        Root:
+        ApiEvent:
           Type: HttpApi
-          Properties:
-            Path: /
-            Method: ANY
-        Proxy:
-          Type: HttpApi
-          Properties:
-            Path: /{proxy+}
-            Method: ANY
+
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./app

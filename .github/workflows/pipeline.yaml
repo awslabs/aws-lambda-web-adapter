@@ -33,10 +33,6 @@ jobs:
   test:
     runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -50,22 +46,11 @@ jobs:
       - name: run unit and integration tests
         run: cargo nextest run --profile ci
 
-      - name: Analyze Test and/or Coverage Results
-        uses: runforesight/foresight-test-kit-action@v1
-        if: ${{ always() }}
-        with:
-          test_format: JUNIT
-          test_framework: JUNIT
-          test_path: "**/junit.xml"
 
   build:
     needs: [test]
     runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -99,10 +84,6 @@ jobs:
     needs: [ build ]
     runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -190,10 +171,6 @@ jobs:
     needs: [package-beta]
     runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -246,10 +223,6 @@ jobs:
     needs: [deploy-beta]
     runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
@@ -340,14 +313,6 @@ jobs:
           API_ENDPOINT=${HTTPBIN_TLS_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
           API_ENDPOINT=${HTTPBIN_TLS_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
-      - name: Analyze Test and/or Coverage Results
-        uses: runforesight/foresight-test-kit-action@v1
-        if: ${{ always() }}
-        with:
-          test_format: JUNIT
-          test_framework: JUNIT
-          test_path: "**/junit.xml"
-
       - name: remove the oci x86 integration test stacks
         working-directory: ./tests/e2e_tests/fixtures/go-httpbin
         run: |
@@ -370,10 +335,6 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
@@ -385,10 +346,6 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
@@ -400,10 +357,6 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -472,10 +425,6 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -544,10 +493,6 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
@@ -559,10 +504,6 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -618,10 +559,6 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
@@ -634,10 +571,6 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -691,10 +624,6 @@ jobs:
     needs: [deploy-prod]
     runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
 
       - name: Assume the prod pipeline user role
