@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  serverless-nginx-demo
+
+  Sample SAM Template for serverless-nginx-demo
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      MemorySize: 2048
+      Architectures:
+        - x86_64
+      Handler: bootstrap
+      Runtime: provided.al2
+      Environment:
+        Variables:
+          RUST_LOG: debug
+          PORT: 8080
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:16
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:Nginx123X86:12
+      Events:
+        Root:
+          Type: HttpApi
+
+Outputs:
+  URL:
+    Description: "API Gateway endpoint URL for Prod stage for Nginx application"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+  Function:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt Function.Arn
+  FunctionRole:
+    Description: "Implicit IAM Role created for function"
+    Value: !GetAtt FunctionRole.Arn

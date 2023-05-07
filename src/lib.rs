@@ -1,10 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::fmt::Debug;
 use std::{
     env,
     future::Future,
-    io::prelude::*,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -13,36 +13,31 @@ use std::{
     time::Duration,
 };
 
-use flate2::write::GzEncoder;
-use flate2::Compression;
 use http::{
     header::{HeaderName, HeaderValue},
-    Method, StatusCode, Uri,
+    Method, StatusCode,
 };
 use hyper::{
-    body,
     body::HttpBody,
-    client::{Client, HttpConnector},
+    client::{connect::Connect, Client, HttpConnector},
     Body,
 };
+use hyper_rustls::HttpsConnector;
 use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
-use tower::Service;
+use tower::{Service, ServiceBuilder};
+use tower_http::compression::CompressionLayer;
+use url::Url;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Protocol {
+    #[default]
     Http,
     Tcp,
-}
-
-impl Default for Protocol {
-    fn default() -> Self {
-        Protocol::Http
-    }
 }
 
 impl From<&str> for Protocol {
@@ -51,6 +46,23 @@ impl From<&str> for Protocol {
             "http" => Protocol::Http,
             "tcp" => Protocol::Tcp,
             _ => Protocol::Http,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum LambdaInvokeMode {
+    #[default]
+    Buffered,
+    ResponseStream,
+}
+
+impl From<&str> for LambdaInvokeMode {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "buffered" => LambdaInvokeMode::Buffered,
+            "response_stream" => LambdaInvokeMode::ResponseStream,
+            _ => LambdaInvokeMode::Buffered,
         }
     }
 }
@@ -65,60 +77,96 @@ pub struct AdapterOptions {
     pub base_path: Option<String>,
     pub async_init: bool,
     pub compression: bool,
+    pub enable_tls: bool,
+    pub tls_server_name: Option<String>,
+    pub tls_cert_file: Option<String>,
+    pub invoke_mode: LambdaInvokeMode,
 }
 
 impl AdapterOptions {
     pub fn from_env() -> Self {
         AdapterOptions {
-            host: env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string()),
-            port: env::var("PORT").unwrap_or_else(|_| "8080".to_string()),
-            readiness_check_port: env::var("READINESS_CHECK_PORT")
-                .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
-            readiness_check_path: env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string()),
-            readiness_check_protocol: env::var("READINESS_CHECK_PROTOCOL")
-                .unwrap_or_else(|_| "HTTP".to_string())
+            host: env::var("AWS_LWA_HOST").unwrap_or(env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string())),
+            port: env::var("AWS_LWA_PORT").unwrap_or(env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
+            readiness_check_port: env::var("AWS_LWA_READINESS_CHECK_PORT").unwrap_or(
+                env::var("READINESS_CHECK_PORT")
+                    .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
+            ),
+            readiness_check_path: env::var("AWS_LWA_READINESS_CHECK_PATH")
+                .unwrap_or(env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())),
+            readiness_check_protocol: env::var("AWS_LWA_READINESS_CHECK_PROTOCOL")
+                .unwrap_or(env::var("READINESS_CHECK_PROTOCOL").unwrap_or_else(|_| "HTTP".to_string()))
                 .as_str()
                 .into(),
-            base_path: env::var("REMOVE_BASE_PATH").ok(),
-            async_init: env::var("ASYNC_INIT")
-                .unwrap_or_else(|_| "false".to_string())
+            base_path: env::var("AWS_LWA_REMOVE_BASE_PATH").map_or_else(|_| env::var("REMOVE_BASE_PATH").ok(), Some),
+            async_init: env::var("AWS_LWA_ASYNC_INIT")
+                .unwrap_or(env::var("ASYNC_INIT").unwrap_or_else(|_| "false".to_string()))
                 .parse()
                 .unwrap_or(false),
             compression: env::var("AWS_LWA_ENABLE_COMPRESSION")
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
+            enable_tls: env::var("AWS_LWA_ENABLE_TLS")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse()
+                .unwrap_or(false),
+            tls_server_name: env::var("AWS_LWA_TLS_SERVER_NAME").ok(),
+            tls_cert_file: env::var("AWS_LWA_TLS_CERT_FILE").ok(),
+            invoke_mode: env::var("AWS_LWA_INVOKE_MODE")
+                .unwrap_or("buffered".to_string())
+                .as_str()
+                .into(),
         }
     }
 }
 
 #[derive(Clone)]
-pub struct Adapter {
-    client: Arc<Client<HttpConnector>>,
-    healthcheck_url: Uri,
+pub struct Adapter<C> {
+    client: Arc<Client<C>>,
+    healthcheck_url: Url,
     healthcheck_protocol: Protocol,
     async_init: bool,
     ready_at_init: Arc<AtomicBool>,
-    domain: Uri,
+    domain: Url,
     base_path: Option<String>,
     compression: bool,
+    invoke_mode: LambdaInvokeMode,
 }
 
-impl Adapter {
-    /// Create a new Adapter instance.
-    /// This function initializes a new HTTP client
+impl Adapter<HttpsConnector<HttpConnector>> {
+    /// Create a new HTTPS Adapter instance.
+    /// This function initializes a new HTTPS client
     /// to talk with the web server.
-    pub fn new(options: &AdapterOptions) -> Adapter {
-        let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build_http();
+    pub fn new_https(options: &AdapterOptions) -> Adapter<HttpsConnector<HttpConnector>> {
+        if let Some(cert_file) = &options.tls_cert_file {
+            env::set_var("SSL_CERT_FILE", cert_file);
+        }
+
+        let https = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .https_or_http()
+            .with_server_name(
+                options
+                    .tls_server_name
+                    .clone()
+                    .unwrap_or_else(|| "localhost".to_string()),
+            )
+            .enable_http1()
+            .build();
+
+        let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build(https);
+
+        let schema = "https";
 
         let healthcheck_url = format!(
             "{}://{}:{}{}",
-            "http", options.host, options.readiness_check_port, options.readiness_check_path
+            schema, options.host, options.readiness_check_port, options.readiness_check_path
         )
         .parse()
         .unwrap();
 
-        let domain = format!("{}://{}:{}", "http", options.host, options.port)
+        let domain = format!("{}://{}:{}", schema, options.host, options.port)
             .parse()
             .unwrap();
 
@@ -131,17 +179,51 @@ impl Adapter {
             async_init: options.async_init,
             ready_at_init: Arc::new(AtomicBool::new(false)),
             compression: options.compression,
+            invoke_mode: options.invoke_mode,
         }
     }
+}
 
-    /// Switch the default HTTP client with a different one.
-    pub fn with_client(self, client: Client<HttpConnector>) -> Self {
+impl Adapter<HttpConnector> {
+    /// Create a new HTTP Adapter instance.
+    /// This function initializes a new HTTP client
+    /// to talk with the web server.
+    pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector> {
+        let client = Client::builder()
+            .pool_idle_timeout(Duration::from_secs(4))
+            .build(HttpConnector::new());
+
+        let schema = "http";
+
+        let healthcheck_url = format!(
+            "{}://{}:{}{}",
+            schema, options.host, options.readiness_check_port, options.readiness_check_path
+        )
+        .parse()
+        .unwrap();
+
+        let domain = format!("{}://{}:{}", schema, options.host, options.port)
+            .parse()
+            .unwrap();
+
         Adapter {
             client: Arc::new(client),
-            ..self
+            healthcheck_url,
+            healthcheck_protocol: options.readiness_check_protocol,
+            domain,
+            base_path: options.base_path.clone(),
+            async_init: options.async_init,
+            ready_at_init: Arc::new(AtomicBool::new(false)),
+            compression: options.compression,
+            invoke_mode: options.invoke_mode,
         }
     }
+}
 
+impl<C> Adapter<C>
+where
+    C: Connect + Clone + Send + Sync + 'static,
+{
     /// Register a Lambda Extension to ensure
     /// that the adapter is loaded before any Lambda function
     /// associated with it.
@@ -193,22 +275,62 @@ impl Adapter {
     async fn check_readiness(&self) -> bool {
         let url = self.healthcheck_url.clone();
         let protocol = self.healthcheck_protocol;
-        is_web_ready(&url, &protocol).await
+        self.is_web_ready(&url, &protocol).await
+    }
+
+    async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
+        Retry::spawn(FixedInterval::from_millis(10), || {
+            self.check_web_readiness(url, protocol)
+        })
+        .await
+        .is_ok()
+    }
+
+    async fn check_web_readiness(&self, url: &Url, protocol: &Protocol) -> Result<(), i8> {
+        match protocol {
+            Protocol::Http => match self.client.get(url.to_string().parse().unwrap()).await {
+                Ok(response) if { 500 > response.status().as_u16() && response.status().as_u16() >= 100 } => Ok(()),
+                _ => {
+                    tracing::debug!("app is not ready");
+                    Err(-1)
+                }
+            },
+            Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await
+            {
+                Ok(_) => Ok(()),
+                Err(_) => Err(-1),
+            },
+        }
     }
 
     /// Run the adapter to take events from Lambda.
     pub async fn run(self) -> Result<(), Error> {
-        lambda_http::run(self).await
+        let compression = self.compression;
+        let invoke_mode = self.invoke_mode;
+
+        if compression {
+            let svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(self);
+            match invoke_mode {
+                LambdaInvokeMode::Buffered => lambda_http::run(svc).await,
+                LambdaInvokeMode::ResponseStream => lambda_http::run_with_streaming_response(svc).await,
+            }
+        } else {
+            match invoke_mode {
+                LambdaInvokeMode::Buffered => lambda_http::run(self).await,
+                LambdaInvokeMode::ResponseStream => lambda_http::run_with_streaming_response(self).await,
+            }
+        }
     }
 
     async fn fetch_response(&self, event: Request) -> Result<Response<Body>, Error> {
         if self.async_init && !self.ready_at_init.load(Ordering::SeqCst) {
-            is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol).await;
+            self.is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol)
+                .await;
             self.ready_at_init.store(true, Ordering::SeqCst);
         }
 
         let request_context = event.request_context();
-        let path = event.raw_http_path();
+        let path = event.raw_http_path().to_string();
         let mut path = path.as_str();
         let (parts, body) = event.into_parts();
 
@@ -216,12 +338,6 @@ impl Adapter {
         if let Some(base_path) = self.base_path.as_deref() {
             path = path.trim_start_matches(base_path);
         }
-
-        let accepts_gzip = parts
-            .headers
-            .get("accept-encoding")
-            .map(|v| v.to_str().unwrap_or_default().contains("gzip"))
-            .unwrap_or_default();
 
         let mut req_headers = parts.headers;
 
@@ -231,19 +347,13 @@ impl Adapter {
             HeaderValue::from_bytes(serde_json::to_string(&request_context)?.as_bytes())?,
         );
 
-        let mut pq = path.to_string();
-        if let Some(q) = parts.uri.query() {
-            pq.push('?');
-            pq.push_str(q);
-        }
-
-        let mut app_parts = self.domain.clone().into_parts();
-        app_parts.path_and_query = Some(pq.parse()?);
-        let app_url = Uri::from_parts(app_parts)?;
+        let mut app_url = self.domain.clone();
+        app_url.set_path(path);
+        app_url.set_query(parts.uri.query());
 
         tracing::debug!(app_url = %app_url, req_headers = ?req_headers, "sending request to app server");
 
-        let mut builder = hyper::Request::builder().method(parts.method).uri(app_url);
+        let mut builder = hyper::Request::builder().method(parts.method).uri(app_url.to_string());
         if let Some(headers) = builder.headers_mut() {
             headers.extend(req_headers);
         }
@@ -254,56 +364,16 @@ impl Adapter {
         tracing::debug!(status = %app_response.status(), body_size = app_response.body().size_hint().lower(),
             app_headers = ?app_response.headers().clone(), "responding to lambda event");
 
-        let response_compressed = app_response.headers().get("content-encoding").is_some();
-
-        let content_type = if let Some(content_type) = app_response.headers().get("content-type") {
-            content_type.to_str().unwrap()
-        } else {
-            ""
-        };
-
-        let compressable_content_type = content_type.starts_with("text/")
-            || content_type.starts_with("application/json")
-            || content_type.starts_with("application/ld+json")
-            || content_type.starts_with("application/javascript")
-            || content_type.starts_with("image/svg+xml")
-            || content_type.starts_with("application/xhtml+xml")
-            || content_type.starts_with("application/x-javascript")
-            || content_type.starts_with("application/xml");
-
-        // Gzip the response if the client accepts it
-        let app_response = if !self.compression {
-            app_response
-        } else if accepts_gzip && !response_compressed && compressable_content_type {
-            let (parts, body) = app_response.into_parts();
-            let mut builder = hyper::Response::builder().status(parts.status).version(parts.version);
-            if let Some(headers) = builder.headers_mut() {
-                // Remove the content-length header as we can't overwrite it after setting it
-                let mut clean_headers = parts.headers.clone();
-                clean_headers.remove(http::header::CONTENT_LENGTH);
-
-                headers.extend(clean_headers);
-            }
-            let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-            encoder.write_all(&body::to_bytes(body).await.unwrap())?;
-            let gzipped_body = encoder.finish()?;
-
-            builder
-                // Write the new content-length header
-                .header(http::header::CONTENT_LENGTH, gzipped_body.len().to_string())
-                .header("content-encoding", "gzip")
-                .body(hyper::Body::from(gzipped_body))?
-        } else {
-            app_response
-        };
-
         Ok(app_response)
     }
 }
 
 /// Implement a `Tower.Service` that sends the requests
 /// to the web server.
-impl Service<Request> for Adapter {
+impl<C> Service<Request> for Adapter<C>
+where
+    C: Connect + Clone + Send + Sync + 'static,
+{
     type Response = Response<Body>;
     type Error = Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
@@ -315,24 +385,5 @@ impl Service<Request> for Adapter {
     fn call(&mut self, event: Request) -> Self::Future {
         let adapter = self.clone();
         Box::pin(async move { adapter.fetch_response(event).await })
-    }
-}
-
-async fn is_web_ready(url: &Uri, protocol: &Protocol) -> bool {
-    Retry::spawn(FixedInterval::from_millis(10), || check_web_readiness(url, protocol))
-        .await
-        .is_ok()
-}
-
-async fn check_web_readiness(url: &Uri, protocol: &Protocol) -> Result<(), i8> {
-    match protocol {
-        Protocol::Http => match Client::new().get(url.clone()).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(-1),
-        },
-        Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(-1),
-        },
     }
 }

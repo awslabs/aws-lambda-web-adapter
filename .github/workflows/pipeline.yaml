@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
   pull_request:
     branches:
       - main
@@ -32,12 +31,8 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -51,23 +46,11 @@ jobs:
       - name: run unit and integration tests
         run: cargo nextest run --profile ci
 
-      - name: Analyze Test and/or Coverage Results
-        uses: runforesight/foresight-test-kit-action@v1
-        if: ${{ always() }}
-        with:
-          test_format: JUNIT
-          test_framework: JUNIT
-          test_path: "**/junit.xml"
 
   build:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -96,45 +79,11 @@ jobs:
           name: aws-sam-build-arm64
           path: build-arm64.tar
 
-  load-gamma-matrix:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ test ]
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
-      - uses: actions/checkout@v3
-      - id: set-matrix
-        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
-
-  load-prod-matrix:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ test ]
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
-      - uses: actions/checkout@v3
-      - id: set-matrix
-        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
-
   package-beta:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -217,18 +166,197 @@ jobs:
               477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
           docker manifest push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest
 
+  deploy-beta:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [package-beta]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the beta pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: beta-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: packaged-beta-x86_64.yaml
+
+      - name: Deploy x86_64 layer to beta account
+        run: |
+          sam deploy --stack-name ${BETA_STACK_NAME}-x86 \
+            --template packaged-beta-x86_64.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: packaged-beta-arm64.yaml
+
+      - name: Deploy arm64 layer to beta account
+        run: |
+          sam deploy --stack-name ${BETA_STACK_NAME}-arm64 \
+            --template packaged-beta-arm64.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+  e2e-test:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [deploy-beta]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - uses: taiki-e/install-action@nextest
+
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the beta pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: beta-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: deploy the oci x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin
+        run: |
+          aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-oci-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - name: deploy the zip x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
+        run: |
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-zip-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - name: deploy the tls zip x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-tls-zip
+        run: |
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-tls-zip-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - uses: dkershner6/aws-ssm-getparameters-action@v1
+        with:
+          parameterPairs:   "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint      = HTTPBIN_OCI_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint      = HTTPBIN_OCI_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/oci/alb-endpoint           = HTTPBIN_OCI_ALB_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/oci/function-url           = HTTPBIN_OCI_FURL_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint      = HTTPBIN_ZIP_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint           = HTTPBIN_ZIP_ALB_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin-tls/zip/rest-api-endpoint  = HTTPBIN_TLS_ZIP_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin-tls/zip/http-api-endpoint  = HTTPBIN_TLS_ZIP_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin-tls/zip/alb-endpoint       = HTTPBIN_TLS_ZIP_ALB_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin-tls/zip/function-url       = HTTPBIN_TLS_ZIP_FURL_ENDPOINT"
+
+      - name: run e2e tests
+        run: |
+          API_ENDPOINT=${HTTPBIN_OCI_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_OCI_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_OCI_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_OCI_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_TLS_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_TLS_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_TLS_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_TLS_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+
+      - name: remove the oci x86 integration test stacks
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin
+        run: |
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86
+
+      - name: remove the zip x86 integration test stacks
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
+        run: |
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
+
+      - name: remove the tls zip x86 integration test stacks
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-tls-zip
+        run: |
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-tls-zip-x86
+
+  load-gamma-matrix:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ e2e-test ]
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set-matrix
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
+
+  load-prod-matrix:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ e2e-test ]
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set-matrix
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
 
   package-gamma:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-gamma-matrix ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -293,14 +421,10 @@ jobs:
   package-prod:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-prod-matrix ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -362,162 +486,13 @@ jobs:
           name: packaged-prod-arm64-${{ matrix.region }}.yaml
           path: packaged-prod-arm64-${{ matrix.region }}.yaml
 
-  deploy-beta:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [package-beta, package-gamma, package-prod]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8"
-      - uses: aws-actions/setup-sam@v2
-
-      - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.BETA_REGION }}
-          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: beta-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: packaged-beta-x86_64.yaml
-
-      - name: Deploy x86_64 layer to beta account
-        run: |
-          sam deploy --stack-name ${BETA_STACK_NAME}-x86 \
-            --template packaged-beta-x86_64.yaml \
-            --capabilities CAPABILITY_IAM \
-            --region ${BETA_REGION} \
-            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
-            --image-repository ${BETA_IMAGE_REPOSITORY} \
-            --no-fail-on-empty-changeset \
-            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: packaged-beta-arm64.yaml
-
-      - name: Deploy arm64 layer to beta account
-        run: |
-          sam deploy --stack-name ${BETA_STACK_NAME}-arm64 \
-            --template packaged-beta-arm64.yaml \
-            --capabilities CAPABILITY_IAM \
-            --region ${BETA_REGION} \
-            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
-            --image-repository ${BETA_IMAGE_REPOSITORY} \
-            --no-fail-on-empty-changeset \
-            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
-
-  e2e-test:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [deploy-beta]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          components: clippy, rustfmt
-      - uses: taiki-e/install-action@nextest
-
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8"
-      - uses: aws-actions/setup-sam@v2
-
-      - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.BETA_REGION }}
-          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: beta-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
-
-      - name: deploy the oci x86 integration test stacks for the beta environment
-        working-directory: ./tests/e2e/fixtures/go-httpbin
-        run: |
-          aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
-          sam build
-          sam deploy --stack-name ${BETA_STACK_NAME}-oci-x86 \
-            --capabilities CAPABILITY_IAM \
-            --region ${BETA_REGION} \
-            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
-            --image-repository ${BETA_IMAGE_REPOSITORY} \
-            --no-fail-on-empty-changeset \
-            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
-
-      - name: deploy the zip x86 integration test stacks for the beta environment
-        working-directory: ./tests/e2e/fixtures/go-httpbin-zip
-        run: |
-          sam build
-          sam deploy --stack-name ${BETA_STACK_NAME}-zip-x86 \
-            --capabilities CAPABILITY_IAM \
-            --region ${BETA_REGION} \
-            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
-            --image-repository ${BETA_IMAGE_REPOSITORY} \
-            --no-fail-on-empty-changeset \
-            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
-
-      - uses: dkershner6/aws-ssm-getparameters-action@v1
-        with:
-          parameterPairs:   "/lambda-web-adapter/e2e/oci/rest-api-endpoint = OCI_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/oci/http-api-endpoint = OCI_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/oci/alb-endpoint      = OCI_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/oci/function-url      = OCI_FURL_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/rest-api-endpoint = ZIP_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/http-api-endpoint = ZIP_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/alb-endpoint      = ZIP_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/zip/function-url      = ZIP_FURL_ENDPOINT"
-
-      - name: run e2e tests
-        run: cargo nextest run --run-ignored ignored-only --profile ci
-
-      - name: Analyze Test and/or Coverage Results
-        uses: runforesight/foresight-test-kit-action@v1
-        if: ${{ always() }}
-        with:
-          test_format: JUNIT
-          test_framework: JUNIT
-          test_path: "**/junit.xml"
-
-      - name: remove the oci x86 integration test stacks
-        working-directory: ./tests/e2e/fixtures/go-httpbin
-        run: |
-          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86
-
-      - name: remove the zip x86 integration test stacks
-        working-directory: ./tests/e2e/fixtures/go-httpbin-zip
-        run: |
-          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
-
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test ]
-    runs-on: ubuntu-latest
+    needs: [ e2e-test, package-gamma ]
+    runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
@@ -525,14 +500,10 @@ jobs:
   deploy-gamma:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [load-gamma-matrix2]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -583,15 +554,11 @@ jobs:
 
   load-prod-matrix2:
     if: ${{ github.event_name == 'release' }}
-    needs: [ deploy-gamma ]
-    runs-on: ubuntu-latest
+    needs: [ deploy-gamma, package-prod ]
+    runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
@@ -599,15 +566,11 @@ jobs:
   deploy-prod:
     if: ${{ github.event_name == 'release' }}
     needs: [load-prod-matrix2]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     environment: prod
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -659,12 +622,8 @@ jobs:
   publish-to-public-ecr:
     if: ${{ github.event_name == 'release' }}
     needs: [deploy-prod]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - name: Collect Workflow Telemetry
-        if: always()
-        uses: runforesight/foresight-workflow-kit-action@v1
-
       - uses: actions/checkout@v3
 
       - name: Assume the prod pipeline user role
