@@ -13,6 +13,9 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          AWS_LWA_INVOKE_MODE: response_stream
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: RESPONSE_STREAM
