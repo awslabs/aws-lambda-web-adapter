@@ -68,14 +68,19 @@ Once the deployment is completed, the SAM CLI will print out the stack's outputs
 
 ```shell
 ...
----------------------------------------------------------------------------------------------------------
-OutputKey-Description                        OutputValue
----------------------------------------------------------------------------------------------------------
-PetStoreApi - URL for application            https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/v1/pets
----------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Outputs                                                                                                                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Key                 StreamFilesFunctionUrl                                                                                                                                    
+Description         Function URL for StreamFiles function to stream a dummy 15mb file                                                                                         
+Value               https://abcdxxxxxxxxxxxx.lambda-url.us-west-2.on.aws/stream-dummy?size=15                                                                 
+
+Key                 StreamFilesFunction                                                                                                                                       
+Description         StreamFilesFunction Lambda Function ARN                                                                                                                   
+Value               arn:aws:lambda:us-west-2:111111111111:function:spring-wa-StreamFilesFunction-abcdxxxxxxxxxxxx     
 ...
 
-$ curl https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/v1/pets
+$ curl  https://abcdxxxxxxxxxxxx.lambda-url.us-west-2.on.aws/stream-dummy?size=15   
 ```
 
 ## Clean up
