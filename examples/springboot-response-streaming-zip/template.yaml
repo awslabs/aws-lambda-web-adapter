@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-app
+
+  Sample SAM Template for sam-app
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  StreamFilesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 512
+      Handler: run.sh
+      CodeUri: app/
+      Runtime: java11
+      AutoPublishAlias: live
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Environment:
+        Variables:
+          RUST_LOG: info
+          READINESS_CHECK_PATH: /healthz
+          REMOVE_BASE_PATH: /v1
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          AWS_LWA_INVOKE_MODE: response_stream
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:16
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+Outputs:
+  StreamFilesFunctionUrl:
+    Description: "Function URL for StreamFiles function to stream a dummy 15mb file"
+    Value:  !Sub '${StreamFilesFunctionUrl.FunctionUrl}stream-dummy?size=15'
+  StreamFilesFunction:
+    Description: "StreamFilesFunction Lambda Function ARN"
+    Value:  !GetAtt StreamFilesFunction.Arn
