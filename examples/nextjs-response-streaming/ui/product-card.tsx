@@ -27,9 +27,9 @@ export const ProductCard = ({
                         </div>
                     ) : null}
                     <Image
-                        src={`/${product.image}`}
+                        src={`${product.image}`}
                         width={400}
-                        height={400}
+                        height={127}
                         className="rounded-xl grayscale group-hover:opacity-80"
                         alt={product.name}
                         placeholder="blur"
