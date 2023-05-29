@@ -3,3 +3,5 @@
 samconfig.toml
 /.idea/
 .aws-sam
+
+.vscode
