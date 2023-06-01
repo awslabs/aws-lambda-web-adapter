@@ -44,7 +44,7 @@ public class StreamFilesController {
     }
 
     @GetMapping("/stream-dummy")
-    public ResponseEntity<InputStreamResource> streamDummyFile(@RequestParam("size") long fileSize) throws IOException {
+    public ResponseEntity<InputStreamResource> streamDummyFile(@RequestParam("size") long fileSize) {
         // Create a byte array with the specified size
         byte[] dummyData = new byte[(int) fileSize*1024*1024];
         System.out.println("Size "+fileSize+" array size :"+dummyData.length);
