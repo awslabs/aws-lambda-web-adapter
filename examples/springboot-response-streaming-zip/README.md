@@ -29,6 +29,7 @@ In the configuration we have to specify the AWS Lambda adapter as a layer and co
           READINESS_CHECK_PATH: /healthz
           REMOVE_BASE_PATH: /v1
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          AWS_LWA_INVOKE_MODE: response_stream
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:16
 ```
@@ -80,7 +81,11 @@ Description         StreamFilesFunction Lambda Function ARN
 Value               arn:aws:lambda:us-west-2:111111111111:function:spring-wa-StreamFilesFunction-abcdxxxxxxxxxxxx     
 ...
 
-$ curl  https://abcdxxxxxxxxxxxx.lambda-url.us-west-2.on.aws/stream-dummy?size=15   
+$ curl  https://abcdxxxxxxxxxxxx.lambda-url.us-west-2.on.aws/stream-dummy?size=15
+
+To stream a preexisting mp4 file  
+
+$ curl  https://abcdxxxxxxxxxxxx.lambda-url.us-west-2.on.aws/stream   
 ```
 
 ## Clean up

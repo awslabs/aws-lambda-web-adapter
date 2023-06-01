@@ -17,16 +17,11 @@ import java.nio.file.Files;
 @EnableWebMvc
 public class StreamFilesController {
 
-    @RequestMapping(value = "/files/{file_name}", method = RequestMethod.GET)
-    @ResponseBody
-    public FileSystemResource getFile(@PathVariable("file_name") String fileName) {
-        return new FileSystemResource(fileName);
-    }
 
     @GetMapping("/stream")
-    public ResponseEntity<Resource> streamFile(@RequestParam("filename") String filename) throws IOException {
+    public ResponseEntity<Resource> streamFile() throws IOException {
         // Load the file from the filesystem or any other source
-        File file = new File(filename);
+        File file = new File("room.mp4");
 
         // Check if the file exists
         if (!file.exists()) {
