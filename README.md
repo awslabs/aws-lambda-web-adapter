@@ -161,6 +161,7 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 - [Express.js in Zip](examples/expressjs-zip)
 - [Next.js](examples/nextjs)
 - [Next.js in Zip](examples/nextjs-zip)
+- [Next.js with Response Streaming in Container](examples/nextjs-response-streaming-container/)
 - [SpringBoot](examples/springboot)
 - [SpringBoot in Zip](examples/springboot-zip)
 - [Nginx](examples/nginx)
