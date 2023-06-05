@@ -12,22 +12,12 @@ export async function RecommendedProducts({
     const products = (await data.then((res) => res.json())) as Product[]
 
     return (
-        <div className="space-y-6">
-            <div>
-                <div className="text-lg font-medium text-white">
-                    Recommended Products for You
+        <div className="grid grid-cols-4 gap-6">
+            {products.map((product) => (
+                <div key={product.id} className="col-span-4 lg:col-span-1">
+                    <ProductCard product={product} href={`${path}/${product.id}`} />
                 </div>
-                <div className="text-sm text-gray-400">
-                    Based on you preferences and shopping habits
-                </div>
-            </div>
-            <div className="grid grid-cols-4 gap-6">
-                {products.map((product) => (
-                    <div key={product.id} className="col-span-4 lg:col-span-1">
-                        <ProductCard product={product} href={`${path}/${product.id}`} />
-                    </div>
-                ))}
-            </div>
+            ))}
         </div>
     )
 
