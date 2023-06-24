@@ -85,6 +85,17 @@ fn test_adapter_options_from_namespaced_env() {
     assert_eq!(LambdaInvokeMode::ResponseStream, options.invoke_mode);
 }
 
+#[test]
+fn test_readiness_check_port_fallback_to_lwa_port() {
+    env::set_var("AWS_LWA_PORT", "3000");
+
+    // Initialize adapter with env options
+    let options = AdapterOptions::from_env();
+    Adapter::new(&options);
+
+    assert_eq!("3000", options.readiness_check_port);
+}
+
 #[tokio::test]
 async fn test_http_readiness_check() {
     // Start app server
