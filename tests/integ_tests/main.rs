@@ -5,12 +5,15 @@ use std::io;
 use std::io::prelude::*;
 
 use crate::common::LambdaEventBuilder;
+use http::HeaderMap;
+use http::Request;
 use http::{Method, Response};
 use httpmock::{
     Method::{DELETE, GET, POST, PUT},
     MockServer,
 };
 use hyper::{body, Body};
+use lambda_http::Context;
 use lambda_web_adapter::{Adapter, AdapterOptions, LambdaInvokeMode, Protocol};
 use tower::{Service, ServiceBuilder};
 
@@ -158,7 +161,13 @@ async fn test_http_basic_request() {
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new().with_path("/hello").build();
-    let response = adapter.call(req.into()).await.expect("Request failed");
+
+    // We convert to Request object because it allows us to add
+    // the lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
 
     // Assert endpoint was called once
     hello.assert();
@@ -202,8 +211,13 @@ async fn test_http_headers() {
         .with_header("foo", "bar")
         .build();
 
+    // We convert to Request object because it allows us to add
+    // the Lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
     // Call the adapter service with request
-    let response = adapter.call(req.into()).await.expect("Request failed");
+    let response = adapter.call(request).await.expect("Request failed");
 
     // Assert endpoint was called once
     test_endpoint.assert();
@@ -245,8 +259,13 @@ async fn test_http_path_encoding() {
     // Prepare request
     let req = LambdaEventBuilder::new().with_path("/Año_1234").build();
 
+    // We convert to Request object because it allows us to add
+    // the lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
     // Call the adapter service with request
-    let response = adapter.call(req.into()).await.expect("Request failed");
+    let response = adapter.call(request).await.expect("Request failed");
 
     // Assert endpoint was called once
     test_endpoint.assert();
@@ -293,8 +312,13 @@ async fn test_http_query_params() {
         .with_query("fizz", "buzz")
         .build();
 
+    // We convert to Request object because it allows us to add
+    // the lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
     // Call the adapter service with request
-    let response = adapter.call(req.into()).await.expect("Request failed");
+    let response = adapter.call(request).await.expect("Request failed");
 
     // Assert endpoint was called once
     test_endpoint.assert();
@@ -354,11 +378,20 @@ async fn test_http_post_put_delete() {
         .with_method(Method::DELETE)
         .with_path("/")
         .build();
+    // We convert to Request object because it allows us to add the lambda Context
+    let mut post_request = Request::from(post_req);
+    add_lambda_context_to_request(&mut post_request);
+
+    let mut put_request = Request::from(put_req);
+    add_lambda_context_to_request(&mut put_request);
+
+    let mut delete_request = Request::from(delete_req);
+    add_lambda_context_to_request(&mut delete_request);
 
     // Call the adapter service with requests
-    let post_response = adapter.call(post_req.into()).await.expect("Request failed");
-    let put_response = adapter.call(put_req.into()).await.expect("Request failed");
-    let delete_response = adapter.call(delete_req.into()).await.expect("Request failed");
+    let post_response = adapter.call(post_request).await.expect("Request failed");
+    let put_response = adapter.call(put_request).await.expect("Request failed");
+    let delete_response = adapter.call(delete_request).await.expect("Request failed");
 
     // Assert endpoints were called
     post_endpoint.assert();
@@ -407,7 +440,13 @@ async fn test_http_compress() {
         .with_path("/hello")
         .with_header("accept-encoding", "gzip")
         .build();
-    let response = svc.call(req.into()).await.expect("Request failed");
+
+    // We convert to Request object because it allows us to add
+    // the lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = svc.call(request).await.expect("Request failed");
 
     // Assert endpoint was called once
     hello.assert();
@@ -453,7 +492,13 @@ async fn test_http_compress_disallowed_type() {
         .with_path("/hello")
         .with_header("accept-encoding", "gzip")
         .build();
-    let response = adapter.call(req.into()).await.expect("Request failed");
+
+    // We convert to Request object because it allows us to add
+    // the lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
 
     // Assert endpoint was called once
     hello.assert();
@@ -506,7 +551,13 @@ async fn test_http_compress_already_compressed() {
         .with_path("/hello")
         .with_header("accept-encoding", "gzip")
         .build();
-    let response = svc.call(req.into()).await.expect("Request failed");
+
+    // We convert to Request object because it allows us to add
+    // the lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = svc.call(request).await.expect("Request failed");
 
     // Assert endpoint was called once
     hello.assert();
@@ -536,4 +587,18 @@ fn decode_reader(bytes: &[u8]) -> io::Result<String> {
     let mut s = String::new();
     gz.read_to_string(&mut s)?;
     Ok(s)
+}
+
+fn add_lambda_context_to_request(request: &mut Request<lambda_http::Body>) {
+    // create a HeaderMap to build the lambda context
+    let mut headers = HeaderMap::new();
+    headers.insert("lambda-runtime-aws-request-id", "my_id".parse().unwrap());
+    headers.insert("lambda-runtime-deadline-ms", "123".parse().unwrap());
+    headers.insert("lambda-runtime-client-context", "{}".parse().unwrap());
+
+    // converts HeaderMap to Context
+    let context = Context::try_from(headers).expect("Couldn't convert HeaderMap to Context");
+
+    // add Context to the request
+    request.extensions_mut().insert(context);
 }
