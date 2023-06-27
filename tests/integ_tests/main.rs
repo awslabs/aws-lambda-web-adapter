@@ -87,6 +87,8 @@ fn test_adapter_options_from_namespaced_env() {
 
 #[test]
 fn test_readiness_check_port_fallback_to_lwa_port() {
+    env::remove_var("AWS_LWA_READINESS_CHECK_PORT");
+    env::remove_var("READINESS_CHECK_PORT");
     env::set_var("AWS_LWA_PORT", "3000");
 
     // Initialize adapter with env options
