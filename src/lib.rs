@@ -89,8 +89,10 @@ impl AdapterOptions {
             host: env::var("AWS_LWA_HOST").unwrap_or(env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string())),
             port: env::var("AWS_LWA_PORT").unwrap_or(env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
             readiness_check_port: env::var("AWS_LWA_READINESS_CHECK_PORT").unwrap_or(
-                env::var("READINESS_CHECK_PORT")
-                    .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
+                env::var("READINESS_CHECK_PORT").unwrap_or(
+                    env::var("AWS_LWA_PORT")
+                        .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
+                ),
             ),
             readiness_check_path: env::var("AWS_LWA_READINESS_CHECK_PATH")
                 .unwrap_or(env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())),
