@@ -91,7 +91,8 @@ impl AdapterOptions {
             readiness_check_port: env::var("AWS_LWA_READINESS_CHECK_PORT").unwrap_or(
                 env::var("READINESS_CHECK_PORT").unwrap_or(
                     env::var("AWS_LWA_PORT")
-                        .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string()))),
+                        .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
+                ),
             ),
             readiness_check_path: env::var("AWS_LWA_READINESS_CHECK_PATH")
                 .unwrap_or(env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())),
