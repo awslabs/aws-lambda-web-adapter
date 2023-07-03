@@ -572,6 +572,54 @@ async fn test_http_compress_already_compressed() {
     );
 }
 
+#[tokio::test]
+async fn test_http_lambda_context_header() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // An endpoint that expects and returns headers
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/").header_exists("x-amzn-lambda-context");
+        then.status(200).header("fizz", "buzz").body("OK");
+    });
+
+    // Initialize adapter and do readiness check
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        readiness_check_protocol: Protocol::Http,
+        async_init: false,
+        base_path: None,
+        compression: false,
+        enable_tls: false,
+        tls_server_name: None,
+        tls_cert_file: None,
+        invoke_mode: LambdaInvokeMode::Buffered,
+    });
+
+    // Prepare request
+    let req = LambdaEventBuilder::new().with_path("/").build();
+
+    // We convert to Request object because it allows us to add
+    // the Lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    // Call the adapter service with request
+    let response = adapter.call(request).await.expect("Request failed");
+
+    // Assert endpoint was called once
+    test_endpoint.assert();
+
+    // and response has expected content
+    assert_eq!(200, response.status());
+    assert!(response.headers().contains_key("fizz"));
+    assert_eq!("buzz", response.headers().get("fizz").unwrap());
+    assert_eq!("OK", body_to_string(response).await);
+}
+
 async fn body_to_string(res: Response<Body>) -> String {
     let body_bytes = body::to_bytes(res.into_body()).await.unwrap();
     String::from_utf8_lossy(&body_bytes).to_string()
