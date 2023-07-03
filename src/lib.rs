@@ -332,6 +332,7 @@ where
         }
 
         let request_context = event.request_context();
+        let lambda_context = &event.lambda_context();
         let path = event.raw_http_path().to_string();
         let mut path = path.as_str();
         let (parts, body) = event.into_parts();
@@ -349,6 +350,11 @@ where
             HeaderValue::from_bytes(serde_json::to_string(&request_context)?.as_bytes())?,
         );
 
+        // include lambda context in http header "x-amzn-lambda-context"
+        req_headers.append(
+            HeaderName::from_static("x-amzn-lambda-context"),
+            HeaderValue::from_bytes(serde_json::to_string(&lambda_context)?.as_bytes())?,
+        );
         let mut app_url = self.domain.clone();
         app_url.set_path(path);
         app_url.set_query(parts.uri.query());
