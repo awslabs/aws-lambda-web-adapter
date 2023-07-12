@@ -74,6 +74,7 @@ pub struct AdapterOptions {
     pub readiness_check_port: String,
     pub readiness_check_path: String,
     pub readiness_check_protocol: Protocol,
+    pub readiness_check_min_unhealthy_status: u16,
     pub base_path: Option<String>,
     pub async_init: bool,
     pub compression: bool,
@@ -94,6 +95,10 @@ impl AdapterOptions {
                         .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
                 ),
             ),
+            readiness_check_min_unhealthy_status: env::var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS")
+                .unwrap_or_else(|_| "500".to_string())
+                .parse()
+                .unwrap_or(500),
             readiness_check_path: env::var("AWS_LWA_READINESS_CHECK_PATH")
                 .unwrap_or(env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())),
             readiness_check_protocol: env::var("AWS_LWA_READINESS_CHECK_PROTOCOL")
@@ -128,6 +133,7 @@ pub struct Adapter<C> {
     client: Arc<Client<C>>,
     healthcheck_url: Url,
     healthcheck_protocol: Protocol,
+    healthcheck_min_unhealthy_status: u16,
     async_init: bool,
     ready_at_init: Arc<AtomicBool>,
     domain: Url,
@@ -176,6 +182,7 @@ impl Adapter<HttpsConnector<HttpConnector>> {
             client: Arc::new(client),
             healthcheck_url,
             healthcheck_protocol: options.readiness_check_protocol,
+            healthcheck_min_unhealthy_status: 500,
             domain,
             base_path: options.base_path.clone(),
             async_init: options.async_init,
@@ -212,6 +219,7 @@ impl Adapter<HttpConnector> {
             client: Arc::new(client),
             healthcheck_url,
             healthcheck_protocol: options.readiness_check_protocol,
+            healthcheck_min_unhealthy_status: options.readiness_check_min_unhealthy_status,
             domain,
             base_path: options.base_path.clone(),
             async_init: options.async_init,
@@ -291,7 +299,7 @@ where
     async fn check_web_readiness(&self, url: &Url, protocol: &Protocol) -> Result<(), i8> {
         match protocol {
             Protocol::Http => match self.client.get(url.to_string().parse().unwrap()).await {
-                Ok(response) if { 500 > response.status().as_u16() && response.status().as_u16() >= 100 } => Ok(()),
+                Ok(response) if { self.healthcheck_min_unhealthy_status > response.status().as_u16() && response.status().as_u16() >= 100 } => Ok(()),
                 _ => {
                     tracing::debug!("app is not ready");
                     Err(-1)
@@ -393,5 +401,137 @@ where
     fn call(&mut self, event: Request) -> Self::Future {
         let adapter = self.clone();
         Box::pin(async move { adapter.fetch_response(event).await })
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use httpmock::{
+        Method::{GET},
+        MockServer,
+    };
+    
+
+    #[tokio::test]
+    async fn test_status_200_is_ok() {
+        // Start app server
+        let app_server = MockServer::start();
+        let healthcheck = app_server.mock(|when, then| {
+            when.method(GET).path("/healthcheck");
+            then.status(200).body("OK");
+        });
+
+        // Prepare adapter configuration
+        let options = AdapterOptions {
+            host: app_server.host(),
+            port: app_server.port().to_string(),
+            readiness_check_port: app_server.port().to_string(),
+            readiness_check_path: "/healthcheck".to_string(),
+            readiness_check_protocol: Protocol::Http,
+            readiness_check_min_unhealthy_status: 500,
+            async_init: false,
+            base_path: None,
+            compression: false,
+            enable_tls: false,
+            tls_server_name: None,
+            tls_cert_file: None,
+            invoke_mode: LambdaInvokeMode::Buffered,
+        };
+
+        // Initialize adapter and do readiness check
+        let adapter = Adapter::new(&options);
+
+        let url = adapter.healthcheck_url.clone();
+        let protocol = adapter.healthcheck_protocol;
+
+        //adapter.check_init_health().await;
+
+        assert!(adapter.check_web_readiness(&url, &protocol).await.is_ok());
+
+        // Assert app server's healthcheck endpoint got called
+        healthcheck.assert();
+    }
+
+    #[tokio::test]
+    async fn test_status_500_is_bad() {
+        // Start app server
+        let app_server = MockServer::start();
+        let healthcheck = app_server.mock(|when, then| {
+            when.method(GET).path("/healthcheck");
+            then.status(500).body("OK");
+        });
+
+        // Prepare adapter configuration
+        let options = AdapterOptions {
+            host: app_server.host(),
+            port: app_server.port().to_string(),
+            readiness_check_port: app_server.port().to_string(),
+            readiness_check_path: "/healthcheck".to_string(),
+            readiness_check_protocol: Protocol::Http,
+            readiness_check_min_unhealthy_status: 500,
+            async_init: false,
+            base_path: None,
+            compression: false,
+            enable_tls: false,
+            tls_server_name: None,
+            tls_cert_file: None,
+            invoke_mode: LambdaInvokeMode::Buffered,
+        };
+
+        // Initialize adapter and do readiness check
+        let adapter = Adapter::new(&options);
+
+        let url = adapter.healthcheck_url.clone();
+        let protocol = adapter.healthcheck_protocol;
+
+        //adapter.check_init_health().await;
+
+        assert!(!adapter.check_web_readiness(&url, &protocol).await.is_ok());
+
+        // Assert app server's healthcheck endpoint got called
+        healthcheck.assert();
+    }
+
+    #[tokio::test]
+    async fn test_status_403_is_bad_when_configured() {
+        // Start app server
+        let app_server = MockServer::start();
+        let healthcheck = app_server.mock(|when, then| {
+            when.method(GET).path("/healthcheck");
+            then.status(403).body("OK");
+        });
+
+        // Prepare adapter configuration
+        let options = AdapterOptions {
+            host: app_server.host(),
+            port: app_server.port().to_string(),
+            readiness_check_port: app_server.port().to_string(),
+            readiness_check_path: "/healthcheck".to_string(),
+            readiness_check_protocol: Protocol::Http,
+            readiness_check_min_unhealthy_status: 400,
+            async_init: false,
+            base_path: None,
+            compression: false,
+            enable_tls: false,
+            tls_server_name: None,
+            tls_cert_file: None,
+            invoke_mode: LambdaInvokeMode::Buffered,
+        };
+
+        // Initialize adapter and do readiness check
+        let adapter = Adapter::new(&options);
+
+        let url = adapter.healthcheck_url.clone();
+        let protocol = adapter.healthcheck_protocol;
+
+        //adapter.check_init_health().await;
+
+        assert!(!adapter.check_web_readiness(&url, &protocol).await.is_ok());
+
+        // Assert app server's healthcheck endpoint got called
+        healthcheck.assert();
     }
 }

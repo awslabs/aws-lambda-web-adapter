@@ -59,6 +59,7 @@ fn test_adapter_options_from_env() {
 fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_PORT", "3000");
     env::set_var("AWS_LWA_HOST", "localhost");
+    env::set_var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS", "400");
     env::set_var("AWS_LWA_READINESS_CHECK_PORT", "8000");
     env::set_var("AWS_LWA_READINESS_CHECK_PROTOCOL", "TCP");
     env::set_var("AWS_LWA_READINESS_CHECK_PATH", "/healthcheck");
@@ -75,6 +76,7 @@ fn test_adapter_options_from_namespaced_env() {
     Adapter::new(&options);
 
     assert_eq!("3000", options.port);
+    assert_eq!(400, options.readiness_check_min_unhealthy_status);
     assert_eq!("localhost", options.host);
     assert_eq!("8000", options.readiness_check_port);
     assert_eq!("/healthcheck", options.readiness_check_path);
@@ -117,6 +119,7 @@ async fn test_http_readiness_check() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: false,
@@ -150,6 +153,7 @@ async fn test_http_basic_request() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: false,
@@ -196,6 +200,7 @@ async fn test_http_headers() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: false,
@@ -247,6 +252,7 @@ async fn test_http_path_encoding() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: false,
@@ -296,6 +302,7 @@ async fn test_http_query_params() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: false,
@@ -354,6 +361,7 @@ async fn test_http_post_put_delete() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: false,
@@ -424,6 +432,7 @@ async fn test_http_compress() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: true,
@@ -478,6 +487,7 @@ async fn test_http_compress_disallowed_type() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: true,
@@ -535,6 +545,7 @@ async fn test_http_compress_already_compressed() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: true,
@@ -590,6 +601,7 @@ async fn test_http_lambda_context_header() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
         async_init: false,
         base_path: None,
         compression: false,
