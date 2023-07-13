@@ -299,7 +299,14 @@ where
     async fn check_web_readiness(&self, url: &Url, protocol: &Protocol) -> Result<(), i8> {
         match protocol {
             Protocol::Http => match self.client.get(url.to_string().parse().unwrap()).await {
-                Ok(response) if { self.healthcheck_min_unhealthy_status > response.status().as_u16() && response.status().as_u16() >= 100 } => Ok(()),
+                Ok(response)
+                    if {
+                        self.healthcheck_min_unhealthy_status > response.status().as_u16()
+                            && response.status().as_u16() >= 100
+                    } =>
+                {
+                    Ok(())
+                }
                 _ => {
                     tracing::debug!("app is not ready");
                     Err(-1)
@@ -404,16 +411,10 @@ where
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use httpmock::{
-        Method::{GET},
-        MockServer,
-    };
-    
+    use httpmock::{Method::GET, MockServer};
 
     #[tokio::test]
     async fn test_status_200_is_ok() {
