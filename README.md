@@ -84,6 +84,7 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_READINESS_CHECK_PORT / READINESS_CHECK_PORT*         | readiness check port, default to the traffic port                                    | PORT        |
 | AWS_LWA_READINESS_CHECK_PATH / READINESS_CHECK_PATH*         | readiness check path                                                                 | "/"         |
 | AWS_LWA_READINESS_CHECK_PROTOCOL / READINESS_CHECK_PROTOCOL* | readiness check protocol: "http" or "tcp", default is "http"                         | "http"      |
+| AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS                 | The minimum HTTP status code that is considered unhealthy                            | "500"  |
 | AWS_LWA_ASYNC_INIT / ASYNC_INIT*                             | enable asynchronous initialization for long initialization functions                 | "false"     |
 | AWS_LWA_REMOVE_BASE_PATH / REMOVE_BASE_PATH*                 | the base path to be removed from request path                                        | None        |
 | AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip compression for response body                                            | "false"     |
@@ -125,6 +126,8 @@ Please check out [FastAPI with HTTPS](examples/fastapi-https) example for more d
 
 **AWS_LWA_INVOKE_MODE** - Lambda function invoke mode, this should match Function Url invoke mode. The default is "buffered". When configured as "response_stream", Lambda Web Adapter will stream response to Lambda service [blog](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/). 
 Please check out [FastAPI with Response Streaming](examples/fastapi-response-streaming) example. 
+
+**AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS** - allows you to customize which HTTP status codes are considered healthy and which ones are not
 
 ## Request Context
 
