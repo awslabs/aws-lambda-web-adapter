@@ -15,6 +15,8 @@ env:
   CARGO_TERM_COLOR: always
   PIPELINE_USER_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   PIPELINE_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  PIPELINE_CN_USER_ACCESS_KEY_ID: ${{ secrets.AWS_CN_ACCESS_KEY_ID }}
+  PIPELINE_CN_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_CN_SECRET_ACCESS_KEY }}
   SAM_TEMPLATE_X86_64: template-x86_64.yaml
   SAM_TEMPLATE_ARM64: template-arm64.yaml
   BETA_STACK_NAME: lambda-adapter-beta
@@ -349,6 +351,17 @@ jobs:
       - uses: actions/checkout@v3
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
+  
+  load-china-matrix:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ e2e-test ]
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set-matrix
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/china.json)}" >> $GITHUB_OUTPUT
 
   package-gamma:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -439,6 +452,74 @@ jobs:
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
           role-session-name: prod-packaging
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: aws-sam-build-x86_64
+
+      - name: extract build_x86_64
+        run: |
+          tar -xvf build-x86_64.tar
+
+      - name: Upload x86_64 layer to prod artifact buckets
+        run: |
+          sam package \
+            --template build-x86_64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-prod-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: packaged-prod-x86_64-${{ matrix.region }}.yaml
+          path: packaged-prod-x86_64-${{ matrix.region }}.yaml
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: aws-sam-build-arm64
+
+      - name: extract build_arm64
+        run: |
+          tar -xvf build-arm64.tar
+
+      - name: Upload arm64 layer to prod artifact buckets
+        run: |
+          sam package \
+            --template build-arm64/template.yaml \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --region ${{ matrix.region }} \
+            --output-template-file packaged-prod-arm64-${{ matrix.region }}.yaml
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: packaged-prod-arm64-${{ matrix.region }}.yaml
+          path: packaged-prod-arm64-${{ matrix.region }}.yaml
+
+  package-china:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ build, load-china-matrix ]
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix: ${{fromJSON(needs.load-china-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the china pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ matrix.pipeline_execution_role }}
+          role-session-name: china-packaging
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
@@ -618,6 +699,74 @@ jobs:
             --image-repository ${{ matrix.image_repository }} \
             --no-fail-on-empty-changeset \
             --role-arn ${{ matrix.cloudformation_execution_role }}
+  
+  load-china-matrix2:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ e2e-test, package-china]
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set-matrix
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/china.json)}" >> $GITHUB_OUTPUT
+
+  deploy-china:
+    if: ${{ github.event_name == 'release' }}
+    needs: [load-china-matrix2]
+    runs-on: ubuntu-20.04
+    environment: prod
+    strategy:
+      matrix: ${{fromJSON(needs.load-china-matrix2.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the china pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ matrix.pipeline_execution_role }}
+          role-session-name: china-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: packaged-prod-x86_64-${{ matrix.region }}.yaml
+
+      - name: Deploy x86_64 Layer to all regions in china
+        run: |
+          sam deploy --stack-name lambda-adapter-prod-x86-${{ matrix.region }} \
+            --template packaged-prod-x86_64-${{ matrix.region }}.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ matrix.region }} \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${{ matrix.cloudformation_execution_role }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: packaged-prod-arm64-${{ matrix.region }}.yaml
+
+      - name: Deploy arm64 Layer to supported china regions
+        if: ${{ matrix.arm64_supported }}
+        run: |
+          sam deploy --stack-name lambda-adapter-prod-arm64-${{ matrix.region }} \
+            --template packaged-prod-arm64-${{ matrix.region }}.yaml \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ matrix.region }} \
+            --s3-bucket ${{ matrix.artifacts_bucket }} \
+            --image-repository ${{ matrix.image_repository }} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${{ matrix.cloudformation_execution_role }}
+  
 
   publish-to-public-ecr:
     if: ${{ github.event_name == 'release' }}
