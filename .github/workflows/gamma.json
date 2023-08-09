@@ -108,7 +108,7 @@
     "cloudformation_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-QL5NJ1OADKBF",
     "image_repository": "520465526641.dkr.ecr.eu-central-2.amazonaws.com/aws-sam-cli-managed-gamma-pipeline-resources-imagerepository-ze9skredlbdh",
     "pipeline_execution_role": "arn:aws:iam::520465526641:role/aws-sam-cli-managed-gamma-pi-PipelineExecutionRole-8L89W4PHSJEB",
-    "arm64_supported": true,
+    "arm64_supported": false,
     "region": "eu-central-2"
   },
   {
