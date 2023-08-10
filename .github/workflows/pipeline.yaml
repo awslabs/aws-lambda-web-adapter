@@ -782,7 +782,7 @@ jobs:
 
   load-china-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test ]
+    needs: [ e2e-test, package-china-gamma]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -850,7 +850,7 @@ jobs:
   
   load-china-prod-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test, package-china-prod]
+    needs: [ deploy-china-gamma, package-china-prod]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
