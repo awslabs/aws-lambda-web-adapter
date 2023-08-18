@@ -849,7 +849,7 @@ jobs:
 
   
   load-china-prod-matrix2:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if:  ${{ github.event_name == 'release' }}
     needs: [ deploy-china-gamma, package-china-prod]
     runs-on: ubuntu-20.04
     outputs:
@@ -857,7 +857,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/china.json)}" >> $GITHUB_OUTPUT
+        run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-prod.json)}" >> $GITHUB_OUTPUT
 
   deploy-china-prod:
     if: ${{ github.event_name == 'release' }}
