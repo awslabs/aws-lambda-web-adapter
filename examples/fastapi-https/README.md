@@ -25,7 +25,7 @@ Below is a Dockerfile to package FastAPI with Lambda Web Adapter.
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/python:3.8.12-slim-buster
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.0 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.1 /lambda-adapter /opt/extensions/lambda-adapter
 WORKDIR /var/task
 COPY requirements.txt ./
 RUN python -m pip install -r requirements.txt
