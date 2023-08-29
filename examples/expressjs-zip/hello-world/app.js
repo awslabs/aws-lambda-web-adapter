@@ -5,11 +5,17 @@ const port = process.env['PORT'] || 8080
 
 app.get('/', (req, res) => {
     // deserialize request context from the http header 'x-amzn-request-context'
-    let context = req.headers['x-amzn-request-context'] || null
-    let requestContext = context != null? JSON.parse(context) : null
+    let requestContextHeader = req.headers['x-amzn-request-context'] || null
+    let requestContext = requestContextHeader != null? JSON.parse(requestContextHeader) : null
+
+    // deserialize lambda context from the http header 'x-amzn-lambda-context'
+    let lambdaContextHeader = req.headers['x-amzn-lambda-context'] || null
+    let lambdaContext = lambdaContextHeader != null? JSON.parse(lambdaContextHeader) : null
+
     res.send({
-        messagge: 'Hi there!', 
-        requestContext
+        message: 'Hi there!', 
+        requestContext,
+        lambdaContext
     })
 })
 
