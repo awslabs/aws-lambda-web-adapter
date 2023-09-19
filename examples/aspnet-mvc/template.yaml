@@ -1,0 +1,31 @@
+﻿AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    MemorySize: 1024
+    Architectures:
+      - x86_64
+    Timeout: 29
+    Tracing: Active
+
+Resources:
+  AspNetOnLambdaWebAdapterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+    Metadata: 
+      DockerTag: v1
+      DockerContext: ./src
+      Dockerfile: Dockerfile
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
