@@ -189,6 +189,9 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 - [Golang Gin in Zip](examples/gin-zip)
 - [Deno Oak in Zip](examples/deno-zip)
 - [Laravel on Lambda](https://github.com/aws-samples/lambda-laravel)
+- [ASP.NET MVC](examples/aspnet-mvc)
+- [ASP.NET MVC in Zip](examples/aspnet-mvc-zip)
+- [ASP.NET Web API in Zip](examples/aspnet-webapi-zip)
 
 ## Acknowledgement
 
