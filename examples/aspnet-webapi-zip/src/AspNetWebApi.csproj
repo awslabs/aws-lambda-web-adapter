@@ -13,4 +13,8 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Amazon.Lambda.APIGatewayEvents" Version="2.6.0" />
+  </ItemGroup>
+
 </Project>

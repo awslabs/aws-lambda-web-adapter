@@ -42,3 +42,31 @@ Make sure .NET 6 is already installed. Run the following commands on a x86_64 ma
 sam build --use-container
 sam deploy -g
 ```
+
+Once deployed, SAM will return two API URL's. One using the default `WeatherForecast` controller. The other, demonstrates how you can retrieve details about the inbound request context and the Lambda execution context. 
+
+The request and Lambda context data is retrieved using 2 header values:
+
+```
+app.MapGet("/context",
+        ([FromHeader(Name = "x-amzn-request-context")] string requestContext, [FromHeader(Name = "x-amzn-lambda-context")] string lambdaContext) =>
+        {
+            var jsonOptions = new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true,
+            };
+
+            return new
+            {
+                // LambdaContext is a custom class
+                lambdaContext = JsonSerializer.Deserialize<LambdaContext>(
+                    lambdaContext,
+                    jsonOptions),
+                // APIGatewayHttpApiV2ProxyRequest.ProxyRequestContext comes from the Amazon.Lambda.APIGatewayEvents Nuget package
+                requestContext = JsonSerializer.Deserialize<APIGatewayHttpApiV2ProxyRequest.ProxyRequestContext>(
+                    requestContext,
+                    jsonOptions)
+            };
+        })
+    .WithName("Context");
+```

@@ -34,3 +34,6 @@ Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/weatherforecast"
+  ContextUrl:
+    Description: "API Gateway endpoint for retrieving Lambda and Request context data"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/context"

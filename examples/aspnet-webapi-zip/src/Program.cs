@@ -1,3 +1,9 @@
+using System.Text.Json;
+
+using Amazon.Lambda.APIGatewayEvents;
+
+using Microsoft.AspNetCore.Mvc;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
@@ -23,9 +29,38 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
-app.Run();
+app.MapGet(
+        "/context",
+        ([FromHeader(Name = "x-amzn-request-context")] string requestContext, [FromHeader(Name = "x-amzn-lambda-context")] string lambdaContext) =>
+        {
+            var jsonOptions = new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true,
+            };
 
-record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+            LambdaContext parsedLambdaContext = null;
+            APIGatewayHttpApiV2ProxyRequest.ProxyRequestContext parsedReqContext = null;
+
+            if (!string.IsNullOrEmpty(requestContext))
+            {
+                parsedReqContext = JsonSerializer.Deserialize<APIGatewayHttpApiV2ProxyRequest.ProxyRequestContext>(
+                    requestContext,
+                    jsonOptions);
+            }
+
+            if (!string.IsNullOrEmpty(lambdaContext))
+            {
+                parsedLambdaContext = JsonSerializer.Deserialize<LambdaContext>(
+                    lambdaContext,
+                    jsonOptions);
+            }
+
+            return new
+            {
+                lambdaContext = parsedLambdaContext,
+                requestContext = parsedReqContext
+            };
+        })
+    .WithName("Context");
+
+app.Run();
