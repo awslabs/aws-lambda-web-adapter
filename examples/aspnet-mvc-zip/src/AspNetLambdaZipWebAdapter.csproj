@@ -15,10 +15,4 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="run.sh">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

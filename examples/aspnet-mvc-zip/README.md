@@ -10,7 +10,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
-      Handler: run.sh
+      Handler: AspNetLambdaZipWebAdapter
       MemorySize: 1024
       Environment:
         Variables:
@@ -26,19 +26,11 @@ Resources:
             Method: ANY
 ```
 
-A shell script is used as the handler to startup the ASP.NET web application.
-
-```run.sh
-#!/bin/bash
-
-./AspNetLambdaZipWebAdapter
-```
-
 ## Build & Deploy
 
 Make sure .NET 6 is already installed. Run the following commands on a x86_64 machine. 
 
 ```shell
-sam build 
+sam build --use-container
 sam deploy -g
 ```
