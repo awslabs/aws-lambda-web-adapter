@@ -360,13 +360,13 @@ where
         let mut req_headers = parts.headers;
 
         // include request context in http header "x-amzn-request-context"
-        req_headers.append(
+        req_headers.insert(
             HeaderName::from_static("x-amzn-request-context"),
             HeaderValue::from_bytes(serde_json::to_string(&request_context)?.as_bytes())?,
         );
 
         // include lambda context in http header "x-amzn-lambda-context"
-        req_headers.append(
+        req_headers.insert(
             HeaderName::from_static("x-amzn-lambda-context"),
             HeaderValue::from_bytes(serde_json::to_string(&lambda_context)?.as_bytes())?,
         );
