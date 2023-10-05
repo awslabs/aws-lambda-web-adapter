@@ -22,7 +22,6 @@ use hyper::{
     client::{connect::Connect, Client, HttpConnector},
     Body,
 };
-use hyper_rustls::HttpsConnector;
 use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
@@ -78,9 +77,6 @@ pub struct AdapterOptions {
     pub base_path: Option<String>,
     pub async_init: bool,
     pub compression: bool,
-    pub enable_tls: bool,
-    pub tls_server_name: Option<String>,
-    pub tls_cert_file: Option<String>,
     pub invoke_mode: LambdaInvokeMode,
 }
 
@@ -114,12 +110,6 @@ impl AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            enable_tls: env::var("AWS_LWA_ENABLE_TLS")
-                .unwrap_or_else(|_| "false".to_string())
-                .parse()
-                .unwrap_or(false),
-            tls_server_name: env::var("AWS_LWA_TLS_SERVER_NAME").ok(),
-            tls_cert_file: env::var("AWS_LWA_TLS_CERT_FILE").ok(),
             invoke_mode: env::var("AWS_LWA_INVOKE_MODE")
                 .unwrap_or("buffered".to_string())
                 .as_str()
@@ -140,57 +130,6 @@ pub struct Adapter<C> {
     base_path: Option<String>,
     compression: bool,
     invoke_mode: LambdaInvokeMode,
-}
-
-impl Adapter<HttpsConnector<HttpConnector>> {
-    /// Create a new HTTPS Adapter instance.
-    /// This function initializes a new HTTPS client
-    /// to talk with the web server.
-    pub fn new_https(options: &AdapterOptions) -> Adapter<HttpsConnector<HttpConnector>> {
-        if let Some(cert_file) = &options.tls_cert_file {
-            env::set_var("SSL_CERT_FILE", cert_file);
-        }
-
-        let https = hyper_rustls::HttpsConnectorBuilder::new()
-            .with_native_roots()
-            .https_or_http()
-            .with_server_name(
-                options
-                    .tls_server_name
-                    .clone()
-                    .unwrap_or_else(|| "localhost".to_string()),
-            )
-            .enable_http1()
-            .build();
-
-        let client = Client::builder().pool_idle_timeout(Duration::from_secs(4)).build(https);
-
-        let schema = "https";
-
-        let healthcheck_url = format!(
-            "{}://{}:{}{}",
-            schema, options.host, options.readiness_check_port, options.readiness_check_path
-        )
-        .parse()
-        .unwrap();
-
-        let domain = format!("{}://{}:{}", schema, options.host, options.port)
-            .parse()
-            .unwrap();
-
-        Adapter {
-            client: Arc::new(client),
-            healthcheck_url,
-            healthcheck_protocol: options.readiness_check_protocol,
-            healthcheck_min_unhealthy_status: 500,
-            domain,
-            base_path: options.base_path.clone(),
-            async_init: options.async_init,
-            ready_at_init: Arc::new(AtomicBool::new(false)),
-            compression: options.compression,
-            invoke_mode: options.invoke_mode,
-        }
-    }
 }
 
 impl Adapter<HttpConnector> {
@@ -436,9 +375,6 @@ mod tests {
             async_init: false,
             base_path: None,
             compression: false,
-            enable_tls: false,
-            tls_server_name: None,
-            tls_cert_file: None,
             invoke_mode: LambdaInvokeMode::Buffered,
         };
 
@@ -476,9 +412,6 @@ mod tests {
             async_init: false,
             base_path: None,
             compression: false,
-            enable_tls: false,
-            tls_server_name: None,
-            tls_cert_file: None,
             invoke_mode: LambdaInvokeMode::Buffered,
         };
 
@@ -516,9 +449,6 @@ mod tests {
             async_init: false,
             base_path: None,
             compression: false,
-            enable_tls: false,
-            tls_server_name: None,
-            tls_cert_file: None,
             invoke_mode: LambdaInvokeMode::Buffered,
         };
 

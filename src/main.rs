@@ -15,28 +15,14 @@ async fn main() -> Result<(), Error> {
     // get configuration options from environment variables
     let options = AdapterOptions::from_env();
 
-    match options.enable_tls {
-        false => {
-            // create a HTTP adapter
-            let mut adapter = Adapter::new(&options);
-            // register the adapter as an extension
-            adapter.register_default_extension();
-            // check if the web application is ready
-            adapter.check_init_health().await;
-            // start lambda runtime after the web application is ready
-            adapter.run().await.expect("lambda runtime failed");
-        }
-        true => {
-            // create a HTTPS adapter
-            let mut adapter = Adapter::new_https(&options);
-            // register the adapter as an extension
-            adapter.register_default_extension();
-            // check if the web application is ready
-            adapter.check_init_health().await;
-            // start lambda runtime after the web application is ready
-            adapter.run().await.expect("lambda runtime failed");
-        }
-    }
+    // create a HTTPS adapter
+    let mut adapter = Adapter::new(&options);
+    // register the adapter as an extension
+    adapter.register_default_extension();
+    // check if the web application is ready
+    adapter.check_init_health().await;
+    // start lambda runtime after the web application is ready
+    adapter.run().await.expect("lambda runtime failed");
 
     Ok(())
 }
