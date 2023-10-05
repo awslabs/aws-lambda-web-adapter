@@ -67,7 +67,7 @@ AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to 
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 
-For details, please check out [the example nodejs application](examples/expressjs-zip).
+For details, please check out [the example Node.js application](examples/expressjs-zip).
 
 ## Readiness Check
 
@@ -165,8 +165,10 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 - [Express.js in Zip](examples/expressjs-zip)
 - [Next.js](examples/nextjs)
 - [Next.js in Zip](examples/nextjs-zip)
+- [Next.js Response Streaming](examples/nextjs-response-streaming)
 - [SpringBoot](examples/springboot)
 - [SpringBoot in Zip](examples/springboot-zip)
+- [SpringBoot Response Streaming](examples/springboot-response-streaming-zip)
 - [Nginx](examples/nginx)
 - [PHP](examples/php)
 - [Rust Actix Web in Zip](examples/rust-actix-web-zip)
