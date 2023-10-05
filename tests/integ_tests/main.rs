@@ -49,9 +49,6 @@ fn test_adapter_options_from_env() {
     assert_eq!(Some("/prod".into()), options.base_path);
     assert!(options.async_init);
     assert!(options.compression);
-    assert!(options.enable_tls);
-    assert_eq!(Some("api.example.com".into()), options.tls_server_name);
-    assert_eq!(None, options.tls_cert_file);
     assert_eq!(LambdaInvokeMode::Buffered, options.invoke_mode);
 }
 
@@ -66,9 +63,6 @@ fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_REMOVE_BASE_PATH", "/prod");
     env::set_var("AWS_LWA_ASYNC_INIT", "true");
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
-    env::set_var("AWS_LWA_ENABLE_TLS", "true");
-    env::set_var("AWS_LWA_TLS_SERVER_NAME", "api.example.com");
-    env::remove_var("AWS_LWA_TLS_CERT_FILE");
     env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
 
     // Initialize adapter with env options
@@ -84,9 +78,6 @@ fn test_adapter_options_from_namespaced_env() {
     assert_eq!(Some("/prod".into()), options.base_path);
     assert!(options.async_init);
     assert!(options.compression);
-    assert!(options.enable_tls);
-    assert_eq!(Some("api.example.com".into()), options.tls_server_name);
-    assert_eq!(None, options.tls_cert_file);
     assert_eq!(LambdaInvokeMode::ResponseStream, options.invoke_mode);
 }
 
@@ -123,9 +114,6 @@ async fn test_http_readiness_check() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     };
 
@@ -157,9 +145,6 @@ async fn test_http_basic_request() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -204,9 +189,6 @@ async fn test_http_headers() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -256,9 +238,6 @@ async fn test_http_path_encoding() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -306,9 +285,6 @@ async fn test_http_query_params() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -365,9 +341,6 @@ async fn test_http_post_put_delete() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -436,9 +409,6 @@ async fn test_http_compress() {
         async_init: false,
         base_path: None,
         compression: true,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -491,9 +461,6 @@ async fn test_http_compress_disallowed_type() {
         async_init: false,
         base_path: None,
         compression: true,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -549,9 +516,6 @@ async fn test_http_compress_already_compressed() {
         async_init: false,
         base_path: None,
         compression: true,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -608,9 +572,6 @@ async fn test_http_context_headers() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -676,9 +637,6 @@ async fn test_http_context_multi_headers() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 

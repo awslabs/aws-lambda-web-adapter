@@ -19,7 +19,6 @@ exclude = ["examples"]
 [dependencies]
 http = "0.2"
 hyper = { version = "0.14", features = ["client"] }
-hyper-rustls = "0.24"
 lambda_http = "0.8"
 tokio = { version = "1.24", features = [
     "macros",
@@ -43,7 +42,8 @@ flate2 = "1.0.25"
 httpmock = "0.6"
 http-body-util = "0.1.0-rc.2"
 http-body = "0.4.5"
-aws-sigv4 = "0.55"
+hyper-rustls = "0.24"
+aws-sigv4 = "0.56.1"
 
 [[bin]]
 name = "lambda-adapter"
@@ -52,4 +52,4 @@ path = "src/main.rs"
 [profile.release]
 strip = true
 lto = true
-opt-level = 'z'
+codegen-units = 1
