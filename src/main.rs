@@ -15,7 +15,7 @@ async fn main() -> Result<(), Error> {
     // get configuration options from environment variables
     let options = AdapterOptions::from_env();
 
-    // create a HTTPS adapter
+    // create an adapter
     let mut adapter = Adapter::new(&options);
     // register the adapter as an extension
     adapter.register_default_extension();
