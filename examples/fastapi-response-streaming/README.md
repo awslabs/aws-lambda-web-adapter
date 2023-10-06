@@ -8,7 +8,7 @@ This example shows streaming response from Amazon Bedrock with FastAPI on AWS La
 
 ## How does it work?
 
-This example use Anthropic Claude v2 model to generate bedtime stories. FastAPI provides the static web frontend and the inference API. In FastAPI inference API endpoint, it invokes Bedrock using Boto3, and stream the response. Both Lambda Web Adapter and function URL have response streaming model enabled. So the response chunks from Bedrock are streamed all the way back to the client. 
+This example uses Anthropic Claude v2 model to generate bedtime stories. FastAPI provides the static web frontend and an inference API.  The inference API endpoint invokes Bedrock using Boto3, and streams the response. Both Lambda Web Adapter and function URL have response streaming mode enabled. So the response from Bedrock are streamed all the way back to the client. 
 
 This function is packaged as a Docker image. Here is the content of the Dockerfile. 
 
@@ -32,7 +32,6 @@ COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.1 /lambda-adapter /opt
 In the SAM template, we use an environment variable `AWS_LWA_INVOKE_MODE: RESPONSE_STREAM` to configure Lambda Web Adapter in response streaming mode. And adding a function url with `InvokeMode: RESPONSE_STREAM`. 
 
 ```yaml
-Resources:
   FastAPIFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -51,11 +50,6 @@ Resources:
           Action:
           - bedrock:InvokeModelWithResponseStream
           Resource: '*'
-      Tracing: Active
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: ./app
-      DockerTag: v1
 ```      
 
 
@@ -71,7 +65,7 @@ sam deploy --guided
 
 ## Test the example
 
-After the deployment completes, open the `FastAPIFunctionUrl` in the output messages. You should see a simple web page. Here is a demo. 
+After the deployment completes, open the `FastAPIFunctionUrl` shown in the output messages. You should see a simple web page. Here is a demo. 
 
 
 ![Demo](imgs/demo.gif)
