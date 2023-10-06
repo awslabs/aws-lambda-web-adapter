@@ -273,18 +273,6 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - name: deploy the tls zip x86 integration test stacks for the beta environment
-        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-tls-zip
-        run: |
-          sam build
-          sam deploy --stack-name ${BETA_STACK_NAME}-tls-zip-x86 \
-            --capabilities CAPABILITY_IAM \
-            --region ${BETA_REGION} \
-            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
-            --image-repository ${BETA_IMAGE_REPOSITORY} \
-            --no-fail-on-empty-changeset \
-            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
-
       - uses: dkershner6/aws-ssm-getparameters-action@v1
         with:
           parameterPairs:   "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint      = HTTPBIN_OCI_REST_ENDPOINT,
@@ -294,11 +282,7 @@ jobs:
                              /lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint      = HTTPBIN_ZIP_HTTP_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint           = HTTPBIN_ZIP_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin-tls/zip/rest-api-endpoint  = HTTPBIN_TLS_ZIP_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin-tls/zip/http-api-endpoint  = HTTPBIN_TLS_ZIP_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin-tls/zip/alb-endpoint       = HTTPBIN_TLS_ZIP_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin-tls/zip/function-url       = HTTPBIN_TLS_ZIP_FURL_ENDPOINT"
+                             /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT"
 
       - name: run e2e tests
         run: |
@@ -310,10 +294,6 @@ jobs:
           API_ENDPOINT=${HTTPBIN_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
           API_ENDPOINT=${HTTPBIN_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
           API_ENDPOINT=${HTTPBIN_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_TLS_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_TLS_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_TLS_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_TLS_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
       - name: remove the oci x86 integration test stacks
         working-directory: ./tests/e2e_tests/fixtures/go-httpbin
@@ -325,10 +305,6 @@ jobs:
         run: |
           sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
 
-      - name: remove the tls zip x86 integration test stacks
-        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-tls-zip
-        run: |
-          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-tls-zip-x86
 
   load-gamma-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
