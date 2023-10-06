@@ -157,6 +157,7 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 
 - [FastAPI](examples/fastapi)
 - [FastAPI with Response Streaming](examples/fastapi-response-streaming)
+- [FastAPI with Response Streaming in Zip](examples/fastapi-response-streaming-zip)
 - [FastAPI in Zip](examples/fastapi-zip)
 - [Flask](examples/flask)
 - [Flask in Zip](examples/flask-zip)
