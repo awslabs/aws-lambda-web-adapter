@@ -1,37 +1,31 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Streaming Bedrock Response with FastAPI on AWS Lambda
+  fastapi response streaming
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 300
+    Timeout: 60
 
 Resources:
   FastAPIFunction:
     Type: AWS::Serverless::Function
     Properties:
-      PackageType: Image
-      MemorySize: 512
+      CodeUri: app/
+      Handler: run.sh
+      Runtime: python3.9
+      MemorySize: 256
       Environment:
         Variables:
-          AWS_LWA_INVOKE_MODE: RESPONSE_STREAM
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          AWS_LWA_INVOKE_MODE: response_stream
+          PORT: 8000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: RESPONSE_STREAM
-      Policies:
-      - Statement:
-        - Sid: BedrockInvokePolicy
-          Effect: Allow
-          Action:
-          - bedrock:InvokeModelWithResponseStream
-          Resource: '*'
-      Tracing: Active
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: ./app
-      DockerTag: v1
 
 Outputs:
   FastAPIFunctionUrl:
