@@ -2,7 +2,7 @@
 
 A tool to run web applications on AWS Lambda
 
-AWS Lambda Web Adapter allows developers to build web apps (http api) with familiar frameworks (e.g. Express.js, Next.js, Flask, SpringBoot, and Laravel, anything speaks HTTP 1.1/1.0) and run it on AWS Lambda.
+AWS Lambda Web Adapter allows developers to build web apps (http api) with familiar frameworks (e.g. Express.js, Next.js, Flask, SpringBoot, ASP.NET and Laravel, anything speaks HTTP 1.1/1.0) and run it on AWS Lambda.
 The same docker image can run on AWS Lambda, Amazon EC2, AWS Fargate, and local computers.
 
 ![Lambda Web Adapter](docs/images/lambda-adapter-overview.png)
@@ -16,7 +16,7 @@ The same docker image can run on AWS Lambda, Amazon EC2, AWS Fargate, and local 
 - Automatic encode binary response
 - Enables graceful shutdown
 - Supports response payload compression
-- Supports web applications running over both HTTP and HTTPS
+- Supports response streaming
 
 ## Usage
 
@@ -64,11 +64,10 @@ AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to 
       2. cn-northwest-1 (Ningxia)
          - x86_64: `arn:aws-cn:lambda:cn-northwest-1:069767869989:layer:LambdaAdapterLayerX86:17`
       
-
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 
-For details, please check out [the example nodejs application](examples/expressjs-zip).
+For details, please check out [the example Node.js application](examples/expressjs-zip).
 
 ## Readiness Check
 
@@ -96,9 +95,6 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_ASYNC_INIT / ASYNC_INIT*                             | enable asynchronous initialization for long initialization functions                 | "false"     |
 | AWS_LWA_REMOVE_BASE_PATH / REMOVE_BASE_PATH*                 | the base path to be removed from request path                                        | None        |
 | AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip compression for response body                                            | "false"     |
-| AWS_LWA_ENABLE_TLS                                           | enable TLS/HTTPS support for the web application                                     | "false"     |
-| AWS_LWA_TLS_SERVER_NAME                                      | override server name for TLS SNI                                                     | "localhost" |
-| AWS_LWA_TLS_CERT_FILE                                        | override server certificate file                                                     | None        |
 | AWS_LWA_INVOKE_MODE                                          | Lambda function invoke mode: "buffered" or "response_stream", default is "buffered"  | "buffered"  |
 
 > **Note:**
@@ -122,15 +118,6 @@ Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the a
 
 **AWS_LWA_ENABLE_COMPRESSION** - Lambda Web Adapter supports gzip compression for response body. This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ENABLE_COMPRESSION` to `true`.
 When enabled, this will compress responses unless it's an image as determined by the content-type starting with `image` or the response is less than 32 bytes. This will also compress HTTP/1.1 chunked streaming response.
-
-**AWS_LWA_ENABLE_TLS** - With TLS support enabled, Lambda Web Adapter uses HTTPS to communicate with the web application. Lambda Web Adapter use
-[hyper-rustls](https://crates.io/crates/hyper-rustls) with [rustls-native-certs](https://crates.io/crates/rustls-native-certs) to implement TLS support. 
-It supports TLS1.2 and TLS1.3 with safe defaults. To see the supported TLS features, please check out [rustls](https://docs.rs/rustls/latest/rustls/). 
-
-**AWS_LWA_TLS_SERVER_NAME** - allows you to override the server name for TLS Server Name Indication. This should match one of the SAN names on the server certificate. The default is "localhost".
-
-**AWS_LWA_TLS_CERT_FILE** - Lambda Web Adapter uses the platform's native certificate store to find trusted certificates. You can configure this environment variable to use your own certificate.
-Please check out [FastAPI with HTTPS](examples/fastapi-https) example for more details.
 
 **AWS_LWA_INVOKE_MODE** - Lambda function invoke mode, this should match Function Url invoke mode. The default is "buffered". When configured as "response_stream", Lambda Web Adapter will stream response to Lambda service [blog](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/). 
 Please check out [FastAPI with Response Streaming](examples/fastapi-response-streaming) example. 
@@ -169,8 +156,8 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 ## Examples
 
 - [FastAPI](examples/fastapi)
-- [FastAPI with HTTPS](examples/fastapi-https)
 - [FastAPI with Response Streaming](examples/fastapi-response-streaming)
+- [FastAPI with Response Streaming in Zip](examples/fastapi-response-streaming-zip)
 - [FastAPI in Zip](examples/fastapi-zip)
 - [Flask](examples/flask)
 - [Flask in Zip](examples/flask-zip)
@@ -179,8 +166,10 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 - [Express.js in Zip](examples/expressjs-zip)
 - [Next.js](examples/nextjs)
 - [Next.js in Zip](examples/nextjs-zip)
+- [Next.js Response Streaming](examples/nextjs-response-streaming)
 - [SpringBoot](examples/springboot)
 - [SpringBoot in Zip](examples/springboot-zip)
+- [SpringBoot Response Streaming](examples/springboot-response-streaming-zip)
 - [Nginx](examples/nginx)
 - [PHP](examples/php)
 - [Rust Actix Web in Zip](examples/rust-actix-web-zip)
@@ -189,6 +178,9 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 - [Golang Gin in Zip](examples/gin-zip)
 - [Deno Oak in Zip](examples/deno-zip)
 - [Laravel on Lambda](https://github.com/aws-samples/lambda-laravel)
+- [ASP.NET MVC](examples/aspnet-mvc)
+- [ASP.NET MVC in Zip](examples/aspnet-mvc-zip)
+- [ASP.NET Web API in Zip](examples/aspnet-webapi-zip)
 
 ## Acknowledgement
 

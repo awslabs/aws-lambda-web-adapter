@@ -1,52 +1,71 @@
-# FastAPI Response Streaming
+# Serverless Bedtime Storyteller
 
-This example shows how to use Lambda Web Adapter to run a FastAPI application with response streaming via a Function URL.
+This example shows streaming response from Amazon Bedrock with FastAPI on AWS Lambda.
 
-### How does it work?
 
-We add Lambda Web Adapter layer to the function and configure wrapper script.
+![Architecture](imgs/serverless-storyteller-architecture.png)
 
-1. attach Lambda Adapter layer to your function. This layer containers Lambda Adapter binary and a wrapper script.
-    1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17`
-    2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:17`
-2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. This is a wrapper script included in the layer.
-3. set function handler to a startup command: `run.sh`. The wrapper script will execute this command to boot up your application.
 
-To get more information of Wrapper script, please read Lambda documentation [here](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper).
+## How does it work?
 
-This is the resource for Lambda function. The function urls's invoke mode is configured as "RESPONSE_STREAM", and Lambda environment variable "AWS_LWA_INVOKE_MODE" is set to "response_stream". 
+This example uses Anthropic Claude v2 model to generate bedtime stories. FastAPI provides the static web frontend and an inference API.  The inference API endpoint invokes Bedrock using Boto3, and streams the response. Both Lambda Web Adapter and function URL have response streaming mode enabled. So the response from Bedrock are streamed all the way back to the client. 
+
+This function is packaged as a Docker image. Here is the content of the Dockerfile. 
+
+```dockerfile
+FROM public.ecr.aws/docker/library/python:3.12.0-slim-bullseye
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.1 /lambda-adapter /opt/extensions/lambda-adapter
+
+WORKDIR /app
+ADD . .
+RUN pip install -r requirements.txt
+
+CMD ["python", "main.py"]
+```
+
+Notice that we only need to add the second line to install Lambda Web Adapter. 
+
+```dockerfile
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.1 /lambda-adapter /opt/extensions/
+```
+
+In the SAM template, we use an environment variable `AWS_LWA_INVOKE_MODE: RESPONSE_STREAM` to configure Lambda Web Adapter in response streaming mode. And adding a function url with `InvokeMode: RESPONSE_STREAM`. 
 
 ```yaml
   FastAPIFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: app/
-      Handler: run.sh
-      Runtime: python3.9
-      MemorySize: 256
+      PackageType: Image
+      MemorySize: 512
       Environment:
         Variables:
-          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
-          AWS_LWA_INVOKE_MODE: response_stream
-          PORT: 8000
-      Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17
+          AWS_LWA_INVOKE_MODE: RESPONSE_STREAM
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: RESPONSE_STREAM
-```
+      Policies:
+      - Statement:
+        - Sid: BedrockInvokePolicy
+          Effect: Allow
+          Action:
+          - bedrock:InvokeModelWithResponseStream
+          Resource: '*'
+```      
 
-### Build and Deploy
 
-Run the following commands to build and deploy the application to lambda.
+## Build and deploy
+
+Run the following commends to build and deploy this example. 
 
 ```bash
 sam build --use-container
 sam deploy --guided
 ```
-When the deployment completes, take note of FastAPI's Value. It is the API Gateway endpoint URL.
 
-### Verify it works
 
-Open FastAPI's URL in a browser, you should see "This is streaming from Lambda" streams back 10 times. 
+## Test the example
 
+After the deployment completes, open the `FastAPIFunctionUrl` shown in the output messages. You should see a simple web page. Here is a demo. 
+
+
+![Demo](imgs/demo.gif)

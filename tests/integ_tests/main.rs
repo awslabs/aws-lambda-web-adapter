@@ -49,9 +49,6 @@ fn test_adapter_options_from_env() {
     assert_eq!(Some("/prod".into()), options.base_path);
     assert!(options.async_init);
     assert!(options.compression);
-    assert!(options.enable_tls);
-    assert_eq!(Some("api.example.com".into()), options.tls_server_name);
-    assert_eq!(None, options.tls_cert_file);
     assert_eq!(LambdaInvokeMode::Buffered, options.invoke_mode);
 }
 
@@ -66,9 +63,6 @@ fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_REMOVE_BASE_PATH", "/prod");
     env::set_var("AWS_LWA_ASYNC_INIT", "true");
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
-    env::set_var("AWS_LWA_ENABLE_TLS", "true");
-    env::set_var("AWS_LWA_TLS_SERVER_NAME", "api.example.com");
-    env::remove_var("AWS_LWA_TLS_CERT_FILE");
     env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
 
     // Initialize adapter with env options
@@ -84,9 +78,6 @@ fn test_adapter_options_from_namespaced_env() {
     assert_eq!(Some("/prod".into()), options.base_path);
     assert!(options.async_init);
     assert!(options.compression);
-    assert!(options.enable_tls);
-    assert_eq!(Some("api.example.com".into()), options.tls_server_name);
-    assert_eq!(None, options.tls_cert_file);
     assert_eq!(LambdaInvokeMode::ResponseStream, options.invoke_mode);
 }
 
@@ -123,9 +114,6 @@ async fn test_http_readiness_check() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     };
 
@@ -157,9 +145,6 @@ async fn test_http_basic_request() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -204,9 +189,6 @@ async fn test_http_headers() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -256,9 +238,6 @@ async fn test_http_path_encoding() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -306,9 +285,6 @@ async fn test_http_query_params() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -365,9 +341,6 @@ async fn test_http_post_put_delete() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -436,9 +409,6 @@ async fn test_http_compress() {
         async_init: false,
         base_path: None,
         compression: true,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -491,9 +461,6 @@ async fn test_http_compress_disallowed_type() {
         async_init: false,
         base_path: None,
         compression: true,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -549,9 +516,6 @@ async fn test_http_compress_already_compressed() {
         async_init: false,
         base_path: None,
         compression: true,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
@@ -584,13 +548,16 @@ async fn test_http_compress_already_compressed() {
 }
 
 #[tokio::test]
-async fn test_http_lambda_context_header() {
+async fn test_http_context_headers() {
     // Start app server
     let app_server = MockServer::start();
 
     // An endpoint that expects and returns headers
     let test_endpoint = app_server.mock(|when, then| {
-        when.method(GET).path("/").header_exists("x-amzn-lambda-context");
+        when.method(GET)
+            .path("/")
+            .header_exists("x-amzn-lambda-context")
+            .header_exists("x-amzn-request-context");
         then.status(200).header("fizz", "buzz").body("OK");
     });
 
@@ -605,14 +572,82 @@ async fn test_http_lambda_context_header() {
         async_init: false,
         base_path: None,
         compression: false,
-        enable_tls: false,
-        tls_server_name: None,
-        tls_cert_file: None,
         invoke_mode: LambdaInvokeMode::Buffered,
     });
 
     // Prepare request
     let req = LambdaEventBuilder::new().with_path("/").build();
+
+    // We convert to Request object because it allows us to add
+    // the Lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    // Call the adapter service with request
+    let response = adapter.call(request).await.expect("Request failed");
+
+    // Assert endpoint was called once
+    test_endpoint.assert();
+
+    // and response has expected content
+    assert_eq!(200, response.status());
+    assert!(response.headers().contains_key("fizz"));
+    assert_eq!("buzz", response.headers().get("fizz").unwrap());
+    assert_eq!("OK", body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_context_multi_headers() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // An endpoint that expects and returns headers
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET)
+            .path("/")
+            .matches(|req| {
+                req.headers
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .filter(|(key, _value)| key == "x-amzn-lambda-context")
+                    .count()
+                    == 1
+            })
+            .matches(|req| {
+                req.headers
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .filter(|(key, _value)| key == "x-amzn-request-context")
+                    .count()
+                    == 1
+            });
+        then.status(200).header("fizz", "buzz").body("OK");
+    });
+
+    // Initialize adapter and do readiness check
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        readiness_check_protocol: Protocol::Http,
+        readiness_check_min_unhealthy_status: 500,
+        async_init: false,
+        base_path: None,
+        compression: false,
+        invoke_mode: LambdaInvokeMode::Buffered,
+    });
+
+    // Prepare request
+    let req = LambdaEventBuilder::new()
+        .with_path("/")
+        .with_header("x-amzn-lambda-context", "header_from_client_1")
+        .with_header("x-amzn-lambda-context", "header_from_client_2")
+        .with_header("x-amzn-request-context", "header_from_client_1")
+        .with_header("x-amzn-request-context", "header_from_client_2")
+        .build();
 
     // We convert to Request object because it allows us to add
     // the Lambda Context

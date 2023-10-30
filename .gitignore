@@ -5,3 +5,8 @@ samconfig.toml
 .aws-sam
 
 .vscode
+
+**/obj/*
+**/bin/*
+**/.idea/*
+
