@@ -1,6 +1,7 @@
 BUILD_DIR=${PWD}
 
 install:
+	rm -rf node_modules
 	npm install
 
 build:
