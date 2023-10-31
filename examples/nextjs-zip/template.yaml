@@ -14,9 +14,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      MemorySize: 512
+      MemorySize: 256
       Handler: run.sh
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
       Architectures:
         - x86_64
       Environment:
