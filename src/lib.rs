@@ -22,7 +22,6 @@ use hyper::{
     client::{connect::Connect, Client, HttpConnector},
     Body,
 };
-use lambda_http::aws_lambda_events::serde_json;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
 use tokio::net::TcpStream;
@@ -81,6 +80,21 @@ pub struct AdapterOptions {
 }
 
 impl AdapterOptions {
+    pub fn default() -> Self {
+        AdapterOptions {
+            host: "127.0.0.1".to_string(),
+            port: "8080".to_string(),
+            readiness_check_port: "8080".to_string(),
+            readiness_check_path: "/".to_string(),
+            readiness_check_protocol: Protocol::Http,
+            readiness_check_min_unhealthy_status: 500,
+            base_path: None,
+            async_init: false,
+            compression: false,
+            invoke_mode: LambdaInvokeMode::Buffered,
+        }
+    }
+
     pub fn from_env() -> Self {
         AdapterOptions {
             host: env::var("AWS_LWA_HOST").unwrap_or(env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string())),
@@ -370,12 +384,7 @@ mod tests {
             port: app_server.port().to_string(),
             readiness_check_port: app_server.port().to_string(),
             readiness_check_path: "/healthcheck".to_string(),
-            readiness_check_protocol: Protocol::Http,
-            readiness_check_min_unhealthy_status: 500,
-            async_init: false,
-            base_path: None,
-            compression: false,
-            invoke_mode: LambdaInvokeMode::Buffered,
+            ..AdapterOptions::default()
         };
 
         // Initialize adapter and do readiness check
@@ -407,12 +416,7 @@ mod tests {
             port: app_server.port().to_string(),
             readiness_check_port: app_server.port().to_string(),
             readiness_check_path: "/healthcheck".to_string(),
-            readiness_check_protocol: Protocol::Http,
-            readiness_check_min_unhealthy_status: 500,
-            async_init: false,
-            base_path: None,
-            compression: false,
-            invoke_mode: LambdaInvokeMode::Buffered,
+            ..AdapterOptions::default()
         };
 
         // Initialize adapter and do readiness check
@@ -444,12 +448,8 @@ mod tests {
             port: app_server.port().to_string(),
             readiness_check_port: app_server.port().to_string(),
             readiness_check_path: "/healthcheck".to_string(),
-            readiness_check_protocol: Protocol::Http,
             readiness_check_min_unhealthy_status: 400,
-            async_init: false,
-            base_path: None,
-            compression: false,
-            invoke_mode: LambdaInvokeMode::Buffered,
+            ..AdapterOptions::default()
         };
 
         // Initialize adapter and do readiness check
