@@ -65,7 +65,6 @@ impl From<&str> for LambdaInvokeMode {
     }
 }
 
-#[derive(Default)]
 pub struct AdapterOptions {
     pub host: String,
     pub port: String,
@@ -79,8 +78,8 @@ pub struct AdapterOptions {
     pub invoke_mode: LambdaInvokeMode,
 }
 
-impl AdapterOptions {
-    pub fn default() -> Self {
+impl Default for AdapterOptions {
+    fn default() -> Self {
         AdapterOptions {
             host: "127.0.0.1".to_string(),
             port: "8080".to_string(),
@@ -94,7 +93,9 @@ impl AdapterOptions {
             invoke_mode: LambdaInvokeMode::Buffered,
         }
     }
+}
 
+impl AdapterOptions {
     pub fn from_env() -> Self {
         AdapterOptions {
             host: env::var("AWS_LWA_HOST").unwrap_or(env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string())),
@@ -384,7 +385,7 @@ mod tests {
             port: app_server.port().to_string(),
             readiness_check_port: app_server.port().to_string(),
             readiness_check_path: "/healthcheck".to_string(),
-            ..AdapterOptions::default()
+            ..Default::default()
         };
 
         // Initialize adapter and do readiness check
@@ -416,7 +417,7 @@ mod tests {
             port: app_server.port().to_string(),
             readiness_check_port: app_server.port().to_string(),
             readiness_check_path: "/healthcheck".to_string(),
-            ..AdapterOptions::default()
+            ..Default::default()
         };
 
         // Initialize adapter and do readiness check
@@ -449,7 +450,7 @@ mod tests {
             readiness_check_port: app_server.port().to_string(),
             readiness_check_path: "/healthcheck".to_string(),
             readiness_check_min_unhealthy_status: 400,
-            ..AdapterOptions::default()
+            ..Default::default()
         };
 
         // Initialize adapter and do readiness check

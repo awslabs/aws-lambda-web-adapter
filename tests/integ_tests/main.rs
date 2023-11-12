@@ -110,7 +110,7 @@ async fn test_http_readiness_check() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     };
 
     // Initialize adapter and do readiness check
@@ -136,7 +136,7 @@ async fn test_http_basic_request() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // // Call the adapter service with basic request
@@ -175,7 +175,7 @@ async fn test_http_headers() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // Prepare request
@@ -219,7 +219,7 @@ async fn test_http_path_encoding() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // Prepare request
@@ -261,7 +261,7 @@ async fn test_http_query_params() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // Prepare request
@@ -312,7 +312,7 @@ async fn test_http_post_put_delete() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // Prepare requests
@@ -376,7 +376,7 @@ async fn test_http_compress() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
@@ -424,7 +424,7 @@ async fn test_http_compress_disallowed_type() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // // Call the adapter service with basic request
@@ -475,7 +475,7 @@ async fn test_http_compress_already_compressed() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
@@ -526,7 +526,7 @@ async fn test_http_context_headers() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // Prepare request
@@ -576,7 +576,7 @@ async fn test_http_content_encoding_suffix() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // Prepare request
@@ -639,7 +639,7 @@ async fn test_http_context_multi_headers() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        ..AdapterOptions::default()
+        ..Default::default()
     });
 
     // Prepare request
