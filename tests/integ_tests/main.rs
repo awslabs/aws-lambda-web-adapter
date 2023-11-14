@@ -20,6 +20,7 @@ use tower::{Service, ServiceBuilder};
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use serde_json::json;
 use tower_http::compression::{CompressionBody, CompressionLayer};
 
 #[test]
@@ -109,12 +110,7 @@ async fn test_http_readiness_check() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
-        compression: false,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     };
 
     // Initialize adapter and do readiness check
@@ -140,12 +136,7 @@ async fn test_http_basic_request() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
-        compression: false,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     // // Call the adapter service with basic request
@@ -184,12 +175,7 @@ async fn test_http_headers() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
-        compression: false,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     // Prepare request
@@ -233,12 +219,7 @@ async fn test_http_path_encoding() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
-        compression: false,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     // Prepare request
@@ -280,12 +261,7 @@ async fn test_http_query_params() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
-        compression: false,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     // Prepare request
@@ -336,12 +312,7 @@ async fn test_http_post_put_delete() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
-        compression: false,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     // Prepare requests
@@ -404,12 +375,8 @@ async fn test_http_compress() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
         compression: true,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
@@ -456,12 +423,8 @@ async fn test_http_compress_disallowed_type() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
         compression: true,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     // // Call the adapter service with basic request
@@ -511,12 +474,8 @@ async fn test_http_compress_already_compressed() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
         compression: true,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
@@ -567,12 +526,7 @@ async fn test_http_context_headers() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
-        compression: false,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     // Prepare request
@@ -594,6 +548,59 @@ async fn test_http_context_headers() {
     assert!(response.headers().contains_key("fizz"));
     assert_eq!("buzz", response.headers().get("fizz").unwrap());
     assert_eq!("OK", body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_content_encoding_suffix() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    let json_data = json!({
+        "name": "John Doe",
+        "age": 43,
+        "gender": "Male"
+    })
+    .to_string();
+
+    // An endpoint that expects and returns headers
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/json");
+        then.status(200)
+            .header("content-type", "application/graphql-response+json; charset=utf-8")
+            .body(json_data.to_owned());
+    });
+
+    // Initialize adapter and do readiness check
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        ..Default::default()
+    });
+
+    // Prepare request
+    let req = LambdaEventBuilder::new().with_path("/json").build();
+
+    // We convert to Request object because it allows us to add
+    // the Lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    // Call the adapter service with request
+    let response = adapter.call(request).await.expect("Request failed");
+
+    // Assert endpoint was called once
+    test_endpoint.assert();
+
+    // and response has expected content
+    assert_eq!(200, response.status());
+    assert!(response.headers().contains_key("content-type"));
+    assert_eq!(
+        "application/graphql-response+json; charset=utf-8",
+        response.headers().get("content-type").unwrap()
+    );
+    assert_eq!(json_data.to_owned(), body_to_string(response).await);
 }
 
 #[tokio::test]
@@ -632,12 +639,7 @@ async fn test_http_context_multi_headers() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        readiness_check_protocol: Protocol::Http,
-        readiness_check_min_unhealthy_status: 500,
-        async_init: false,
-        base_path: None,
-        compression: false,
-        invoke_mode: LambdaInvokeMode::Buffered,
+        ..Default::default()
     });
 
     // Prepare request

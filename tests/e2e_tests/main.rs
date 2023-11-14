@@ -4,8 +4,6 @@ use http::Uri;
 use hyper::client::HttpConnector;
 use hyper::{Body, Client, Method, Request};
 use hyper_rustls::HttpsConnector;
-use lambda_http::aws_lambda_events::serde_json;
-use lambda_http::aws_lambda_events::serde_json::Value;
 use std::env;
 use std::io;
 use std::io::prelude::*;
@@ -117,7 +115,7 @@ async fn test_http_headers() {
     let resp = client.request(req.map(Body::from)).await.unwrap();
     let (parts, body) = resp.into_parts();
     let body_bytes = hyper::body::to_bytes(body).await.unwrap();
-    let body = serde_json::from_slice::<Value>(&body_bytes).unwrap();
+    let body = serde_json::from_slice::<serde_json::Value>(&body_bytes).unwrap();
 
     assert_eq!(200, parts.status.as_u16());
     assert!(body["headers"]["Foo"][0].is_string());
@@ -141,7 +139,7 @@ async fn test_http_query_params() {
     let resp = client.request(req.map(Body::from)).await.unwrap();
     let (parts, body) = resp.into_parts();
     let body_bytes = hyper::body::to_bytes(body).await.unwrap();
-    let body = serde_json::from_slice::<Value>(&body_bytes).unwrap();
+    let body = serde_json::from_slice::<serde_json::Value>(&body_bytes).unwrap();
 
     assert_eq!(200, parts.status.as_u16());
     assert!(body["args"]["fizz"][0].is_string());
