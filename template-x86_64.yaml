@@ -24,6 +24,7 @@ Resources:
         - dotnetcore3.1
         - provided.al2
         - provided
+        - provided.al2023
       Description: 'Layer for AWS Lambda Adapter x86_64'
       LicenseInfo: 'Available under the Apache-2.0 license.'
       RetentionPolicy: Retain
