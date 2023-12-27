@@ -24,7 +24,7 @@ use serde_json::json;
 use tower_http::compression::{CompressionBody, CompressionLayer};
 
 #[test]
-fn test_adapter_options_from_env() {
+fn test_default_adapter_options() {
     env::set_var("PORT", "3000");
     env::set_var("HOST", "localhost");
     env::set_var("READINESS_CHECK_PORT", "8000");
@@ -38,8 +38,8 @@ fn test_adapter_options_from_env() {
     env::remove_var("AWS_LWA_TLS_CERT_FILE");
     env::set_var("AWS_LWA_INVOKE_MODE", "buffered");
 
-    // Initialize adapter with env options
-    let options = AdapterOptions::from_env();
+    // Initialize adapter
+    let options = AdapterOptions::default();
     Adapter::new(&options);
 
     assert_eq!("3000", options.port);
@@ -66,8 +66,8 @@ fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
     env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
 
-    // Initialize adapter with env options
-    let options = AdapterOptions::from_env();
+    // Initialize adapter
+    let options = AdapterOptions::default();
     Adapter::new(&options);
 
     assert_eq!("3000", options.port);
@@ -88,8 +88,8 @@ fn test_readiness_check_port_fallback_to_lwa_port() {
     env::remove_var("READINESS_CHECK_PORT");
     env::set_var("AWS_LWA_PORT", "3000");
 
-    // Initialize adapter with env options
-    let options = AdapterOptions::from_env();
+    // Initialize adapter
+    let options = AdapterOptions::default();
     Adapter::new(&options);
 
     assert_eq!("3000", options.readiness_check_port);
