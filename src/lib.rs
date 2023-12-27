@@ -284,7 +284,7 @@ where
         }
 
         let request_context = event.request_context();
-        let lambda_context = &event.lambda_context();
+        let lambda_context = event.lambda_context();
         let path = event.raw_http_path().to_string();
         let mut path = path.as_str();
         let (parts, body) = event.into_parts();
