@@ -81,23 +81,6 @@ pub struct AdapterOptions {
 impl Default for AdapterOptions {
     fn default() -> Self {
         AdapterOptions {
-            host: "127.0.0.1".to_string(),
-            port: "8080".to_string(),
-            readiness_check_port: "8080".to_string(),
-            readiness_check_path: "/".to_string(),
-            readiness_check_protocol: Protocol::Http,
-            readiness_check_min_unhealthy_status: 500,
-            base_path: None,
-            async_init: false,
-            compression: false,
-            invoke_mode: LambdaInvokeMode::Buffered,
-        }
-    }
-}
-
-impl AdapterOptions {
-    pub fn from_env() -> Self {
-        AdapterOptions {
             host: env::var("AWS_LWA_HOST").unwrap_or(env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string())),
             port: env::var("AWS_LWA_PORT").unwrap_or(env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
             readiness_check_port: env::var("AWS_LWA_READINESS_CHECK_PORT").unwrap_or(
@@ -301,7 +284,7 @@ where
         }
 
         let request_context = event.request_context();
-        let lambda_context = &event.lambda_context();
+        let lambda_context = event.lambda_context();
         let path = event.raw_http_path().to_string();
         let mut path = path.as_str();
         let (parts, body) = event.into_parts();

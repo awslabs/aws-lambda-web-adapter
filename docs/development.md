@@ -80,3 +80,10 @@ When these commands complete successfully, you will have the following container
 - "aws-lambda-adapter:latest-x86_64" for x86_64.
 - "aws-lambda-adapter:latest-aarch64" for arm64.
 - "aws-lambda-adapter:latest" is the same as "aws-lambda-adapter:latest-x86_64".
+
+### Testing
+
+Please test with the following [commands](https://github.com/awslabs/aws-lambda-web-adapter/blob/ff2dc8bddd968e74d7dc2ec56a249c56e5a3c5a7/.github/workflows/pipeline.yaml#L46-L49) before submitting a pull request:
+1. `cargo fmt -- --check`
+1. `cargo clippy -- -Dwarnings`
+1. `cargo nextest run`

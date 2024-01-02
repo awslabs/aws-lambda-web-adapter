@@ -13,7 +13,7 @@ async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt().with_env_filter(filter).without_time().init();
 
     // get configuration options from environment variables
-    let options = AdapterOptions::from_env();
+    let options = AdapterOptions::default();
 
     // create an adapter
     let mut adapter = Adapter::new(&options);
