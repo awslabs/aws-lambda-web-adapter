@@ -8,23 +8,6 @@ Resources:
     Type: AWS::Serverless::LayerVersion
     Properties:
       ContentUri: .
-      CompatibleRuntimes:
-        - nodejs16.x
-        - nodejs14.x
-        - nodejs12.x
-        - python3.9
-        - python3.8
-        - python3.7
-        - ruby2.7
-        - java11
-        - java8.al2
-        - java8
-        - go1.x
-        - dotnet6
-        - dotnetcore3.1
-        - provided.al2
-        - provided
-        - provided.al2023
       Description: 'Layer for AWS Lambda Adapter x86_64'
       LicenseInfo: 'Available under the Apache-2.0 license.'
       RetentionPolicy: Retain

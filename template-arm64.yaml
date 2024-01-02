@@ -10,19 +10,6 @@ Resources:
       ContentUri: .
       CompatibleArchitectures:
         - arm64
-      CompatibleRuntimes:
-        - nodejs16.x
-        - nodejs14.x
-        - nodejs12.x
-        - python3.9
-        - python3.8
-        - ruby2.7
-        - java11
-        - java8.al2
-        - dotnet6
-        - dotnetcore3.1
-        - provided.al2
-        - provided.al2023
       Description: 'Layer for AWS Lambda Adapter arm64'
       LicenseInfo: 'Available under the Apache-2.0 license.'
       RetentionPolicy: Retain
