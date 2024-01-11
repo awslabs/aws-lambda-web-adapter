@@ -16,7 +16,7 @@ Resources:
     Properties:
       CodeUri: hello-world/
       Handler: run.sh
-      Runtime: nodejs14.x
+      Runtime: nodejs18.x
       MemorySize: 1024
       Architectures:
         - x86_64
@@ -25,7 +25,7 @@ Resources:
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           RUST_LOG: info
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:18
       Events:
         RootPath:
           Type: Api

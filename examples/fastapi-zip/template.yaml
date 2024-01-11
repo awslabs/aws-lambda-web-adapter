@@ -14,14 +14,14 @@ Resources:
     Properties:
       CodeUri: app/
       Handler: run.sh
-      Runtime: python3.9
+      Runtime: python3.11
       MemorySize: 256
       Environment:
         Variables:
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           PORT: 8000
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17      
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:18      
       Events:
         ApiEvent:
           Type: HttpApi

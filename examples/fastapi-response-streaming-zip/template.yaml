@@ -14,7 +14,7 @@ Resources:
     Properties:
       CodeUri: app/
       Handler: run.sh
-      Runtime: python3.9
+      Runtime: python3.11
       MemorySize: 256
       Environment:
         Variables:
@@ -22,7 +22,7 @@ Resources:
           AWS_LWA_INVOKE_MODE: response_stream
           PORT: 8000
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:18
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: RESPONSE_STREAM

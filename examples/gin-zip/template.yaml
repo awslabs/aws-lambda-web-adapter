@@ -15,14 +15,14 @@ Resources:
     Properties:
       CodeUri: ./app
       Handler: bootstrap
-      Runtime: provided.al2
+      Runtime: provided.al2023
       MemorySize: 256
       Environment:
         Variables:
           PORT: 8000
           GIN_MODE: release
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:18
       Events:
         APIEvent:
           Type: HttpApi
