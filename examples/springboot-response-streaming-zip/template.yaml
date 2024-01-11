@@ -16,7 +16,7 @@ Resources:
       MemorySize: 512
       Handler: run.sh
       CodeUri: app/
-      Runtime: java11
+      Runtime: java17
       AutoPublishAlias: live
       SnapStart:
         ApplyOn: PublishedVersions
@@ -28,7 +28,7 @@ Resources:
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           AWS_LWA_INVOKE_MODE: response_stream
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:18
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: RESPONSE_STREAM

@@ -16,7 +16,7 @@ Resources:
       CodeUri: app/
       MemorySize: 256
       Handler: run.sh
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
       Architectures:
         - x86_64
       Environment:
@@ -26,7 +26,7 @@ Resources:
           RUST_LOG: info
           PORT: 8000
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:17
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:18
       Events:
         HttpEvent:
           Type: HttpApi
