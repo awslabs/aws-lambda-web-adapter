@@ -134,6 +134,9 @@ jobs:
   package-beta:
     needs: [ build ]
     runs-on: ubuntu-20.04
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
