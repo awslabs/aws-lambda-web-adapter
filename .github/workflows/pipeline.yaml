@@ -723,7 +723,7 @@ jobs:
 
   load-gamma-matrix2:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test, package-gamma ]
+    needs: [ e2e-test-zip, e2e-test-oci, package-gamma ]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
