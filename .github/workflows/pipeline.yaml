@@ -238,6 +238,10 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: Add cargo pkg version to env vars
+        run: |
+          echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
+
       - uses: actions/download-artifact@v3
         with:
           name: packaged-beta-x86_64.yaml
@@ -764,6 +768,10 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: Add cargo pkg version to env vars
+        run: |
+          echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
+
       - uses: actions/download-artifact@v3
         with:
           name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
@@ -772,6 +780,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-gamma-x86-${{ matrix.region }} \
             --template packaged-gamma-x86_64-${{ matrix.region }}.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -788,6 +797,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-gamma-arm64-${{ matrix.region }} \
             --template packaged-gamma-arm64-${{ matrix.region }}.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -831,6 +841,10 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: Add cargo pkg version to env vars
+        run: |
+          echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
+
       - uses: actions/download-artifact@v3
         with:
           name: packaged-prod-x86_64-${{ matrix.region }}.yaml
@@ -839,6 +853,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-prod-x86-${{ matrix.region }} \
             --template packaged-prod-x86_64-${{ matrix.region }}.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -855,6 +870,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-prod-arm64-${{ matrix.region }} \
             --template packaged-prod-arm64-${{ matrix.region }}.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -898,6 +914,10 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: Add cargo pkg version to env vars
+        run: |
+          echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
+
       - uses: actions/download-artifact@v3
         with:
           name: packaged-china-gamma-x86_64-${{ matrix.region }}.yaml
@@ -906,6 +926,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-gamma-x86-${{ matrix.region }} \
             --template packaged-china-gamma-x86_64-${{ matrix.region }}.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -922,6 +943,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-gamma-arm64-${{ matrix.region }} \
             --template packaged-china-gamma-arm64-${{ matrix.region }}.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -966,6 +988,10 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: Add cargo pkg version to env vars
+        run: |
+          echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
+
       - uses: actions/download-artifact@v3
         with:
           name: packaged-china-prod-x86_64-${{ matrix.region }}.yaml
@@ -974,6 +1000,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-prod-x86-${{ matrix.region }} \
             --template packaged-china-prod-x86_64-${{ matrix.region }}.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -990,6 +1017,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-prod-arm64-${{ matrix.region }} \
             --template packaged-china-prod-arm64-${{ matrix.region }}.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -1015,6 +1043,10 @@ jobs:
           role-session-name: prod-deployment
           role-duration-seconds: 3600
           role-skip-session-tagging: true
+
+      - name: Add cargo pkg version to env vars
+        run: |
+          echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
 
       - name: login ECR Public Registry
         run: |
