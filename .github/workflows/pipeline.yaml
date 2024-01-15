@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "docs"
+      - "examples"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "docs"
+      - "examples"
   release:
     types:
       - released
@@ -31,20 +37,38 @@ env:
   PROD_IMAGE_REPOSITORY: 373534280245.dkr.ecr.us-east-1.amazonaws.com/aws-sam-cli-managed-prod-ecr-pipeline-resources-imagerepository-fhpoty0tapro
   PROD_ECR_REGION: us-east-1
 
+  RUST_BACKTRACE: full
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+  CARGO_INCREMENTAL: 0
+
 jobs:
   test:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@master
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: clippy, rustfmt
+          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+
+      - uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.11.0
+
+      - name: Configure cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
       - uses: taiki-e/install-action@nextest
+
       - name: linting
         run: |
-          cargo fmt -- --check
+          cargo fmt --all -- --check
           cargo clippy -- -Dwarnings
+
       - name: run unit and integration tests
         run: cargo nextest run --profile ci
 
@@ -54,13 +78,31 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
+
       - uses: aws-actions/setup-sam@v2
 
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+
+      - uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.11.0
+
+      - name: Configure cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
+      - name: Add cargo pkg version to env vars
+        run: |
+          echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
+
       - name: Build x86_64 Layer
-        run: sam build --template ${SAM_TEMPLATE_X86_64} -b build-x86_64
+        run: sam build --template ${SAM_TEMPLATE_X86_64} --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} -b build-x86_64
 
       - name: Tar files
         run: tar -cvf build-x86_64.tar build-x86_64
@@ -71,7 +113,7 @@ jobs:
           path: build-x86_64.tar
 
       - name: Build arm64 Layer
-        run: sam build --template ${SAM_TEMPLATE_ARM64} -b build-arm64
+        run: sam build --template ${SAM_TEMPLATE_ARM64} --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} -b build-arm64
 
       - name: Tar files
         run: tar -cvf build-arm64.tar build-arm64
@@ -149,13 +191,13 @@ jobs:
 
       - name: Create and push the x86_64 docker image to beta ecr repo
         run: |
-          tar -c -C build-x86_64/LambdaAdapterLayerX86/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
+          tar -c -C build-x86_64/LambdaAdapterLayerX86/extensions . | docker import --platform linux/amd64 - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
           aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
           docker push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64
 
       - name: Create and push the arm64 docker image to beta ecr repo
         run: |
-          tar -c -C build-arm64/LambdaAdapterLayerArm64/extensions . | docker import - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
+          tar -c -C build-arm64/LambdaAdapterLayerArm64/extensions . | docker import --platform linux/arm64 - 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
           aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com
           docker push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
 
@@ -163,8 +205,6 @@ jobs:
         run: |
           docker manifest create 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest \
               477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-x86_64 \
-              477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
-          docker manifest annotate --arch arm64 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest \
               477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest-aarch64
           docker manifest push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest
 
@@ -198,6 +238,7 @@ jobs:
         run: |
           sam deploy --stack-name ${BETA_STACK_NAME}-x86 \
             --template packaged-beta-x86_64.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${BETA_REGION} \
             --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
@@ -213,6 +254,7 @@ jobs:
         run: |
           sam deploy --stack-name ${BETA_STACK_NAME}-arm64 \
             --template packaged-beta-arm64.yaml \
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${BETA_REGION} \
             --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
@@ -220,21 +262,102 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-  e2e-test:
+  e2e-test-zip:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [deploy-beta]
     runs-on: ubuntu-20.04
     steps:
-      - uses: dtolnay/rust-toolchain@master
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: clippy, rustfmt
+          targets: x86_64-unknown-linux-musl
+
+      - uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.11.0
+
+      - name: Configure cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
       - uses: taiki-e/install-action@nextest
 
       - uses: actions/checkout@v3
+
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
+
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Assume the beta pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: beta-deployment
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: deploy the zip x86 integration test stacks for the beta environment
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
+        run: |
+          sam build
+          sam deploy --stack-name ${BETA_STACK_NAME}-zip-x86 \
+            --capabilities CAPABILITY_IAM \
+            --region ${BETA_REGION} \
+            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
+            --image-repository ${BETA_IMAGE_REPOSITORY} \
+            --no-fail-on-empty-changeset \
+            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
+
+      - uses: dkershner6/aws-ssm-getparameters-action@v1
+        with:
+          parameterPairs:   "/lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint      = HTTPBIN_ZIP_HTTP_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint           = HTTPBIN_ZIP_ALB_ENDPOINT,
+                             /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT"
+
+      - name: run e2e tests
+        run: |
+          API_ENDPOINT=${HTTPBIN_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=${HTTPBIN_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+
+      - name: remove the zip x86 integration test stacks
+        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
+        run: |
+          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
+
+  e2e-test-oci:
+    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [deploy-beta]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: x86_64-unknown-linux-musl
+
+      - uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.11.0
+
+      - name: Configure cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
+      - uses: taiki-e/install-action@nextest
+
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
@@ -261,28 +384,12 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - name: deploy the zip x86 integration test stacks for the beta environment
-        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
-        run: |
-          sam build
-          sam deploy --stack-name ${BETA_STACK_NAME}-zip-x86 \
-            --capabilities CAPABILITY_IAM \
-            --region ${BETA_REGION} \
-            --s3-bucket ${BETA_ARTIFACTS_BUCKET} \
-            --image-repository ${BETA_IMAGE_REPOSITORY} \
-            --no-fail-on-empty-changeset \
-            --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
-
       - uses: dkershner6/aws-ssm-getparameters-action@v1
         with:
           parameterPairs:   "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint      = HTTPBIN_OCI_REST_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint      = HTTPBIN_OCI_HTTP_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/oci/alb-endpoint           = HTTPBIN_OCI_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/oci/function-url           = HTTPBIN_OCI_FURL_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint      = HTTPBIN_ZIP_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint           = HTTPBIN_ZIP_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT"
+                             /lambda-web-adapter/e2e/httpbin/oci/function-url           = HTTPBIN_OCI_FURL_ENDPOINT"
 
       - name: run e2e tests
         run: |
@@ -290,25 +397,16 @@ jobs:
           API_ENDPOINT=${HTTPBIN_OCI_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
           API_ENDPOINT=${HTTPBIN_OCI_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
           API_ENDPOINT=${HTTPBIN_OCI_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
       - name: remove the oci x86 integration test stacks
         working-directory: ./tests/e2e_tests/fixtures/go-httpbin
         run: |
           sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86
 
-      - name: remove the zip x86 integration test stacks
-        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
-        run: |
-          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
-
 
   load-gamma-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test ]
+    needs: [ e2e-test-zip, e2e-test-oci]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -914,10 +1012,35 @@ jobs:
         run: |
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
 
-      - name: build OCI images for x86_64 and aarch64
-        run: |
-          make build
+      - uses: actions/download-artifact@v3
+        with:
+          name: aws-sam-build-x86_64
 
-      - name: publish OCI images to ECR public repository
+      - name: extract build_x86_64
         run: |
-          make publish
+          tar -xvf build-x86_64.tar
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: aws-sam-build-arm64
+
+      - name: extract build_arm64
+        run: |
+          tar -xvf build-arm64.tar
+
+      - name: Create and push the x86_64 docker image to prod ecr public repo
+        run: |
+          tar -c -C build-x86_64/LambdaAdapterLayerX86/extensions . | docker import --platform linux/amd64 - public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64
+          docker push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64
+
+      - name: Create and push the arm64 docker image to prod ecr public repo
+        run: |
+          tar -c -C build-arm64/LambdaAdapterLayerArm64/extensions . | docker import --platform linux/arm64 - public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
+          docker push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
+
+      - name: create and push the multi-arch manifest to prod ecr public repo
+        run: |
+          docker manifest create public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION) \
+              public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64 \
+              public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
+          docker manifest push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)
