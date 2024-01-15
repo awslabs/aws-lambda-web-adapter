@@ -142,7 +142,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -226,7 +226,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -300,7 +300,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -369,7 +369,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -470,7 +470,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the gamma pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -538,7 +538,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the prod pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -606,7 +606,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the china pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
@@ -675,7 +675,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the china pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
@@ -754,7 +754,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the gamma pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -827,7 +827,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the prod pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
@@ -900,7 +900,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the china pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
@@ -974,7 +974,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the china pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
@@ -1030,7 +1030,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Assume the prod pipeline user role
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
