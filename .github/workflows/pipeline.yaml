@@ -145,7 +145,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
