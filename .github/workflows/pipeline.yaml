@@ -18,13 +18,14 @@ on:
       - released
 
 permissions:
-  id-token: write   # This is required for requesting the JWT
-  contents: read    # This is required for actions/checkout
+  id-token: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
   SAM_TEMPLATE_X86_64: template-x86_64.yaml
   SAM_TEMPLATE_ARM64: template-arm64.yaml
+  GITHUB_RUNNER_ROLE: arn:aws:iam::238946506962:role/GitHubRunnerRole
   BETA_STACK_NAME: lambda-adapter-beta
   BETA_PIPELINE_EXECUTION_ROLE: arn:aws:iam::477159140107:role/aws-sam-cli-managed-beta-pip-PipelineExecutionRole-13NXRWTRTHDCJ
   BETA_CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::477159140107:role/aws-sam-cli-managed-beta-CloudFormationExecutionR-132I77VBFOWQ2
@@ -144,8 +145,14 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
