@@ -132,7 +132,6 @@ jobs:
           path: build-arm64.tar
 
   package-beta:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
     runs-on: ubuntu-20.04
     steps:
@@ -217,7 +216,6 @@ jobs:
           docker manifest push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest
 
   deploy-beta:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [package-beta]
     runs-on: ubuntu-20.04
     steps:
@@ -275,7 +273,6 @@ jobs:
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
   e2e-test-zip:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [deploy-beta]
     runs-on: ubuntu-20.04
     steps:
@@ -345,7 +342,6 @@ jobs:
           sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
 
   e2e-test-oci:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [deploy-beta]
     runs-on: ubuntu-20.04
     steps:
