@@ -97,6 +97,14 @@ jobs:
       - name: Configure cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
+      - name: Install Cargo Lambda
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: cargo-lambda/cargo-lambda
+          tag: v1.0.1
+          platform: linux
+          arch: x86_64
+
       - name: Add cargo pkg version to env vars
         run: |
           echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
