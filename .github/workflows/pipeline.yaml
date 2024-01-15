@@ -23,10 +23,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-#  PIPELINE_USER_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#  PIPELINE_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#  PIPELINE_CN_USER_ACCESS_KEY_ID: ${{ secrets.AWS_CN_ACCESS_KEY_ID }}
-#  PIPELINE_CN_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_CN_SECRET_ACCESS_KEY }}
   SAM_TEMPLATE_X86_64: template-x86_64.yaml
   SAM_TEMPLATE_ARM64: template-arm64.yaml
   BETA_STACK_NAME: lambda-adapter-beta
@@ -148,13 +144,8 @@ jobs:
       - name: Assume the beta pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: beta-packaging
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -232,13 +223,8 @@ jobs:
       - name: Assume the beta pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: beta-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: Add cargo pkg version to env vars
         run: |
@@ -306,13 +292,8 @@ jobs:
       - name: Assume the beta pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: beta-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: deploy the zip x86 integration test stacks for the beta environment
         working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
@@ -375,13 +356,8 @@ jobs:
       - name: Assume the beta pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: beta-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: deploy the oci x86 integration test stacks for the beta environment
         working-directory: ./tests/e2e_tests/fixtures/go-httpbin
@@ -476,13 +452,8 @@ jobs:
       - name: Assume the gamma pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: gamma-packaging
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -544,13 +515,8 @@ jobs:
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: prod-packaging
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -612,14 +578,9 @@ jobs:
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
           audience: sts.amazonaws.com.cn
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: china-gamma-packaging
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -682,14 +643,9 @@ jobs:
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
           audience: sts.amazonaws.com.cn
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: china-prod-packaging
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -762,13 +718,8 @@ jobs:
       - name: Assume the gamma pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: gamma-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: Add cargo pkg version to env vars
         run: |
@@ -835,13 +786,8 @@ jobs:
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: prod-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: Add cargo pkg version to env vars
         run: |
@@ -908,14 +854,9 @@ jobs:
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
           audience: sts.amazonaws.com.cn
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: china-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: Add cargo pkg version to env vars
         run: |
@@ -983,14 +924,9 @@ jobs:
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_CN_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_CN_USER_SECRET_ACCESS_KEY }}
           audience: sts.amazonaws.com.cn
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
-          role-session-name: china-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: Add cargo pkg version to env vars
         run: |
@@ -1040,13 +976,8 @@ jobs:
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-#          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.PROD_ECR_REGION }}
           role-to-assume: ${{ env.PROD_ECR_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: prod-deployment
-          role-duration-seconds: 3600
-          role-skip-session-tagging: true
 
       - name: Add cargo pkg version to env vars
         run: |
