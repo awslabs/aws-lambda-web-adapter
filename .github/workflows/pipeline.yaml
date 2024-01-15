@@ -417,7 +417,7 @@ jobs:
 
   load-prod-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test ]
+    needs: [ e2e-test-zip, e2e-test-oci ]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -428,7 +428,7 @@ jobs:
   
   load-china-prod-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test ]
+    needs: [ e2e-test-zip, e2e-test-oci ]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -439,7 +439,7 @@ jobs:
   
   load-china-gamma-matrix:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test ]
+    needs: [ e2e-test-zip, e2e-test-oci ]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
