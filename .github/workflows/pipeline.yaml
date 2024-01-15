@@ -142,7 +142,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Assume the beta pipeline user role
-        uses: aws-actions/configure-aws-credentials@@v4
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
