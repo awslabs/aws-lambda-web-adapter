@@ -45,11 +45,13 @@ build-mac:
 
 build-LambdaAdapterLayerX86:
 	cp layer/* $(ARTIFACTS_DIR)/
-	DOCKER_BUILDKIT=1 docker build --platform linux/amd64 --build-arg TARGET_PLATFORM=linux/amd64 --build-arg ARCH=x86_64 -o $(ARTIFACTS_DIR)/extensions .
+	LAMBDA_RUNTIME_USER_AGENT=aws-lambda-rust/aws-lambda-adapter/$(CARGO_PKG_VERSION) \
+		cargo lambda build --release --extension --target x86_64-unknown-linux-musl --lambda-dir $(ARTIFACTS_DIR)
 
 build-LambdaAdapterLayerArm64:
 	cp layer/* $(ARTIFACTS_DIR)/
-	DOCKER_BUILDKIT=1 docker build --platform linux/arm64 --build-arg TARGET_PLATFORM=linux/arm64 --build-arg ARCH=aarch64 -o $(ARTIFACTS_DIR)/extensions .
+	LAMBDA_RUNTIME_USER_AGENT=aws-lambda-rust/aws-lambda-adapter/$(CARGO_PKG_VERSION) \
+		cargo lambda build --release --extension --target aarch64-unknown-linux-musl --lambda-dir $(ARTIFACTS_DIR)
 
 fmt:
 	cargo fmt --all

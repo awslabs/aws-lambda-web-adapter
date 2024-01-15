@@ -3,12 +3,19 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   AWS Lambda Adapter (x86_64) - Run web applications on AWS Lambda
 
+Parameters:
+  CargoPkgVersion:
+    Type: String
+    Default: latest
+
 Resources:
   LambdaAdapterLayerX86:
     Type: AWS::Serverless::LayerVersion
     Properties:
       ContentUri: .
-      Description: 'Layer for AWS Lambda Adapter x86_64'
+      CompatibleArchitectures:
+        - x86_64
+      Description: !Sub 'Layer for AWS Lambda Adapter x86_64: ${CargoPkgVersion}'
       LicenseInfo: 'Available under the Apache-2.0 license.'
       RetentionPolicy: Retain
     Metadata:
@@ -28,7 +35,17 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: /lambda-web-adapter/layer/x86_64/latest
-      Description: 'Layer ARN for the latest Lambda Web Adapter X86_64 Layer'
+      Description: 'Layer ARN for the latest Lambda Web Adapter X86_64 Layer: latest'
+      Type: String
+      Value: !Ref LambdaAdapterLayerX86
+
+  LambdaAdapterLayerArm64VersionParameter:
+    Type: AWS::SSM::Parameter
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub '/lambda-web-adapter/layer/x86_64/${CargoPkgVersion}'
+      Description: !Sub 'Layer ARN for the latest Lambda Web Adapter X86_64 Layer: ${CargoPkgVersion}'
       Type: String
       Value: !Ref LambdaAdapterLayerX86
 
