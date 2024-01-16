@@ -26,6 +26,7 @@ env:
   SAM_TEMPLATE_X86_64: template-x86_64.yaml
   SAM_TEMPLATE_ARM64: template-arm64.yaml
   GITHUB_RUNNER_ROLE: arn:aws:iam::238946506962:role/GitHubRunnerRole
+  GITHUB_RUNNER_CHINA_ROLE: arn:aws-cn:iam::075528433517:role/GitHubRunnerRole
   BETA_STACK_NAME: lambda-adapter-beta
   BETA_PIPELINE_EXECUTION_ROLE: arn:aws:iam::477159140107:role/aws-sam-cli-managed-beta-pip-PipelineExecutionRole-13NXRWTRTHDCJ
   BETA_CLOUDFORMATION_EXECUTION_ROLE: arn:aws:iam::477159140107:role/aws-sam-cli-managed-beta-CloudFormationExecutionR-132I77VBFOWQ2
@@ -157,9 +158,9 @@ jobs:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
-          role-skip-session-tagging: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -234,9 +235,19 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
       - name: Assume the beta pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
 
@@ -303,9 +314,19 @@ jobs:
 
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
       - name: Assume the beta pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
 
@@ -367,9 +388,19 @@ jobs:
 
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
       - name: Assume the beta pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
 
@@ -463,9 +494,19 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
       - name: Assume the gamma pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
 
@@ -526,9 +567,19 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
 
@@ -589,9 +640,19 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
+
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           audience: sts.amazonaws.com.cn
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
@@ -654,9 +715,19 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
+
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           audience: sts.amazonaws.com.cn
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
@@ -729,9 +800,19 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
       - name: Assume the gamma pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
 
@@ -797,9 +878,20 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
+
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
 
@@ -865,9 +957,19 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
+
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           audience: sts.amazonaws.com.cn
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
@@ -935,9 +1037,19 @@ jobs:
           python-version: "3.8"
       - uses: aws-actions/setup-sam@v2
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
+
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           audience: sts.amazonaws.com.cn
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ matrix.pipeline_execution_role }}
@@ -987,9 +1099,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Assume the github runner role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.BETA_REGION }}
+          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          role-skip-session-tagging: true
           aws-region: ${{ env.PROD_ECR_REGION }}
           role-to-assume: ${{ env.PROD_ECR_PIPELINE_EXECUTION_ROLE }}
 
