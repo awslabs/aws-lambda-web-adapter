@@ -159,6 +159,7 @@ jobs:
           aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.BETA_REGION }}
           role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
+          role-skip-session-tagging: true
 
       - uses: actions/download-artifact@v3
         with:
