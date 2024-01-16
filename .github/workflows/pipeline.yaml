@@ -99,6 +99,8 @@ jobs:
       - name: Configure cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
+      - uses: taiki-e/install-action@nextest
+
       - name: Install Cargo Lambda
         uses: jaxxstorm/action-install-gh-release@v1.9.0
         with:
