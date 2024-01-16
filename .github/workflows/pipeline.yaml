@@ -149,7 +149,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.BETA_REGION }}
-          role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
+          role-to-assume: ${{ env.BETA_PIPELINE_EXECUTION_ROLE }}
 
       - name: Assume the beta pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
