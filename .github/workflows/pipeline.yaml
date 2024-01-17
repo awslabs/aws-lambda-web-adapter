@@ -648,6 +648,7 @@ jobs:
         with:
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
+          audience: sts.amazonaws.com.cn
 
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
@@ -723,6 +724,7 @@ jobs:
         with:
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
+          audience: sts.amazonaws.com.cn
 
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
@@ -965,6 +967,7 @@ jobs:
         with:
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
+          audience: sts.amazonaws.com.cn
 
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
@@ -1045,6 +1048,7 @@ jobs:
         with:
           aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
+          audience: sts.amazonaws.com.cn
 
       - name: Assume the china pipeline user role
         uses: aws-actions/configure-aws-credentials@v4
