@@ -139,9 +139,6 @@ jobs:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
     runs-on: ubuntu-20.04
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -503,7 +500,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
 
       - name: Assume the gamma pipeline user role
@@ -576,7 +573,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
 
       - name: Assume the prod pipeline user role
@@ -649,7 +646,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
 
       - name: Assume the china pipeline user role
@@ -724,7 +721,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
 
       - name: Assume the china pipeline user role
@@ -809,7 +806,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
 
       - name: Assume the gamma pipeline user role
@@ -887,7 +884,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
 
 
@@ -966,7 +963,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
 
       - name: Assume the china pipeline user role
@@ -1046,7 +1043,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_CHINA_ROLE }}
 
       - name: Assume the china pipeline user role
@@ -1108,7 +1105,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.BETA_REGION }}
+          aws-region: ${{ env.PROD_ECR_REGION }}
           role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
 
       - name: Assume the prod pipeline user role
