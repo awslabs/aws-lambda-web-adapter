@@ -833,7 +833,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-gamma-x86-${{ matrix.region }} \
             --template packaged-gamma-x86_64-${{ matrix.region }}.yaml \
-            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -850,7 +850,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-gamma-arm64-${{ matrix.region }} \
             --template packaged-gamma-arm64-${{ matrix.region }}.yaml \
-            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -912,7 +912,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-prod-x86-${{ matrix.region }} \
             --template packaged-prod-x86_64-${{ matrix.region }}.yaml \
-            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -929,7 +929,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-prod-arm64-${{ matrix.region }} \
             --template packaged-prod-arm64-${{ matrix.region }}.yaml \
-            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -992,7 +992,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-gamma-x86-${{ matrix.region }} \
             --template packaged-china-gamma-x86_64-${{ matrix.region }}.yaml \
-            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -1009,7 +1009,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-gamma-arm64-${{ matrix.region }} \
             --template packaged-china-gamma-arm64-${{ matrix.region }}.yaml \
-            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -1073,7 +1073,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-prod-x86-${{ matrix.region }} \
             --template packaged-china-prod-x86_64-${{ matrix.region }}.yaml \
-            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
@@ -1090,7 +1090,7 @@ jobs:
         run: |
           sam deploy --stack-name lambda-adapter-prod-arm64-${{ matrix.region }} \
             --template packaged-china-prod-arm64-${{ matrix.region }}.yaml \
-            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \          
+            --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} \
             --capabilities CAPABILITY_IAM \
             --region ${{ matrix.region }} \
             --s3-bucket ${{ matrix.artifacts_bucket }} \
