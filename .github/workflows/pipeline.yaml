@@ -99,6 +99,8 @@ jobs:
       - name: Configure cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
+      - uses: taiki-e/install-action@nextest
+
       - name: Install Cargo Lambda
         uses: jaxxstorm/action-install-gh-release@v1.9.0
         with:
@@ -571,7 +573,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.PROD_ECR_REGION }}
+          aws-region: ${{ matrix.region }}
           role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
 
       - name: Assume the prod pipeline user role
@@ -1103,7 +1105,7 @@ jobs:
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ matrix.region }}
+          aws-region: ${{ env.PROD_ECR_REGION }}
           role-to-assume: ${{ env.GITHUB_RUNNER_ROLE }}
 
       - name: Assume the prod pipeline user role
