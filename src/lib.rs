@@ -1,6 +1,17 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+use http::{
+    header::{HeaderName, HeaderValue},
+    Method, StatusCode,
+};
+use hyper::body::Incoming;
+use hyper_util::client::legacy::connect::HttpConnector;
+use hyper_util::client::legacy::Client;
+use lambda_http::request::RequestContext;
+use lambda_http::Body;
+pub use lambda_http::Error;
+use lambda_http::{Request, RequestExt, Response};
 use std::fmt::Debug;
 use std::{
     env,
@@ -12,18 +23,6 @@ use std::{
     },
     time::Duration,
 };
-
-use http::{
-    header::{HeaderName, HeaderValue},
-    Method, StatusCode,
-};
-use hyper::{
-    body::HttpBody,
-    client::{connect::Connect, Client, HttpConnector},
-    Body,
-};
-pub use lambda_http::Error;
-use lambda_http::{Request, RequestExt, Response};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
@@ -73,6 +72,7 @@ pub struct AdapterOptions {
     pub readiness_check_protocol: Protocol,
     pub readiness_check_min_unhealthy_status: u16,
     pub base_path: Option<String>,
+    pub pass_through_path: String,
     pub async_init: bool,
     pub compression: bool,
     pub invoke_mode: LambdaInvokeMode,
@@ -100,6 +100,7 @@ impl Default for AdapterOptions {
                 .as_str()
                 .into(),
             base_path: env::var("AWS_LWA_REMOVE_BASE_PATH").map_or_else(|_| env::var("REMOVE_BASE_PATH").ok(), Some),
+            pass_through_path: env::var("AWS_LWA_PASS_THROUGH_PATH").unwrap_or_else(|_| "/events".to_string()),
             async_init: env::var("AWS_LWA_ASYNC_INIT")
                 .unwrap_or(env::var("ASYNC_INIT").unwrap_or_else(|_| "false".to_string()))
                 .parse()
@@ -117,8 +118,8 @@ impl Default for AdapterOptions {
 }
 
 #[derive(Clone)]
-pub struct Adapter<C> {
-    client: Arc<Client<C>>,
+pub struct Adapter<C, B> {
+    client: Arc<Client<C, B>>,
     healthcheck_url: Url,
     healthcheck_protocol: Protocol,
     healthcheck_min_unhealthy_status: u16,
@@ -126,16 +127,17 @@ pub struct Adapter<C> {
     ready_at_init: Arc<AtomicBool>,
     domain: Url,
     base_path: Option<String>,
+    path_through_path: String,
     compression: bool,
     invoke_mode: LambdaInvokeMode,
 }
 
-impl Adapter<HttpConnector> {
+impl Adapter<HttpConnector, Body> {
     /// Create a new HTTP Adapter instance.
     /// This function initializes a new HTTP client
     /// to talk with the web server.
-    pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector> {
-        let client = Client::builder()
+    pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector, Body> {
+        let client = Client::builder(hyper_util::rt::TokioExecutor::new())
             .pool_idle_timeout(Duration::from_secs(4))
             .build(HttpConnector::new());
 
@@ -159,6 +161,7 @@ impl Adapter<HttpConnector> {
             healthcheck_min_unhealthy_status: options.readiness_check_min_unhealthy_status,
             domain,
             base_path: options.base_path.clone(),
+            path_through_path: options.pass_through_path.clone(),
             async_init: options.async_init,
             ready_at_init: Arc::new(AtomicBool::new(false)),
             compression: options.compression,
@@ -167,10 +170,7 @@ impl Adapter<HttpConnector> {
     }
 }
 
-impl<C> Adapter<C>
-where
-    C: Connect + Clone + Send + Sync + 'static,
-{
+impl Adapter<HttpConnector, Body> {
     /// Register a Lambda Extension to ensure
     /// that the adapter is loaded before any Lambda function
     /// associated with it.
@@ -179,7 +179,7 @@ where
         tokio::task::spawn(async move {
             let aws_lambda_runtime_api: String =
                 env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
-            let client = hyper::Client::new();
+            let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new());
             let register_req = hyper::Request::builder()
                 .method(Method::POST)
                 .uri(format!("http://{aws_lambda_runtime_api}/2020-01-01/extension/register"))
@@ -199,7 +199,7 @@ where
                     "Lambda-Extension-Identifier",
                     register_res.headers().get("Lambda-Extension-Identifier").unwrap(),
                 )
-                .body(Body::empty())
+                .body(Body::Empty)
                 .unwrap();
             client.request(next_req).await.unwrap();
         });
@@ -276,7 +276,7 @@ where
         }
     }
 
-    async fn fetch_response(&self, event: Request) -> Result<Response<Body>, Error> {
+    async fn fetch_response(&self, event: Request) -> Result<Response<Incoming>, Error> {
         if self.async_init && !self.ready_at_init.load(Ordering::SeqCst) {
             self.is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol)
                 .await;
@@ -292,6 +292,10 @@ where
         // strip away Base Path if environment variable REMOVE_BASE_PATH is set.
         if let Some(base_path) = self.base_path.as_deref() {
             path = path.trim_start_matches(base_path);
+        }
+
+        if let RequestContext::PassThrough = request_context {
+            path = self.path_through_path.as_str();
         }
 
         let mut req_headers = parts.headers;
@@ -318,11 +322,9 @@ where
             headers.extend(req_headers);
         }
 
-        let request = builder.body(hyper::Body::from(body.to_vec()))?;
+        let request = builder.body(Body::from(body.to_vec()))?;
 
         let app_response = self.client.request(request).await?;
-        tracing::debug!(status = %app_response.status(), body_size = app_response.body().size_hint().lower(),
-            app_headers = ?app_response.headers().clone(), "responding to lambda event");
 
         Ok(app_response)
     }
@@ -330,11 +332,8 @@ where
 
 /// Implement a `Tower.Service` that sends the requests
 /// to the web server.
-impl<C> Service<Request> for Adapter<C>
-where
-    C: Connect + Clone + Send + Sync + 'static,
-{
-    type Response = Response<Body>;
+impl Service<Request> for Adapter<HttpConnector, Body> {
+    type Response = Response<Incoming>;
     type Error = Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
@@ -411,7 +410,7 @@ mod tests {
 
         //adapter.check_init_health().await;
 
-        assert!(!adapter.check_web_readiness(&url, &protocol).await.is_ok());
+        assert!(adapter.check_web_readiness(&url, &protocol).await.is_err());
 
         // Assert app server's healthcheck endpoint got called
         healthcheck.assert();
@@ -444,7 +443,7 @@ mod tests {
 
         //adapter.check_init_health().await;
 
-        assert!(!adapter.check_web_readiness(&url, &protocol).await.is_ok());
+        assert!(adapter.check_web_readiness(&url, &protocol).await.is_err());
 
         // Assert app server's healthcheck endpoint got called
         healthcheck.assert();

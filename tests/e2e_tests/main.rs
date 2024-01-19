@@ -1,9 +1,15 @@
+mod util;
+
+use aws_credential_types::Credentials;
 use aws_sigv4::http_request::{sign, SignableBody, SignableRequest, SigningParams, SigningSettings};
+use aws_sigv4::sign::v4;
 use flate2::read::GzDecoder;
-use http::Uri;
-use hyper::client::HttpConnector;
-use hyper::{Body, Client, Method, Request};
+use http::{Method, Request, Uri};
+use http_body_util::BodyExt;
 use hyper_rustls::HttpsConnector;
+use hyper_util::client::legacy::connect::HttpConnector;
+use hyper_util::client::legacy::Client;
+use lambda_http::Body;
 use std::env;
 use std::io;
 use std::io::prelude::*;
@@ -48,6 +54,7 @@ fn decode_reader(bytes: &[u8]) -> io::Result<String> {
 fn get_https_connector() -> HttpsConnector<HttpConnector> {
     hyper_rustls::HttpsConnectorBuilder::new()
         .with_native_roots()
+        .unwrap()
         .https_or_http()
         .enable_http1()
         .build()
@@ -60,13 +67,12 @@ fn signing_request(conf: TestConfig, req: &mut Request<&str>) {
         let session_token = env::var("AWS_SESSION_TOKEN").unwrap();
         let region = env::var("AWS_DEFAULT_REGION").unwrap();
         // Set up information and settings for the signing
+        let identity = Credentials::new(access_key_id, secret_key, Some(session_token), None, "temp").into();
         let signing_settings = SigningSettings::default();
-        let signing_params = SigningParams::builder()
-            .access_key(access_key_id.as_str())
-            .secret_key(secret_key.as_str())
-            .security_token(session_token.as_str())
+        let signing_params = v4::SigningParams::builder()
+            .identity(&identity)
             .region(region.as_str())
-            .service_name("lambda")
+            .name("lambda")
             .time(SystemTime::now())
             .settings(signing_settings)
             .build()
@@ -74,15 +80,19 @@ fn signing_request(conf: TestConfig, req: &mut Request<&str>) {
 
         // Convert the HTTP request into a signable request
         let signable_request = SignableRequest::new(
-            req.method(),
-            req.uri(),
-            req.headers(),
+            req.method().as_str(),
+            req.uri().to_string(),
+            req.headers().iter().map(|(k, v)| (k.as_str(), v.to_str().unwrap())),
             SignableBody::Bytes(req.body().as_bytes()),
-        );
+        )
+        .unwrap();
 
         // Sign and then apply the signature to the request
-        let (signing_instructions, _signature) = sign(signable_request, &signing_params).unwrap().into_parts();
-        signing_instructions.apply_to_request(req);
+        let (signing_instructions, _signature) = sign(signable_request, &SigningParams::from(signing_params))
+            .unwrap()
+            .into_parts();
+        // aws-sigv4 still on http 0.4. This is a workaround until it is updated to http 1.0
+        util::apply_to_request_http0x(signing_instructions, req);
     }
 }
 
@@ -90,7 +100,7 @@ fn signing_request(conf: TestConfig, req: &mut Request<&str>) {
 #[tokio::test]
 async fn test_http_basic_request() {
     let conf = TestConfig::default();
-    let client = Client::builder().build::<_, Body>(get_https_connector());
+    let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build::<_, Body>(get_https_connector());
     let uri = conf.endpoint.clone();
     let mut req = http::Request::builder().method(Method::GET).uri(uri).body("").unwrap();
     signing_request(conf, &mut req);
@@ -103,7 +113,7 @@ async fn test_http_basic_request() {
 #[tokio::test]
 async fn test_http_headers() {
     let conf = TestConfig::default();
-    let client = Client::builder().build::<_, Body>(get_https_connector());
+    let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build::<_, Body>(get_https_connector());
     let uri = conf.endpoint.to_string() + "get";
     let mut req = Request::builder()
         .method(Method::GET)
@@ -114,7 +124,7 @@ async fn test_http_headers() {
     signing_request(conf, &mut req);
     let resp = client.request(req.map(Body::from)).await.unwrap();
     let (parts, body) = resp.into_parts();
-    let body_bytes = hyper::body::to_bytes(body).await.unwrap();
+    let body_bytes = body.collect().await.unwrap().to_bytes();
     let body = serde_json::from_slice::<serde_json::Value>(&body_bytes).unwrap();
 
     assert_eq!(200, parts.status.as_u16());
@@ -126,7 +136,7 @@ async fn test_http_headers() {
 #[tokio::test]
 async fn test_http_query_params() {
     let conf = TestConfig::default();
-    let client = Client::builder().build::<_, Body>(get_https_connector());
+    let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build::<_, Body>(get_https_connector());
     let parts = conf.endpoint.clone().into_parts();
     let uri = Uri::builder()
         .scheme(parts.scheme.unwrap())
@@ -138,7 +148,7 @@ async fn test_http_query_params() {
     signing_request(conf, &mut req);
     let resp = client.request(req.map(Body::from)).await.unwrap();
     let (parts, body) = resp.into_parts();
-    let body_bytes = hyper::body::to_bytes(body).await.unwrap();
+    let body_bytes = body.collect().await.unwrap().to_bytes();
     let body = serde_json::from_slice::<serde_json::Value>(&body_bytes).unwrap();
 
     assert_eq!(200, parts.status.as_u16());
@@ -151,7 +161,7 @@ async fn test_http_query_params() {
 #[tokio::test]
 async fn test_http_compress() {
     let conf = TestConfig::default();
-    let client = Client::builder().build::<_, Body>(get_https_connector());
+    let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build::<_, Body>(get_https_connector());
     let parts = conf.endpoint.clone().into_parts();
     let uri = Uri::builder()
         .scheme(parts.scheme.unwrap())
@@ -168,7 +178,7 @@ async fn test_http_compress() {
     signing_request(conf, &mut req);
     let resp = client.request(req.map(Body::from)).await.unwrap();
     let (parts, body) = resp.into_parts();
-    let body_bytes = hyper::body::to_bytes(body).await.unwrap();
+    let body_bytes = body.collect().await.unwrap().to_bytes();
     let body = decode_reader(&body_bytes).unwrap();
 
     assert_eq!(200, parts.status.as_u16());
