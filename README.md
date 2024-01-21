@@ -89,18 +89,18 @@ After passing readiness check, Lambda Web Adapter will start Lambda Runtime and 
 
 The readiness check port/path and traffic port can be configured using environment variables. These environment variables can be defined either within docker file or as Lambda function configuration.
 
-| Environment Variable                                         | Description                                                                         | Default    |
-|--------------------------------------------------------------|-------------------------------------------------------------------------------------|------------|
-| AWS_LWA_PORT / PORT*                                         | traffic port                                                                        | "8080"     |
-| AWS_LWA_READINESS_CHECK_PORT / READINESS_CHECK_PORT*         | readiness check port, default to the traffic port                                   | PORT       |
-| AWS_LWA_READINESS_CHECK_PATH / READINESS_CHECK_PATH*         | readiness check path                                                                | "/"        |
-| AWS_LWA_READINESS_CHECK_PROTOCOL / READINESS_CHECK_PROTOCOL* | readiness check protocol: "http" or "tcp", default is "http"                        | "http"     |
-| AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS                 | The minimum HTTP status code that is considered unhealthy                           | "500"      |
-| AWS_LWA_ASYNC_INIT / ASYNC_INIT*                             | enable asynchronous initialization for long initialization functions                | "false"    |
-| AWS_LWA_REMOVE_BASE_PATH / REMOVE_BASE_PATH*                 | the base path to be removed from request path                                       | None       |
-| AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip compression for response body                                           | "false"    |
-| AWS_LWA_INVOKE_MODE                                          | Lambda function invoke mode: "buffered" or "response_stream", default is "buffered" | "buffered" |
-| AWS_LWA_PASS_THROUGH_PATH                                    | Path to receive events payloads passed through from non-http event triggers         | "/events"  |
+| Environment Variable                                         | Description                                                                          | Default    |
+|--------------------------------------------------------------|--------------------------------------------------------------------------------------|------------|
+| AWS_LWA_PORT / PORT*                                         | traffic port                                                                         | "8080"     |
+| AWS_LWA_READINESS_CHECK_PORT / READINESS_CHECK_PORT*         | readiness check port, default to the traffic port                                    | PORT       |
+| AWS_LWA_READINESS_CHECK_PATH / READINESS_CHECK_PATH*         | readiness check path                                                                 | "/"        |
+| AWS_LWA_READINESS_CHECK_PROTOCOL / READINESS_CHECK_PROTOCOL* | readiness check protocol: "http" or "tcp", default is "http"                         | "http"     |
+| AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS                 | The minimum HTTP status code that is considered unhealthy                            | "500"      |
+| AWS_LWA_ASYNC_INIT / ASYNC_INIT*                             | enable asynchronous initialization for long initialization functions                 | "false"    |
+| AWS_LWA_REMOVE_BASE_PATH / REMOVE_BASE_PATH*                 | the base path to be removed from request path                                        | None       |
+| AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip compression for response body                                            | "false"    |
+| AWS_LWA_INVOKE_MODE                                          | Lambda function invoke mode: "buffered" or "response_stream", default is "buffered"  | "buffered" |
+| AWS_LWA_PASS_THROUGH_PATH                                    | the path for receiving event payloads that are passed through from non-http triggers | "/events"  |
 
 > **Note:**
 > We use "AWS_LWA_" prefix to namespacing all environment variables used by Lambda Web Adapter. The original ones will be supported until we reach version 1.0.
@@ -161,7 +161,7 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 
 ## Non-HTTP Event Triggers
 
-Lambda Web Adapter supports non-http event triggers (such as SQS, EventBridge, and Bedrock Agents, etc.). The adapter will forward the event payload to the web application at the path specified by environment variable `AWS_LWA_PASS_THROUGH_PATH`. The default path is `/events`. The web application can retrieve the event payload from the request body. The http response body must be a valid JSON string and will be passed back as the response payload to the Lambda service.
+The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, SNS, S3, DynamoDB, Kinesis, Kafka, EventBridge, and Bedrock Agents. The adapter forwards the event payload to the web application via a path defined by the `AWS_LWA_PASS_THROUGH_PATH` environment variable. By default, this path is set to `/events`. Upon receiving the event payload from the request body, the web application should processes it and returns the results as a JSON response. Please checkout [SQS Express.js](examples/sqs-expressjs) on how to use it.
 
 ## Examples
 
@@ -191,6 +191,7 @@ Lambda Web Adapter supports non-http event triggers (such as SQS, EventBridge, a
 - [ASP.NET MVC](examples/aspnet-mvc)
 - [ASP.NET MVC in Zip](examples/aspnet-mvc-zip)
 - [ASP.NET Web API in Zip](examples/aspnet-webapi-zip)
+- [SQS Express.js](examples/sqs-expressjs)
 
 ## Acknowledgement
 
