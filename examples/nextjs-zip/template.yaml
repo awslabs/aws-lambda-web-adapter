@@ -32,7 +32,7 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /
-            Method: get
+            Method: any
         ProxyEvent:
           Type: HttpApi
           Properties:
