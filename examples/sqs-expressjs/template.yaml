@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sqs-expressjs
+
+  an expressjs app that receives messages from an sqs queue
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 300
+
+Resources:
+  SqsExpressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 256
+      Environment:
+        Variables:
+          RUST_LOG: info
+      Events:
+        SqsEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SqsQueue.Arn
+    Metadata:
+      DockerTag: v1
+      DockerContext: ./app
+      Dockerfile: Dockerfile
+
+  SqsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: sqs-expressjs
+      VisibilityTimeout: 900
+
+Outputs:
+  SqsQueueUrl:
+    Description: "SQS URL the express Lambda Function will receive messages from"
+    Value: !Ref SqsQueue
+
