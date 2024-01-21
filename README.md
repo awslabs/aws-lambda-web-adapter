@@ -153,9 +153,6 @@ The [Express.js](examples/expressjs/app/src/index.js) gives a simple example. Mo
 
 Lambda Web Adapter allows developers to develop web applications locally with familiar tools and debuggers: just run the web app locally and test it. If you want to simulate Lambda Runtime environment locally, you can use AWS SAM CLI. The following command starts a local api gateway endpoint and simulate the Lambda runtime execution environment.  
 
-## Non-HTTP Event Triggers
-
-Lambda Web Adapter supports non-http event triggers (such as SQS, EventBridge, and Bedrock Agents, etc.). The adapter will forward the event payload to the web application at the path specified by environment variable `AWS_LWA_PASS_THROUGH_PATH`. The default path is `/events`. The web application can retrieve the event payload from the request body.
 
 ```bash
 sam local start-api
