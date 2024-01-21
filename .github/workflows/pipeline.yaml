@@ -358,10 +358,6 @@ jobs:
           API_ENDPOINT=${HTTPBIN_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
           API_ENDPOINT=${HTTPBIN_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
-      - name: remove the zip x86 integration test stacks
-        working-directory: ./tests/e2e_tests/fixtures/go-httpbin-zip
-        run: |
-          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-zip-x86
 
   e2e-test-oci:
     if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
@@ -434,10 +430,6 @@ jobs:
           API_ENDPOINT=${HTTPBIN_OCI_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
           API_ENDPOINT=${HTTPBIN_OCI_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
-      - name: remove the oci x86 integration test stacks
-        working-directory: ./tests/e2e_tests/fixtures/go-httpbin
-        run: |
-          sam delete --no-prompts --region ${BETA_REGION} --stack-name ${BETA_STACK_NAME}-oci-x86
 
 
   load-gamma-matrix:
