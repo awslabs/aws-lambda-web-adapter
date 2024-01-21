@@ -14,7 +14,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      MemorySize: 1024
+      MemorySize: 256
       PackageType: Image
       Architectures:
         - x86_64
@@ -23,7 +23,7 @@ Resources:
           Type: HttpApi
           Properties:
             Path: /
-            Method: get
+            Method: any
         ProxyEvent:
           Type: HttpApi
           Properties:
