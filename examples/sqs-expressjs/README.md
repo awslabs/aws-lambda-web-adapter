@@ -1,8 +1,8 @@
 # SQS Express.js example
 
-This project demonstrates the integration of Amazon Simple Queue Service (SQS) with an Express.js application. It showcases how to effectively manage and process messages from an SQS queue within an Express.js application environment.
+This project demonstrates the integration of Amazon Simple Queue Service (SQS) with an Express.js application on AWS Lambda. It showcases how to effectively manage and process messages from an SQS queue within an serverless Express.js application environment.
 
-In this Express.js application integrated with Amazon SQS, there is no explicit code required to poll the SQS queue. The AWS Lambda handles the polling of the SQS queue and Lambda Web Adapter forwards the event payload to the Express.js application. This simplifies the application code and allows developers to focus on processing the event payload rather than managing the queue polling logic.
+In this Express.js application integrated with Amazon SQS, there is no explicit code required to poll the SQS queue. The AWS Lambda handles the polling of the SQS queue and Lambda Web Adapter forwards the event payload to the Express.js application vith a HTTP POST request. This simplifies the application code and allows developers to focus on processing the event payload rather than managing the queue polling logic.
 
 The application can be deployed in an AWS account using the [Serverless Application Model](https://github.com/awslabs/serverless-application-model). The `template.yaml` file in the root folder contains the application definition.
 
@@ -83,24 +83,19 @@ sam logs --tail --stack-name <replace with your stack name>
 
 ## Local Test
 
-You can also use SAM CLI for local testing.
+First, start the express.js server locally.
 
 ```shell
-sam local invoke SqsExpressFunction -e events/sqs.json
+cd app/src
+npm install
+node index.js
 ```
 
-Here is a sample output from this command.
+Use `curl` to send a POST request to the express.js server.
 
 ```shell
-Invoking Container created from sqsexpressfunction:v1                                                                            
-Building image.................
-Using local image: sqsexpressfunction:rapid-x86_64.                                                                              
-                                                                                                                                 
-START RequestId: ceaaf9bb-8d8c-42a5-828c-a5d4c8a506f1 Version: $LATEST
-Example app listening at http://localhost:8000
-Received event: {"Records":[{"messageId":"19dd0b57-b21e-4ac1-bd88-01bbb068cb78","receiptHandle":"MessageReceiptHandle","body":"Hello from SQS!","attributes":{"ApproximateReceiveCount":"1","SentTimestamp":"1523232000000","SenderId":"123456789012","ApproximateFirstReceiveTimestamp":"1523232000001"},"messageAttributes":{},"md5OfBody":"7b270e59b47ff90a553787216d55d91d","eventSource":"aws:sqs","eventSourceARN":"arn:aws:sqs:us-east-1:123456789012:MyQueue","awsRegion":"us-east-1"}]}
-processing message: 19dd0b57-b21e-4ac1-bd88-01bbb068cb78 with body: Hello from SQS!
-END RequestId: ceaaf9bb-8d8c-42a5-828c-a5d4c8a506f1
-REPORT RequestId: ceaaf9bb-8d8c-42a5-828c-a5d4c8a506f1  Init Duration: 0.10 ms  Duration: 117.12 ms     Billed Duration: 118 ms Memory Size: 1024 MB     Max Memory Used: 1024 MB
-"success"
+curl -X POST -H "Content-Type: application/json" -d @events/sqs.json http://localhost:8080/events
 ```
+
+You can also use your favorate IDE debugger to debug your application step by step.
+
