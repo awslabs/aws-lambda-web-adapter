@@ -155,7 +155,7 @@ Lambda Web Adapter allows developers to develop web applications locally with fa
 
 ## Non-HTTP Event Triggers
 
-Lambda Web Adapter supports non-http event triggers (such as SQS, EventBridge, and Bedrock Agents, etc.). The adapter will forward the event payload to the web application at the path specified by environment variable `AWS_LWA_PASS_THROUGH_PATH`. The default path is `/events`. The web application can retrieve the event payload from the request body. Check out [Bedrock Agent](examples/bedrock-agent) on how to use it.
+Lambda Web Adapter supports non-http event triggers (such as SQS, EventBridge, and Bedrock Agents, etc.). The adapter will forward the event payload to the web application at the path specified by environment variable `AWS_LWA_PASS_THROUGH_PATH`. The default path is `/events`. The web application can retrieve the event payload from the request body.
 
 ```bash
 sam local start-api
@@ -191,7 +191,6 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 - [ASP.NET MVC](examples/aspnet-mvc)
 - [ASP.NET MVC in Zip](examples/aspnet-mvc-zip)
 - [ASP.NET Web API in Zip](examples/aspnet-webapi-zip)
-- [Bedrock Agent](examples/bedrock-agent)
 
 ## Acknowledgement
 
