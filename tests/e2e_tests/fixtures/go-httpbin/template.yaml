@@ -145,7 +145,7 @@ Resources:
       Name: /lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint
       Description: 'Rest API Endpoint for HttpBin function'
       Type: String
-      Value: !Sub "https://httpbin-rest-zip.${Route53HostedZone}/"
+      Value: !Sub "https://httpbin-rest-oci.${Route53HostedZone}/"
 
   HttpApiEndpoint:
     Type: AWS::SSM::Parameter
@@ -153,7 +153,7 @@ Resources:
       Name: /lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint
       Description: 'Http API Endpoint for HttpBin function'
       Type: String
-      Value: !Sub "https://httpbin-http-zip.${Route53HostedZone}/"
+      Value: !Sub "https://httpbin-http-oci.${Route53HostedZone}/"
 
   AlbEndpoint:
     Type: AWS::SSM::Parameter
