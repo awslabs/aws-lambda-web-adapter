@@ -3,6 +3,7 @@ pub mod common;
 use std::env;
 use std::io;
 use std::io::prelude::*;
+use std::sync::Arc;
 
 use crate::common::LambdaEventBuilder;
 use http::HeaderMap;
@@ -12,7 +13,8 @@ use httpmock::{
     Method::{DELETE, GET, POST, PUT},
     MockServer,
 };
-use hyper::{body, Body};
+use hyper::body::Incoming;
+use lambda_http::Body;
 use lambda_http::Context;
 use lambda_web_adapter::{Adapter, AdapterOptions, LambdaInvokeMode, Protocol};
 use tower::{Service, ServiceBuilder};
@@ -20,11 +22,13 @@ use tower::{Service, ServiceBuilder};
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use http_body_util::BodyExt;
+use lambda_http::lambda_runtime::Config;
 use serde_json::json;
 use tower_http::compression::{CompressionBody, CompressionLayer};
 
 #[test]
-fn test_default_adapter_options() {
+fn test_adapter_options_from_env() {
     env::set_var("PORT", "3000");
     env::set_var("HOST", "localhost");
     env::set_var("READINESS_CHECK_PORT", "8000");
@@ -38,7 +42,7 @@ fn test_default_adapter_options() {
     env::remove_var("AWS_LWA_TLS_CERT_FILE");
     env::set_var("AWS_LWA_INVOKE_MODE", "buffered");
 
-    // Initialize adapter
+    // Initialize adapter with env options
     let options = AdapterOptions::default();
     Adapter::new(&options);
 
@@ -66,7 +70,7 @@ fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
     env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
 
-    // Initialize adapter
+    // Initialize adapter with env options
     let options = AdapterOptions::default();
     Adapter::new(&options);
 
@@ -88,7 +92,7 @@ fn test_readiness_check_port_fallback_to_lwa_port() {
     env::remove_var("READINESS_CHECK_PORT");
     env::set_var("AWS_LWA_PORT", "3000");
 
-    // Initialize adapter
+    // Initialize adapter with env options
     let options = AdapterOptions::default();
     Adapter::new(&options);
 
@@ -669,13 +673,13 @@ async fn test_http_context_multi_headers() {
     assert_eq!("OK", body_to_string(response).await);
 }
 
-async fn body_to_string(res: Response<Body>) -> String {
-    let body_bytes = body::to_bytes(res.into_body()).await.unwrap();
+async fn body_to_string(res: Response<Incoming>) -> String {
+    let body_bytes = res.collect().await.unwrap().to_bytes();
     String::from_utf8_lossy(&body_bytes).to_string()
 }
 
-async fn compressed_body_to_string(res: Response<CompressionBody<Body>>) -> String {
-    let body_bytes = body::to_bytes(res.into_body()).await.unwrap();
+async fn compressed_body_to_string(res: Response<CompressionBody<Incoming>>) -> String {
+    let body_bytes = res.collect().await.unwrap().to_bytes();
     decode_reader(&body_bytes).unwrap()
 }
 
@@ -686,15 +690,23 @@ fn decode_reader(bytes: &[u8]) -> io::Result<String> {
     Ok(s)
 }
 
-fn add_lambda_context_to_request(request: &mut Request<lambda_http::Body>) {
+fn add_lambda_context_to_request(request: &mut Request<Body>) {
     // create a HeaderMap to build the lambda context
     let mut headers = HeaderMap::new();
     headers.insert("lambda-runtime-aws-request-id", "my_id".parse().unwrap());
     headers.insert("lambda-runtime-deadline-ms", "123".parse().unwrap());
     headers.insert("lambda-runtime-client-context", "{}".parse().unwrap());
 
+    let conf = Config {
+        function_name: "test_function".into(),
+        memory: 128,
+        version: "latest".into(),
+        log_stream: "/aws/lambda/test_function".into(),
+        log_group: "2023/09/15/[$LATEST]ab831cef03e94457a94b6efcbe22406a".into(),
+    };
+
     // converts HeaderMap to Context
-    let context = Context::try_from(headers).expect("Couldn't convert HeaderMap to Context");
+    let context = Context::new("my_id", Arc::new(conf), &headers).expect("Couldn't convert HeaderMap to Context");
 
     // add Context to the request
     request.extensions_mut().insert(context);

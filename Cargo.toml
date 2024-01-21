@@ -17,11 +17,14 @@ readme = "README.md"
 exclude = ["examples"]
 
 [dependencies]
-http = "0.2"
-hyper = { version = "0.14", features = ["client"] }
-lambda_http = "0.8.3"
+bytes = "1.5.0"
+http = "1.0"
+http-body = "1.0.0"
+hyper = { version = "1.0", features = ["client"] }
+hyper-util = "0.1.2"
+lambda_http = { version = "0.9.1", default-features = false, features = ["apigw_http", "apigw_rest", "alb", "pass_through"] }
 serde_json = "1.0"
-tokio = { version = "1.29", features = [
+tokio = { version = "1.35", features = [
     "macros",
     "io-util",
     "sync",
@@ -35,16 +38,18 @@ tracing-subscriber = { version = "0.3.17", default-features = false, features = 
     "fmt",
 ] }
 tower = "0.4"
-tower-http = { version = "0.4", features = ["compression-gzip"] }
+tower-http = { version = "0.5", features = ["compression-gzip"] }
 url = "2.3"
 
 [dev-dependencies]
 flate2 = "1.0.25"
 httpmock = "0.6.8"
-http-body-util = "0.1.0-rc.2"
-http-body = "0.4.5"
-hyper-rustls = "0.24"
-aws-sigv4 = "0.56.1"
+http-body-util = "0.1.0"
+http-body = "1.0"
+hyper-rustls = "0.26"
+aws-sigv4 = { version = "1.1" }
+aws-credential-types = "1.1"
+percent-encoding = "2.3.0"
 
 [[bin]]
 name = "lambda-adapter"
