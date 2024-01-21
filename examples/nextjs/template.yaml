@@ -14,13 +14,21 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      MemorySize: 256
+      MemorySize: 1024
       PackageType: Image
       Architectures:
         - x86_64
       Events:
-        HttpEvent:
+        RootEvent:
           Type: HttpApi
+          Properties:
+            Path: /
+            Method: get
+        ProxyEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: any
     Metadata:
       DockerTag: v1
       DockerContext: ./app
