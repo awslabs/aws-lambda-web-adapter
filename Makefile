@@ -14,11 +14,11 @@ test:
 
 build-image-x86: fmt lint test
 	LAMBDA_RUNTIME_USER_AGENT=aws-lambda-rust/aws-lambda-adapter/$(CARGO_PKG_VERSION) cargo lambda build --release --extension --target x86_64-unknown-linux-musl
-	tar -c -C target/lambda/extensions . | docker import --platform linux/amd64 - aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64
+	printf 'FROM scratch\nADD target/lambda/extensions/. /\n' | docker build --platform=linux/amd64 -t aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64 -f- .
 
 build-image-arm64: fmt lint test
 	LAMBDA_RUNTIME_USER_AGENT=aws-lambda-rust/aws-lambda-adapter/$(CARGO_PKG_VERSION) cargo lambda build --release --extension --target aarch64-unknown-linux-musl
-	tar -c -C target/lambda/extensions . | docker import --platform linux/arm64 - aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
+	printf "FROM scratch\nADD target/lambda/extensions/. /\n" | docker build --platform=linux/arm64 -t aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64 -f- .
 
 build-LambdaAdapterLayerX86:
 	cp layer/* $(ARTIFACTS_DIR)/

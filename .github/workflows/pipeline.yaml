@@ -1140,17 +1140,17 @@ jobs:
 
       - name: Create and push the x86_64 docker image to prod ecr public repo
         run: |
-          tar -c -C build-x86_64/LambdaAdapterLayerX86/extensions . | docker import --platform linux/amd64 - public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64
-          docker push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64
+          printf 'FROM scratch\nADD build-x86_64/LambdaAdapterLayerX86/extensions/. /\n' | docker build --platform=linux/amd64 -t public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-x86_64 -f- .          
+          docker push public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-x86_64
 
       - name: Create and push the arm64 docker image to prod ecr public repo
         run: |
-          tar -c -C build-arm64/LambdaAdapterLayerArm64/extensions . | docker import --platform linux/arm64 - public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
-          docker push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
+          printf 'FROM scratch\nADD build-arm64/LambdaAdapterLayerArm64/extensions/. /\n' | docker build --platform=linux/arm64 -t public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-aarch64 -f- .          
+          docker push public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-aarch64
 
       - name: create and push the multi-arch manifest to prod ecr public repo
         run: |
-          docker manifest create public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION) \
-              public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-x86_64 \
-              public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)-aarch64
-          docker manifest push public.ecr.aws/awsguru/aws-lambda-adapter:$(CARGO_PKG_VERSION)
+          docker manifest create public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION} \
+              public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-x86_64 \
+              public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-aarch64
+          docker manifest push public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}
