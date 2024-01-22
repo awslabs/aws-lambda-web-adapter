@@ -5,7 +5,7 @@ COPY . .
 RUN npm update && npm run build
 
 FROM public.ecr.aws/lambda/nodejs:20 as runner
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.2 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.0 /lambda-adapter /opt/extensions/lambda-adapter
 
 ENV PORT=3000 NODE_ENV=production
 
