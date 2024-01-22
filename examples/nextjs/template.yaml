@@ -19,8 +19,16 @@ Resources:
       Architectures:
         - x86_64
       Events:
-        HttpEvent:
+        RootEvent:
           Type: HttpApi
+          Properties:
+            Path: /
+            Method: any
+        ProxyEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: any
     Metadata:
       DockerTag: v1
       DockerContext: ./app

@@ -28,8 +28,16 @@ Resources:
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:18
       Events:
-        HttpEvent:
+        RootEvent:
           Type: HttpApi
+          Properties:
+            Path: /
+            Method: any
+        ProxyEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: any
     Metadata:
       BuildMethod: makefile
 
