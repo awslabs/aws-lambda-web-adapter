@@ -73,6 +73,8 @@ AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to 
 
 For details, please check out [the example Node.js application](examples/expressjs-zip).
 
+To get notification for new layers, please subscribe to this SNS topic `arn:aws:sns:us-east-1:753240598075:notification`. Read SNS document on [how to subscribe](https://docs.aws.amazon.com/sns/latest/dg/sns-create-subscribe-endpoint-to-topic.html).
+
 ## Readiness Check
 
 When a new Lambda Execution Environment starts up, Lambda Web Adapter will boot up as a Lambda Extension, followed by the web application.
