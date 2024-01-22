@@ -73,7 +73,7 @@ AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to 
 
 For details, please check out [the example Node.js application](examples/expressjs-zip).
 
-To be alerted about new layers, please subscribe to the following SNS topic: arn:aws:sns:us-east-1:753240598075:notification. For guidance on how to subscribe, please refer to the [SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-create-subscribe-endpoint-to-topic.html).
+To be alerted about new layers, please subscribe to the following SNS topic: `arn:aws:sns:us-east-1:753240598075:notification`. For guidance on how to subscribe, please refer to the [SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-create-subscribe-endpoint-to-topic.html).
 
 ## Readiness Check
 
