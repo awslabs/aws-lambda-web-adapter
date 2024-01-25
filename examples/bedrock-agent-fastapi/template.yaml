@@ -15,9 +15,23 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      MemorySize: 256
-      Policies: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      MemorySize: 1024
+      Policies: AmazonS3ReadOnlyAccess
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./app
       DockerTag: python3.12-v1
+
+  BedrockAgentPermission:  
+    Type: AWS::Lambda::Permission  
+    Properties:  
+      FunctionName: !Ref BedrockAgentFastAPIFunction  
+      Action: lambda:InvokeFunction  
+      Principal: bedrock.amazonaws.com  
+      SourceAccount: !Ref 'AWS::AccountId'  
+      SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*  
+
+Outputs:  
+  BedrockAgentFastAPIFunction:  
+    Description: "BedrockAgentFastAPIFunction Lambda Function ARN"  
+    Value: !GetAtt BedrockAgentFastAPIFunction.Arn  

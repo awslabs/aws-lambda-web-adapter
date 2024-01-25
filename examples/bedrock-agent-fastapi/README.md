@@ -9,12 +9,12 @@ The top level folder is a typical AWS SAM project. The `app` directory is an Fas
 ```dockerfile
 FROM public.ecr.aws/docker/library/python:3.12.0-slim
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt/extensions/lambda-adapter
-
-WORKDIR /app
-ADD . .
-RUN pip install -r requirements.txt
-
-CMD ["python", "main.py"]
+ENV PORT=8000 AWS_LWA_READINESS_CHECK_PROTOCOL=tcp 
+WORKDIR /var/task
+COPY requirements.txt ./
+RUN python -m pip install -r requirements.txt
+COPY *.py ./
+CMD exec uvicorn --port=$PORT main:app
 ```
 
 Line 2 copies lambda adapter binary into /opt/extenions. This is the only change to run the FastAPI application on Lambda.
@@ -45,24 +45,32 @@ To deploy the application in your AWS account, you can use the SAM CLI's guided 
 $ sam deploy --guided
 ```
 
-Create a bedrock agent. (see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-create.html
-))
+## Generate OpenAPI schema
+
+Before you create your agent, you should set up action groups that you want to add to your agent. When you create an action group, you must define the APIs that the agent can invoke with an OpenAPI schema in JSON or YAML format. (see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-api-schema.html))
+
+FastAPI can generate OpenAPI schema.
+
+(in app directory)
+
+```shell
+python -c "import main;import json; print(json.dumps(main.app.openapi()))" > openapi.json
+```
+
+
+## Create an agent.
+
+see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-create.html)
+
+## Test locally
+
+Sample event exists in events directory. You can test locally bellow command.
+
+```shell
+sam local invoke --event events/s3_bucket_count.json
+```
+
 
 ## Test
 
-Test your agent. (see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-test.html))
-
-## Run the docker locally
-
-We can run the same docker image locally, so that we know it can be deployed to ECS Fargate and EKS EC2 without code changes.
-
-```shell
-$ docker run -d -p 8000:8000 {ECR Image}
-
-```
-
-Use curl to verify the docker container works.
-
-```shell
-$ curl localhost:8000/ 
-```
+Test your agent on Management Console. (see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-test.html))
