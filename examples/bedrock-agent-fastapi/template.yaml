@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  bedrock-agent-fastapi
+
+  FastAPI app that work with Agents for Amazon Bedrock
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 60
+
+Resources:
+  BedrockAgentFastAPIFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 1024
+      Policies: AmazonS3ReadOnlyAccess
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./app
+      DockerTag: python3.12-v1
+
+  BedrockAgentPermission:  
+    Type: AWS::Lambda::Permission  
+    Properties:  
+      FunctionName: !Ref BedrockAgentFastAPIFunction  
+      Action: lambda:InvokeFunction  
+      Principal: bedrock.amazonaws.com  
+      SourceAccount: !Ref 'AWS::AccountId'  
+      SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*  
+
+Outputs:  
+  BedrockAgentFastAPIFunction:  
+    Description: "BedrockAgentFastAPIFunction Lambda Function ARN"  
+    Value: !GetAtt BedrockAgentFastAPIFunction.Arn  
