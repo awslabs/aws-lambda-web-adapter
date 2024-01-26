@@ -1,6 +1,6 @@
 # Agents for Amazon Bedrock with FastAPI example
 
-This project demonstrates the integration of "Agents for Amazon Bedrock" with a FastAPI application on AWS Lambda. It showcases how to effectively manage and  process Agents for Amazon Bedrock within an serverless FastAPI application environment.
+This project demonstrates the integration of "Agents for Amazon Bedrock" with a FastAPI application on AWS Lambda. It showcases how to effectively build an Agents for Amazon Bedrock within an serverless FastAPI application environment.
 
 The application can be deployed in an AWS account using the [Serverless Application Model](https://github.com/awslabs/serverless-application-model). The `template.yaml` file in the root folder contains the application definition.
 
@@ -26,15 +26,18 @@ COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt
 ## Pre-requisites
 
 The following tools should be installed and configured.
+
 * [AWS CLI](https://aws.amazon.com/cli/)
 * [SAM CLI](https://github.com/awslabs/aws-sam-cli)
 * [Python](https://www.python.org/)
 * [Docker](https://www.docker.com/products/docker-desktop)
 
 ## Deploy to Lambda
+
 Navigate to the sample's folder and use the SAM CLI to build a container image
+
 ```shell
-$ sam build
+sam build
 ```
 
 This command compiles the application and prepares a deployment package in the `.aws-sam` sub-directory.
@@ -42,7 +45,7 @@ This command compiles the application and prepares a deployment package in the `
 To deploy the application in your AWS account, you can use the SAM CLI's guided deployment process and follow the instructions on the screen
 
 ```shell
-$ sam deploy --guided
+sam deploy --guided
 ```
 
 ## Generate OpenAPI schema
@@ -57,19 +60,17 @@ FastAPI can generate OpenAPI schema.
 python -c "import main;import json; print(json.dumps(main.app.openapi()))" > openapi.json
 ```
 
-
-## Create an agent.
+## Create an agent
 
 see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-create.html)
 
 ## Test locally
 
-Sample event exists in events directory. You can test locally bellow command.
+Sample event exists in events directory. You can test locally with bellow command.
 
 ```shell
 sam local invoke --event events/s3_bucket_count.json
 ```
-
 
 ## Test
 
