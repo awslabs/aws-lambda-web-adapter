@@ -54,6 +54,15 @@ Before you create your agent, you should set up action groups that you want to a
 
 FastAPI can generate OpenAPI schema.
 
+Please install the required dependency in a virtual environment first.
+
+```shell
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r app/requirements.txt
+cd app/
+```
+
 (in app directory)
 
 ```shell
