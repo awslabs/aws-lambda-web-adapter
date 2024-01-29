@@ -1,0 +1,40 @@
+{
+  "messageVersion": "1.0",
+  "agent": {
+    "name": "AgentName",
+    "id": "AgentID",
+    "alias": "AgentAlias",
+    "version": "AgentVersion"
+  },
+  "inputText": "InputText",
+  "sessionId": "SessionID",
+  "actionGroup": "ActionGroup",
+  "apiPath": "/s3_object",
+  "httpMethod": "POST",
+  "parameters": [
+  ],
+  "requestBody": {
+    "content": {
+      "application/json": {
+        "properties": [
+          {
+            "name": "bucket_name",
+            "type": "string",
+            "value": "bucket_001"
+          },
+          {
+            "name": "object_key",
+            "type": "string",
+            "value": "object.txt"
+          }
+        ]
+      }
+    }
+  },
+  "sessionAttributes": {
+    "attr1": "value1"
+  },
+  "promptSessionAttributes": {
+    "promptAttr1": "value1"
+  }
+}
