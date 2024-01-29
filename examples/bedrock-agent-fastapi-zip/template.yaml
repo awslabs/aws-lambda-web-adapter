@@ -14,13 +14,18 @@ Resources:
   BedrockAgentFastAPIFunction:
     Type: AWS::Serverless::Function
     Properties:
-      PackageType: Image
+      CodeUri: ./app
+      Runtime: python3.12
+      Handler: run.sh
       MemorySize: 1024
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          AWS_LWA_READINESS_CHECK_PROTOCOL: TCP
+          PORT: 8000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:20 
       Policies: AmazonS3ReadOnlyAccess
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: ./app
-      DockerTag: python3.12-v1
 
   BedrockAgentPermission:  
     Type: AWS::Lambda::Permission  
