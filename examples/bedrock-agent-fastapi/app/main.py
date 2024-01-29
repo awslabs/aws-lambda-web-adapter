@@ -1,6 +1,7 @@
 import datetime
 
 import boto3
+# This is from "lwa_fastapi_middleware_bedrock_agent" package (https://pypi.org/project/lwa-fastapi-middleware-bedrock-agent/)
 from bedrock_agent.middleware import BedrockAgentMiddleware
 from fastapi import FastAPI, Query
 from pydantic import BaseModel, Field
