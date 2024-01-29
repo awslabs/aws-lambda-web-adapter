@@ -1,7 +1,7 @@
 import datetime
 
 import boto3
-from middleware import BedrockAgentMiddleware
+from bedrock_agent.middleware import BedrockAgentMiddleware
 from fastapi import FastAPI, Query
 from pydantic import BaseModel, Field
 
