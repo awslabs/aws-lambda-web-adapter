@@ -161,7 +161,7 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 
 ## Non-HTTP Event Triggers
 
-The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, SNS, S3, DynamoDB, Kinesis, Kafka, EventBridge, and Bedrock Agents. The adapter forwards the event payload to the web application via http post to a path defined by the `AWS_LWA_PASS_THROUGH_PATH` environment variable. By default, this path is set to `/events`. Upon receiving the event payload from the request body, the web application should processes it and returns the results as a JSON response. Please checkout [SQS Express.js](examples/sqs-expressjs) and [Bedrock Agent FastAPI](examples/bedrock-agent-fastapi) examples.
+The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, SNS, S3, DynamoDB, Kinesis, Kafka, EventBridge, and Bedrock Agents. The adapter forwards the event payload to the web application via http post to a path defined by the `AWS_LWA_PASS_THROUGH_PATH` environment variable. By default, this path is set to `/events`. Upon receiving the event payload from the request body, the web application should processes it and returns the results as a JSON response. Please checkout [SQS Express.js](examples/sqs-expressjs) and [Bedrock Agent FastAPI in Zip](examples/bedrock-agent-fastapi-zip) examples.
 
 ## Examples
 
@@ -193,6 +193,7 @@ The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, S
 - [ASP.NET Web API in Zip](examples/aspnet-webapi-zip)
 - [SQS Express.js](examples/sqs-expressjs)
 - [Bedrock Agent FastAPI](examples/bedrock-agent-fastapi)
+- [Bedrock Agent FastAPI in Zip](examples/bedrock-agent-fastapi-zip)
 
 ## Acknowledgement
 
