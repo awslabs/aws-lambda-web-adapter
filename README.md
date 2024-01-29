@@ -29,7 +29,7 @@ To use Lambda Web Adapter with docker images, package your web app (http api) in
 By default, Lambda Web Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#configurations).
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.0 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 Pre-compiled Lambda Web Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
@@ -39,7 +39,7 @@ Below is a Dockerfile for [an example nodejs application](examples/expressjs).
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:20-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.0 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=7000
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
@@ -58,22 +58,20 @@ AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to 
 1. attach Lambda Web Adapter layer to your function.
    #### AWS Commercial Regions
 
-   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:19`
-   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:19`
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:20`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:20`
 
    #### AWS China Regions
 
    1. cn-north-1 (Beijing)
-      - x86_64: `arn:aws-cn:lambda:cn-north-1:041581134020:layer:LambdaAdapterLayerX86:19`
+      - x86_64: `arn:aws-cn:lambda:cn-north-1:041581134020:layer:LambdaAdapterLayerX86:20`
    2. cn-northwest-1 (Ningxia)
-      - x86_64: `arn:aws-cn:lambda:cn-northwest-1:069767869989:layer:LambdaAdapterLayerX86:19`
+      - x86_64: `arn:aws-cn:lambda:cn-northwest-1:069767869989:layer:LambdaAdapterLayerX86:20`
 
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
 
 For details, please check out [the example Node.js application](examples/expressjs-zip).
-
-To be alerted about new layers, please subscribe to the following SNS topic: `arn:aws:sns:us-east-1:753240598075:notification`. For guidance on how to subscribe, please refer to the [SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-create-subscribe-endpoint-to-topic.html).
 
 ## Readiness Check
 
