@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  GoWebsiteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./cmd/website
+      Handler: bootstrap
+      Runtime: provided.al2023
+      MemorySize: 256
+      Environment:
+        Variables:
+          PORT: 3000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:20
+      Events:
+        APIEvent:
+          Type: HttpApi
+    Metadata:
+       BuildMethod: go1.x
