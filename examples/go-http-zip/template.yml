@@ -23,3 +23,8 @@ Resources:
           Type: HttpApi
     Metadata:
        BuildMethod: go1.x
+
+Outputs:
+  GoWebsiteAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Go-Http function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
