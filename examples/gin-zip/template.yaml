@@ -27,7 +27,7 @@ Resources:
         APIEvent:
           Type: HttpApi
     Metadata:
-       BuildMethod: makefile
+       BuildMethod: go1.x
 
 Outputs:
   GinApi:
