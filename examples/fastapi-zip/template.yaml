@@ -14,7 +14,7 @@ Resources:
     Properties:
       CodeUri: app/
       Handler: run.sh
-      Runtime: python3.11
+      Runtime: python3.12
       MemorySize: 256
       Environment:
         Variables:
