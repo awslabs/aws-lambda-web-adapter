@@ -1,0 +1,3 @@
+# Use LF rather than CRLF line endings on shell scripts checked out to Windows clients otherwise they give errors after 'sam build' / 'sam deploy'
+*.sh text eol=lf
+bootstrap text eol=lf
