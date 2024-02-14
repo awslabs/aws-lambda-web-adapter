@@ -5,6 +5,7 @@ use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode,
 };
+use http_body::Body as HttpBody;
 use hyper::body::Incoming;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::client::legacy::Client;
@@ -294,7 +295,7 @@ impl Adapter<HttpConnector, Body> {
             path = path.trim_start_matches(base_path);
         }
 
-        if let RequestContext::PassThrough = request_context {
+        if matches!(request_context, RequestContext::PassThrough) && parts.method == Method::POST {
             path = self.path_through_path.as_str();
         }
 
@@ -325,6 +326,8 @@ impl Adapter<HttpConnector, Body> {
         let request = builder.body(Body::from(body.to_vec()))?;
 
         let app_response = self.client.request(request).await?;
+        tracing::debug!(status = %app_response.status(), body_size = ?app_response.body().size_hint().lower(),
+            app_headers = ?app_response.headers().clone(), "responding to lambda event");
 
         Ok(app_response)
     }
