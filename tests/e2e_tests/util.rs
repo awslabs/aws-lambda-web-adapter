@@ -1,23 +1,5 @@
-use aws_sigv4::http_request::SigningInstructions;
 use http::Uri;
 use percent_encoding::{AsciiSet, CONTROLS};
-
-pub fn apply_to_request_http0x<B>(instructions: SigningInstructions, request: &mut http::Request<B>) {
-    let (new_headers, new_query) = instructions.into_parts();
-    for header in new_headers.into_iter() {
-        let mut value = http::HeaderValue::from_str(&header.value()).unwrap();
-        value.set_sensitive(header.sensitive());
-        request.headers_mut().insert(header.name(), value);
-    }
-
-    if !new_query.is_empty() {
-        let mut query = QueryWriter::new(request.uri());
-        for (name, value) in new_query {
-            query.insert(name, &value);
-        }
-        *request.uri_mut() = query.build_uri();
-    }
-}
 
 const BASE_SET: &AsciiSet = &CONTROLS
     .add(b' ')
