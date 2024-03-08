@@ -25,12 +25,15 @@ AWS Lambda Web Adapter work with Lambda functions packaged as both docker images
 
 ### Lambda functions packaged as Docker Images or OCI Images
 
-To use Lambda Web Adapter with docker images, package your web app (http api) in a Dockerfile, and add one line to copy Lambda Web Adapter binary to /opt/extensions inside your container.
-By default, Lambda Web Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#configurations).
+To use Lambda Web Adapter with docker images, package your web app (http api) in a Dockerfile, and add one line to copy Lambda Web Adapter binary to /opt/extensions inside your container:
 
 ```dockerfile
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt/extensions/lambda-adapter
 ```
+
+[Non-AWS base images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html) may be used since the [Runtime Interface Client](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html#images-ric) ships with the Lambda Web Adapter.
+
+By default, Lambda Web Adapter assumes the web app is listening on port 8080. If not, you can specify the port via [configuration](#configurations).
 
 Pre-compiled Lambda Web Adapter binaries are provided in ECR public repo: [public.ecr.aws/awsguru/aws-lambda-adapter](https://gallery.ecr.aws/awsguru/aws-lambda-adapter).
 Multi-arch images are also provided in this repo. It works on both x86_64 and arm64 CPU architecture.
