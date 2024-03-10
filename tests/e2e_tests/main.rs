@@ -1,5 +1,3 @@
-mod util;
-
 use aws_credential_types::Credentials;
 use aws_sigv4::http_request::{sign, SignableBody, SignableRequest, SigningParams, SigningSettings};
 use aws_sigv4::sign::v4;
@@ -91,8 +89,8 @@ fn signing_request(conf: TestConfig, req: &mut Request<&str>) {
         let (signing_instructions, _signature) = sign(signable_request, &SigningParams::from(signing_params))
             .unwrap()
             .into_parts();
-        // aws-sigv4 still on http 0.4. This is a workaround until it is updated to http 1.0
-        util::apply_to_request_http0x(signing_instructions, req);
+
+        signing_instructions.apply_to_request_http1x(req);
     }
 }
 
