@@ -167,6 +167,7 @@ The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, S
 
 - [FastAPI](examples/fastapi)
 - [FastAPI in Zip](examples/fastapi-zip)
+- [FastAPI with Background Tasks](examples/fastapi-background-tasks)
 - [FastAPI with Response Streaming](examples/fastapi-response-streaming)
 - [FastAPI with Response Streaming in Zip](examples/fastapi-response-streaming-zip)
 - [Flask](examples/flask)
