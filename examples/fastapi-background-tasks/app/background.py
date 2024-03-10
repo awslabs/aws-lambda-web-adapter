@@ -31,15 +31,15 @@ class BackgroundTaskExtension(Thread):
             if event['eventType'] == 'INVOKE':
                 while True:
                     message = self.queue.get()
-                    if message['taskType'] == 'TASK':
+                    if message['type'] == 'TASK':
                         task, args, kwargs = message['task']
                         task(*args, **kwargs)
-                    if message['taskType'] == 'DONE':
+                    if message['type'] == 'DONE':
                         break
 
     def add_task(self, background_task, *args, **kwargs):
-        self.queue.put( {"taskType": "TASK",
+        self.queue.put( {"type": "TASK",
                          "task": (background_task, args, kwargs)} )
 
     def done(self):
-        self.queue.put( {"taskType": "DONE"} )
+        self.queue.put( {"type": "DONE"} )
