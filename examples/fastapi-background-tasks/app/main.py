@@ -19,12 +19,12 @@ def mock_task(seconds):
     print("in mock_task method \n")
     time.sleep(seconds)
 
-@app.post("/tasks")
+@app.post("/tasks", status_code=201)
 async def create_task():
     print("in create_task method \n")
     background_task.add_task(mock_task, 2)
     background_task.add_task(mock_task, 3)
-    return (201, "task created")
+    return "task created"
 
 @app.get("/")
 async def root():
