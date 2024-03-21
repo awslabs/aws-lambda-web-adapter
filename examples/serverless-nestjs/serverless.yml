@@ -1,0 +1,23 @@
+service: serverless-nestjs
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  region: ap-southeast-1
+  runtime: nodejs18.x
+  architecture: arm64
+  stage: ${opt:stage,'staging'}
+
+  ecr:
+    images:
+      nestjs:
+        # https://docs.aws.amazon.com/lambda/latest/dg/foundation-arch.html
+        platform: linux/arm64
+        path: ./
+
+functions:
+  api:
+    url: true
+    image:
+      name: nestjs
+    timeout: 30
