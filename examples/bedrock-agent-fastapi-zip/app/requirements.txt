@@ -5,7 +5,7 @@ exceptiongroup==1.2.0
 fastapi==0.109.2
 h11==0.14.0
 httptools==0.6.1
-idna==3.6
+idna==3.7
 lwa_fastapi_middleware_bedrock_agent==0.0.4
 pydantic==2.5.3
 pydantic_core==2.14.6
