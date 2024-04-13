@@ -36,7 +36,62 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'  
       SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*  
 
+  BedrockAgentResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AmazonBedrockExecutionRoleForAgents_FastAPISample
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Sub ${AWS::AccountId}
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*
+      Policies:
+        - PolicyName: AmazonBedrockExecutionRoleForAgents_FastAPISamplePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource: !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-v2:1
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt BedrockAgentFastAPIFunction.Arn
+
+  BedrockAgent:
+    Type: AWS::Bedrock::Agent
+    Properties:
+      AgentName: BedrockAgentFastAPISample
+      Description: Query S3 information agent.
+      AgentResourceRoleArn: !GetAtt BedrockAgentResourceRole.Arn
+      Instruction: This agent allows you to query the S3 information in your AWS account.
+      FoundationModel: anthropic.claude-v2:1
+      ActionGroups:
+        - ActionGroupName: action-group
+          ActionGroupExecutor:
+            Lambda: !GetAtt BedrockAgentFastAPIFunction.Arn
+          ApiSchema:
+            Payload: '<<Open API schema>>'
+
+  BedrockAgentRelease:
+    Type: AWS::Bedrock::AgentAlias
+    Properties:
+      AgentAliasName: v1
+      AgentId: !Ref BedrockAgent
+
 Outputs:  
   BedrockAgentFastAPIFunction:  
     Description: "BedrockAgentFastAPIFunction Lambda Function ARN"  
     Value: !GetAtt BedrockAgentFastAPIFunction.Arn  
+  BedrockAgent:
+    Description: "BedrockAgent ID"
+    Value: !Ref BedrockAgent
+  BedrockAgentAlias:
+    Description: "BedrockAgentAlias ID"
+    Value: !Ref BedrockAgentRelease
