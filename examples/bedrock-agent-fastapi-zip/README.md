@@ -25,6 +25,44 @@ The following tools should be installed and configured.
 * [Python](https://www.python.org/)
 * [Docker](https://www.docker.com/products/docker-desktop)
 
+## Generate OpenAPI schema
+
+Before you create your agent, you should set up action groups that you want to add to your agent. When you create an action group, you must define the APIs that the agent can invoke with an OpenAPI schema in JSON or YAML format. (see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-api-schema.html))
+
+FastAPI can generate OpenAPI schema.
+
+Please install the required dependency in a virtual environment first.
+
+```shell
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r app/requirements.txt
+pip install boto3
+cd app/
+```
+
+(in app directory)
+
+```shell
+python -c "import main;import json; print(json.dumps(main.app.openapi()))" > openapi.json
+```
+
+## Update template.yaml
+
+Update the Payload part of ActionGroups defined in template.yaml with the OpenAPI schema value.
+
+```yaml
+ApiSchema:
+    Payload: '<<Open API schema>>'
+```
+
+(in example root directory)
+
+```shell
+sed -i "s@\\\\n@\\\\\\\\\\\\\\\\n@g" app/openapi.json
+sed -i "s@<<Open API schema>>@`cat app/openapi.json`@g" template.yaml
+```
+
 ## Deploy to Lambda
 
 Navigate to the sample's folder and use the SAM CLI to build a container image
@@ -38,33 +76,8 @@ This command compiles the application and prepares a deployment package in the `
 To deploy the application in your AWS account, you can use the SAM CLI's guided deployment process and follow the instructions on the screen
 
 ```shell
-sam deploy --guided
+sam deploy --guided --capabilities CAPABILITY_NAMED_IAM
 ```
-
-## Generate OpenAPI schema
-
-Before you create your agent, you should set up action groups that you want to add to your agent. When you create an action group, you must define the APIs that the agent can invoke with an OpenAPI schema in JSON or YAML format. (see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-api-schema.html))
-
-FastAPI can generate OpenAPI schema.
-
-Please install the required dependency in a virtual environment first.
-
-```shell
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r app/requirements.txt
-cd app/
-```
-
-(in app directory)
-
-```shell
-python -c "import main;import json; print(json.dumps(main.app.openapi()))" > openapi.json
-```
-
-## Create an agent
-
-see [reference](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-create.html)
 
 ## Test locally
 
