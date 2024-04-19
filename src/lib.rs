@@ -312,10 +312,6 @@ impl Adapter<HttpConnector, Body> {
             HeaderName::from_static("x-amzn-lambda-context"),
             HeaderValue::from_bytes(serde_json::to_string(&lambda_context)?.as_bytes())?,
         );
-
-        // remote hop-by-hop headers from the request
-        remove_hop_by_hop_headers(&mut req_headers);
-
         let mut app_url = self.domain.clone();
         app_url.set_path(path);
         app_url.set_query(parts.uri.query());
