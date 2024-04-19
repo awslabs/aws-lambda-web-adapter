@@ -3,7 +3,7 @@
 
 use http::{
     header::{HeaderName, HeaderValue},
-    Method, StatusCode,
+    HeaderMap, Method, StatusCode,
 };
 use http_body::Body as HttpBody;
 use hyper::body::Incoming;
@@ -312,6 +312,10 @@ impl Adapter<HttpConnector, Body> {
             HeaderName::from_static("x-amzn-lambda-context"),
             HeaderValue::from_bytes(serde_json::to_string(&lambda_context)?.as_bytes())?,
         );
+
+        // remote hop-by-hop headers from the request
+        remove_hop_by_hop_headers(&mut req_headers);
+
         let mut app_url = self.domain.clone();
         app_url.set_path(path);
         app_url.set_query(parts.uri.query());
@@ -325,12 +329,33 @@ impl Adapter<HttpConnector, Body> {
 
         let request = builder.body(Body::from(body.to_vec()))?;
 
-        let app_response = self.client.request(request).await?;
+        let mut app_response = self.client.request(request).await?;
+
+        // remote hop-by-hop headers from the response
+        remove_hop_by_hop_headers(app_response.headers_mut());
+
         tracing::debug!(status = %app_response.status(), body_size = ?app_response.body().size_hint().lower(),
             app_headers = ?app_response.headers().clone(), "responding to lambda event");
 
         Ok(app_response)
     }
+}
+
+fn remove_hop_by_hop_headers(headers: &mut HeaderMap) {
+    let hop_by_hop_headers = [
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+    ];
+
+    hop_by_hop_headers.iter().for_each(|header| {
+        headers.remove(*header);
+    });
 }
 
 /// Implement a `Tower.Service` that sends the requests
