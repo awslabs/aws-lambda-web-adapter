@@ -325,7 +325,11 @@ impl Adapter<HttpConnector, Body> {
 
         let request = builder.body(Body::from(body.to_vec()))?;
 
-        let app_response = self.client.request(request).await?;
+        let mut app_response = self.client.request(request).await?;
+
+        // remove "transfer-encoding" from the response to support "sam local start-api"
+        app_response.headers_mut().remove("transfer-encoding");
+
         tracing::debug!(status = %app_response.status(), body_size = ?app_response.body().size_hint().lower(),
             app_headers = ?app_response.headers().clone(), "responding to lambda event");
 
