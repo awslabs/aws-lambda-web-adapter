@@ -3,7 +3,7 @@
 
 use http::{
     header::{HeaderName, HeaderValue},
-    HeaderMap, Method, StatusCode,
+    Method, StatusCode,
 };
 use http_body::Body as HttpBody;
 use hyper::body::Incoming;
@@ -327,31 +327,14 @@ impl Adapter<HttpConnector, Body> {
 
         let mut app_response = self.client.request(request).await?;
 
-        // remote hop-by-hop headers from the response
-        remove_hop_by_hop_headers(app_response.headers_mut());
+        // remove "transfer-encoding" from the response to support "sam local start-api"
+        app_response.headers_mut().remove("transfer-encoding");
 
         tracing::debug!(status = %app_response.status(), body_size = ?app_response.body().size_hint().lower(),
             app_headers = ?app_response.headers().clone(), "responding to lambda event");
 
         Ok(app_response)
     }
-}
-
-fn remove_hop_by_hop_headers(headers: &mut HeaderMap) {
-    let hop_by_hop_headers = [
-        "connection",
-        "keep-alive",
-        "proxy-authenticate",
-        "proxy-authorization",
-        "te",
-        "trailer",
-        "transfer-encoding",
-        "upgrade",
-    ];
-
-    hop_by_hop_headers.iter().for_each(|header| {
-        headers.remove(*header);
-    });
 }
 
 /// Implement a `Tower.Service` that sends the requests
