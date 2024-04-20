@@ -2,7 +2,7 @@
 
 This example shows how to use Lambda Web Adapter to run a FastAPI application with response streaming via a Function URL.
 
-### How does it work?
+## How does it work?
 
 We add Lambda Web Adapter layer to the function and configure wrapper script.
 
@@ -14,7 +14,7 @@ We add Lambda Web Adapter layer to the function and configure wrapper script.
 
 To get more information of Wrapper script, please read Lambda documentation [here](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper).
 
-This is the resource for Lambda function. The function urls's invoke mode is configured as "RESPONSE_STREAM", and Lambda environment variable "AWS_LWA_INVOKE_MODE" is set to "response_stream". 
+This is the resource for Lambda function. The function urls's invoke mode is configured as "RESPONSE_STREAM", and Lambda environment variable "AWS_LWA_INVOKE_MODE" is set to "response_stream".
 
 ```yaml
   FastAPIFunction:
@@ -36,7 +36,7 @@ This is the resource for Lambda function. The function urls's invoke mode is con
         InvokeMode: RESPONSE_STREAM
 ```
 
-### Build and Deploy
+## Build and Deploy
 
 Run the following commands to build and deploy the application to lambda.
 
@@ -44,9 +44,9 @@ Run the following commands to build and deploy the application to lambda.
 sam build --use-container
 sam deploy --guided
 ```
+
 When the deployment completes, take note of FastAPI's Value. It is the API Gateway endpoint URL.
 
-### Verify it works
+## Verify it works
 
-Open FastAPI's URL in a browser, you should see "This is streaming from Lambda" streams back 10 times. 
-
+Open FastAPI's URL in a browser, you should see "This is streaming from Lambda" streams back character by character.
