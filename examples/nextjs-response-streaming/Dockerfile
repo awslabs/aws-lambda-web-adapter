@@ -1,19 +1,20 @@
-FROM public.ecr.aws/lambda/nodejs:20 as builder
+FROM public.ecr.aws/docker/library/node:20.9.0-slim as builder
 WORKDIR /app
 
 COPY . .
-RUN npm update && npm run build
+RUN npm ci && npm run build
 
-FROM public.ecr.aws/lambda/nodejs:20 as runner
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt/extensions/lambda-adapter
+FROM public.ecr.aws/docker/library/node:20.9.0-slim as runner
+COPY --from=awsguru/aws-lambda-adapter:0.8.3-x86_64 /lambda-adapter /opt/extensions/lambda-adapter
 
 ENV PORT=3000 NODE_ENV=production
 
-WORKDIR ${LAMBDA_TASK_ROOT}
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
+WORKDIR /app
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/next.config.js ./next.config.js
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/run.sh ./run.sh
 RUN ln -s /tmp/cache ./.next/cache
 
-ENTRYPOINT ["npm", "run", "start", "--loglevel=verbose", "--cache=/tmp/npm"]
+CMD exec ./run.sh

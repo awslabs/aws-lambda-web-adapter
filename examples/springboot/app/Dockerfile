@@ -5,8 +5,8 @@ COPY pom.xml ./
 RUN mvn -q clean package
 
 FROM public.ecr.aws/docker/library/amazoncorretto:8u322-al2
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.1 /lambda-adapter /opt/extensions/lambda-adapter
-EXPOSE 8080
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.3 /lambda-adapter /opt/extensions/lambda-adapter
+ENV PORT=8000
 WORKDIR /opt
 COPY --from=build-image /task/target/petstore-0.0.1-SNAPSHOT.jar /opt
-CMD ["java", "-jar", "petstore-0.0.1-SNAPSHOT.jar"]
+CMD ["java", "-jar", "petstore-0.0.1-SNAPSHOT.jar", "--server.port=${PORT}"]
