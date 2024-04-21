@@ -10,7 +10,7 @@ export const SingleProduct = async ({ data }: { data: Promise<Response> }) => {
             <div className="col-span-full lg:col-span-1">
                 <div className="space-y-2">
                     <Image
-                        src={`${product.image}`}
+                        src={`/${product.image}`}
                         className="hidden rounded-lg grayscale lg:block"
                         alt={product.name}
                         height={400}
@@ -19,7 +19,7 @@ export const SingleProduct = async ({ data }: { data: Promise<Response> }) => {
                     <div className="flex gap-x-2">
                         <div className="w-1/3">
                             <Image
-                                src={`${product.image}`}
+                                src={`/${product.image}`}
                                 className="rounded-lg grayscale"
                                 alt={product.name}
                                 height={180}
@@ -28,7 +28,7 @@ export const SingleProduct = async ({ data }: { data: Promise<Response> }) => {
                         </div>
                         <div className="w-1/3">
                             <Image
-                                src={`${product.image}`}
+                                src={`/${product.image}`}
                                 className="rounded-lg grayscale"
                                 alt={product.name}
                                 height={180}
@@ -37,7 +37,7 @@ export const SingleProduct = async ({ data }: { data: Promise<Response> }) => {
                         </div>
                         <div className="w-1/3">
                             <Image
-                                src={`${product.image}`}
+                                src={`/${product.image}`}
                                 className="rounded-lg grayscale"
                                 alt={product.name}
                                 height={180}
@@ -56,6 +56,7 @@ export const SingleProduct = async ({ data }: { data: Promise<Response> }) => {
                 <ProductRating rating={product.rating} />
 
                 <div className="space-y-4 text-sm text-gray-200">
+                    <p>{product.description}</p>
                     <p>{product.description}</p>
                 </div>
 
