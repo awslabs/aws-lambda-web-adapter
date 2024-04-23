@@ -12,9 +12,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="[color-scheme:dark]">
       <head>
-        <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+        <link href="/favicon/favicon-16x16.png" rel="icon" type="image/png" />
       </head>
-      <body className="overflow-y-scroll bg-gray-1100">
+      <body className="overflow-y-scroll bg-gray-1100 bg-[url('/grid.svg')]">
 
         <div className="lg:pl-0">
           <div className="mx-auto max-w-4xl space-y-8 px-2 pt-20 lg:py-8 lg:px-8">
