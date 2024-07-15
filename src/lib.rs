@@ -77,6 +77,7 @@ pub struct AdapterOptions {
     pub async_init: bool,
     pub compression: bool,
     pub invoke_mode: LambdaInvokeMode,
+    pub authorization_source: Option<String>,
 }
 
 impl Default for AdapterOptions {
@@ -114,6 +115,7 @@ impl Default for AdapterOptions {
                 .unwrap_or("buffered".to_string())
                 .as_str()
                 .into(),
+            authorization_source: env::var("AWS_LWA_AUTHORIZATION_SOURCE").ok(),
         }
     }
 }
@@ -131,6 +133,7 @@ pub struct Adapter<C, B> {
     path_through_path: String,
     compression: bool,
     invoke_mode: LambdaInvokeMode,
+    authorization_source: Option<String>,
 }
 
 impl Adapter<HttpConnector, Body> {
@@ -167,6 +170,7 @@ impl Adapter<HttpConnector, Body> {
             ready_at_init: Arc::new(AtomicBool::new(false)),
             compression: options.compression,
             invoke_mode: options.invoke_mode,
+            authorization_source: options.authorization_source.clone(),
         }
     }
 }
@@ -312,6 +316,14 @@ impl Adapter<HttpConnector, Body> {
             HeaderName::from_static("x-amzn-lambda-context"),
             HeaderValue::from_bytes(serde_json::to_string(&lambda_context)?.as_bytes())?,
         );
+
+        if let Some(authorization_source) = self.authorization_source.as_deref() {
+            if req_headers.contains_key(authorization_source) {
+                let original = req_headers.remove(authorization_source).unwrap();
+                req_headers.insert("authorization", original);
+            }
+        }
+
         let mut app_url = self.domain.clone();
         app_url.set_path(path);
         app_url.set_query(parts.uri.query());

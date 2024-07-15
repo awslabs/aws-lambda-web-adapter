@@ -41,6 +41,7 @@ fn test_adapter_options_from_env() {
     env::set_var("AWS_LWA_TLS_SERVER_NAME", "api.example.com");
     env::remove_var("AWS_LWA_TLS_CERT_FILE");
     env::set_var("AWS_LWA_INVOKE_MODE", "buffered");
+    env::set_var("AWS_LWA_AUTHORIZATION_SOURCE", "auth-token");
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
@@ -55,6 +56,7 @@ fn test_adapter_options_from_env() {
     assert!(options.async_init);
     assert!(options.compression);
     assert_eq!(LambdaInvokeMode::Buffered, options.invoke_mode);
+    assert_eq!(Some("auth-token".into()), options.authorization_source);
 }
 
 #[test]
@@ -69,6 +71,7 @@ fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_ASYNC_INIT", "true");
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
     env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
+    env::set_var("AWS_LWA_AUTHORIZATION_SOURCE", "auth-token");
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
@@ -84,6 +87,7 @@ fn test_adapter_options_from_namespaced_env() {
     assert!(options.async_init);
     assert!(options.compression);
     assert_eq!(LambdaInvokeMode::ResponseStream, options.invoke_mode);
+    assert_eq!(Some("auth-token".into()), options.authorization_source);
 }
 
 #[test]
@@ -605,6 +609,47 @@ async fn test_http_content_encoding_suffix() {
         response.headers().get("content-type").unwrap()
     );
     assert_eq!(json_data.to_owned(), body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_authorization_source() {
+    // Start app server
+    let app_server = MockServer::start();
+    let hello = app_server.mock(|when, then| {
+        when.method(GET).path("/hello").header_exists("Authorization");
+        then.status(200).body("Hello World");
+    });
+
+    // Initialize adapter
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        authorization_source: Some("auth-token".to_string()),
+        ..Default::default()
+    });
+
+    // // Call the adapter service with basic request
+    let req = LambdaEventBuilder::new()
+        .with_path("/hello")
+        .with_header("auth-token", "Bearer token")
+        .build();
+
+    // We convert to Request object because it allows us to add
+    // the lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    // Assert endpoint was called once
+    hello.assert();
+
+    // and response has expected content
+    assert_eq!(200, response.status());
+    assert_eq!(response.headers().get("content-length").unwrap(), "11");
+    assert_eq!("Hello World", body_to_string(response).await);
 }
 
 #[tokio::test]

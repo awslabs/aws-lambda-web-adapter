@@ -104,6 +104,7 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip compression for response body                                            | "false"    |
 | AWS_LWA_INVOKE_MODE                                          | Lambda function invoke mode: "buffered" or "response_stream", default is "buffered"  | "buffered" |
 | AWS_LWA_PASS_THROUGH_PATH                                    | the path for receiving event payloads that are passed through from non-http triggers | "/events"  |
+| AWS_LWA_AUTHORIZATION_SOURCE                                 | a header name to be replaced to `Authorization` | None  |
 
 > **Note:**
 > We use "AWS_LWA_" prefix to namespacing all environment variables used by Lambda Web Adapter. The original ones will be supported until we reach version 1.0.
@@ -133,6 +134,8 @@ Please check out [FastAPI with Response Streaming](examples/fastapi-response-str
 **AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS** - allows you to customize which HTTP status codes are considered healthy and which ones are not
 
 **AWS_LWA_PASS_THROUGH_PATH** - Path to receive events payloads passed through from non-http event triggers. The default is "/events".
+
+**AWS_LWA_AUTHORIZATION_SOURCE** - When set, Lambda Web Adapter replaces the specified header name to `Authorization` before proxying a request. This is useful when you use Lambda function URL with [IAM auth type](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html), which reserves Authorization header for IAM authentication, but you want to still use Authorization header for your backend apps. This feature is disabled by default.
 
 ## Request Context
 
