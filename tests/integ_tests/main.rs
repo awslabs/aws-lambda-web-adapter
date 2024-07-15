@@ -56,7 +56,7 @@ fn test_adapter_options_from_env() {
     assert!(options.async_init);
     assert!(options.compression);
     assert_eq!(LambdaInvokeMode::Buffered, options.invoke_mode);
-    assert_eq!("auth-token", options.authorization_source);
+    assert_eq!(Some("auth-token".into()), options.authorization_source);
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn test_adapter_options_from_namespaced_env() {
     assert!(options.async_init);
     assert!(options.compression);
     assert_eq!(LambdaInvokeMode::ResponseStream, options.invoke_mode);
-    assert_eq!("auth-token", options.authorization_source);
+    assert_eq!(Some("auth-token".into()), options.authorization_source);
 }
 
 #[test]
@@ -626,7 +626,7 @@ async fn test_http_authorization_source() {
         port: app_server.port().to_string(),
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
-        authorization_source: "auth-token".to_string(),
+        authorization_source: Some("auth-token".to_string()),
         ..Default::default()
     });
 
