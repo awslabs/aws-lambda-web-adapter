@@ -321,6 +321,8 @@ impl Adapter<HttpConnector, Body> {
             if req_headers.contains_key(authorization_source) {
                 let original = req_headers.remove(authorization_source).unwrap();
                 req_headers.insert("authorization", original);
+            } else {
+                tracing::warn!("\"{}\" header not found in request headers", authorization_source);
             }
         }
 
