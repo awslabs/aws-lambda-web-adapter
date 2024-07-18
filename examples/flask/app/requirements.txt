@@ -7,4 +7,4 @@ itsdangerous==2.1.2
 Jinja2==3.1.4
 MarkupSafe==2.1.2
 Werkzeug==3.0.3
-zipp==3.15.0
+zipp==3.19.1
