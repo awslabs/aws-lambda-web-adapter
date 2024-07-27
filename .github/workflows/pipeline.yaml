@@ -25,7 +25,7 @@ env:
   CARGO_TERM_COLOR: always
   SAM_TEMPLATE_X86_64: template-x86_64.yaml
   SAM_TEMPLATE_ARM64: template-arm64.yaml
-  GITHUB_RUNNER_ROLE: arn:aws:iam::238946506962:role/GitHubRunnerRole
+  GITHUB_RUNNER_ROLE: arn:aws:iam::621808641063:role/GitHubRunnerRole
   GITHUB_RUNNER_CHINA_ROLE: arn:aws-cn:iam::075528433517:role/GitHubRunnerRole
   BETA_STACK_NAME: lambda-adapter-beta
   BETA_PIPELINE_EXECUTION_ROLE: arn:aws:iam::477159140107:role/aws-sam-cli-managed-beta-pip-PipelineExecutionRole-13NXRWTRTHDCJ
@@ -76,7 +76,7 @@ jobs:
 
 
   build:
-    needs: [test]
+    needs: [ test ]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -136,7 +136,7 @@ jobs:
           path: build-arm64.tar
 
   package-beta:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
     runs-on: ubuntu-20.04
     steps:
@@ -226,8 +226,8 @@ jobs:
           docker manifest push 477159140107.dkr.ecr.ap-northeast-1.amazonaws.com/awsguru/aws-lambda-adapter:latest
 
   deploy-beta:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [package-beta]
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ package-beta ]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -289,8 +289,8 @@ jobs:
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
   e2e-test-zip:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [deploy-beta]
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ deploy-beta ]
     runs-on: ubuntu-20.04
     steps:
       - name: Install stable toolchain
@@ -346,7 +346,7 @@ jobs:
 
       - uses: dkershner6/aws-ssm-getparameters-action@v1
         with:
-          parameterPairs:   "/lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
+          parameterPairs: "/lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint      = HTTPBIN_ZIP_HTTP_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint           = HTTPBIN_ZIP_ALB_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT"
@@ -360,8 +360,8 @@ jobs:
 
 
   e2e-test-oci:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [deploy-beta]
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ deploy-beta ]
     runs-on: ubuntu-20.04
     steps:
       - name: Install stable toolchain
@@ -418,7 +418,7 @@ jobs:
 
       - uses: dkershner6/aws-ssm-getparameters-action@v1
         with:
-          parameterPairs:   "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint      = HTTPBIN_OCI_REST_ENDPOINT,
+          parameterPairs: "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint      = HTTPBIN_OCI_REST_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint      = HTTPBIN_OCI_HTTP_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/oci/alb-endpoint           = HTTPBIN_OCI_ALB_ENDPOINT,
                              /lambda-web-adapter/e2e/httpbin/oci/function-url           = HTTPBIN_OCI_FURL_ENDPOINT"
@@ -433,8 +433,8 @@ jobs:
 
 
   load-gamma-matrix:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test-zip, e2e-test-oci]
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ e2e-test-zip, e2e-test-oci ]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -444,7 +444,7 @@ jobs:
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
   load-prod-matrix:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
     runs-on: ubuntu-20.04
     outputs:
@@ -455,7 +455,7 @@ jobs:
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
   
   load-china-prod-matrix:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
     runs-on: ubuntu-20.04
     outputs:
@@ -466,7 +466,7 @@ jobs:
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-prod.json)}" >> $GITHUB_OUTPUT
   
   load-china-gamma-matrix:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
     runs-on: ubuntu-20.04
     outputs:
@@ -477,7 +477,7 @@ jobs:
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-gamma.json)}" >> $GITHUB_OUTPUT
 
   package-gamma:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-gamma-matrix ]
     runs-on: ubuntu-20.04
     strategy:
@@ -550,7 +550,7 @@ jobs:
           path: packaged-gamma-arm64-${{ matrix.region }}.yaml
 
   package-prod:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-prod-matrix ]
     runs-on: ubuntu-20.04
     strategy:
@@ -623,7 +623,7 @@ jobs:
           path: packaged-prod-arm64-${{ matrix.region }}.yaml
 
   package-china-gamma:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-china-gamma-matrix ]
     runs-on: ubuntu-20.04
     strategy:
@@ -699,7 +699,7 @@ jobs:
 
 
   package-china-prod:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-china-prod-matrix ]
     runs-on: ubuntu-20.04
     strategy:
@@ -774,7 +774,7 @@ jobs:
           path: packaged-china-prod-arm64-${{ matrix.region }}.yaml
 
   load-gamma-matrix2:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci, package-gamma ]
     runs-on: ubuntu-20.04
     outputs:
@@ -785,8 +785,8 @@ jobs:
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
   deploy-gamma:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [load-gamma-matrix2]
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ load-gamma-matrix2 ]
     runs-on: ubuntu-20.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
@@ -863,7 +863,7 @@ jobs:
 
   deploy-prod:
     if: ${{ github.event_name == 'release' }}
-    needs: [load-prod-matrix2]
+    needs: [ load-prod-matrix2 ]
     runs-on: ubuntu-20.04
     environment: prod
     strategy:
@@ -930,8 +930,8 @@ jobs:
             --role-arn ${{ matrix.cloudformation_execution_role }}
 
   load-china-gamma-matrix2:
-    if:  ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [ e2e-test-zip, e2e-test-oci, package-china-gamma]
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
+    needs: [ e2e-test-zip, e2e-test-oci, package-china-gamma ]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -942,7 +942,7 @@ jobs:
 
   deploy-china-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
-    needs: [load-china-gamma-matrix2]
+    needs: [ load-china-gamma-matrix2 ]
     runs-on: ubuntu-20.04
     environment: prod
     strategy:
@@ -1008,11 +1008,11 @@ jobs:
             --image-repository ${{ matrix.image_repository }} \
             --no-fail-on-empty-changeset \
             --role-arn ${{ matrix.cloudformation_execution_role }}
-
+  
   
   load-china-prod-matrix2:
-    if:  ${{ github.event_name == 'release' }}
-    needs: [ deploy-china-gamma, package-china-prod]
+    if: ${{ github.event_name == 'release' }}
+    needs: [ deploy-china-gamma, package-china-prod ]
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -1023,7 +1023,7 @@ jobs:
 
   deploy-china-prod:
     if: ${{ github.event_name == 'release' }}
-    needs: [load-china-prod-matrix2]
+    needs: [ load-china-prod-matrix2 ]
     runs-on: ubuntu-20.04
     environment: prod
     strategy:
@@ -1093,7 +1093,7 @@ jobs:
 
   publish-to-public-ecr:
     if: ${{ github.event_name == 'release' }}
-    needs: [deploy-prod]
+    needs: [ deploy-prod ]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
