@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  FastHTML in Zip
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  FastHTMLFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: run.sh
+      Runtime: python3.12
+      MemorySize: 256
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          PORT: 8000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:23      
+      Events:
+        ApiEvent:
+          Type: HttpApi
+ 
+
+Outputs:
+  FastHTMLApi:
+    Description: "API Gateway endpoint URL for Prod stage for FastHTML function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+  FastHTMLFunction:
+    Description: "FastHTML Lambda Function ARN"
+    Value: !GetAtt FastHTMLFunction.Arn
+  FastHTMLIamRole:
+    Description: "Implicit IAM Role created for FastHTML function"
+    Value: !GetAtt FastHTMLFunctionRole.Arn

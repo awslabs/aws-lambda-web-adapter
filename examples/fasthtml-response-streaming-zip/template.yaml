@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  FastHTML response streaming
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 60
+
+Resources:
+  FastHTMLFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: run.sh
+      Runtime: python3.12
+      MemorySize: 256
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          AWS_LWA_INVOKE_MODE: response_stream
+          PORT: 8000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:23
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+Outputs:
+  FastHTMLFunctionUrl:
+    Description: "Function URL for FastHTML function"
+    Value: !GetAtt FastHTMLFunctionUrl.FunctionUrl
+  FastHTMLFunction:
+    Description: "FastHTML Lambda Function ARN"
+    Value: !GetAtt FastHTMLFunction.Arn

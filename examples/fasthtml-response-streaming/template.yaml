@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Streaming Bedrock Response with FastHTML on AWS Lambda
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 300
+
+Resources:
+  FastHTMLFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 512
+      Environment:
+        Variables:
+          AWS_LWA_INVOKE_MODE: RESPONSE_STREAM
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+      Policies:
+      - Statement:
+        - Sid: BedrockInvokePolicy
+          Effect: Allow
+          Action:
+          - bedrock:InvokeModelWithResponseStream
+          Resource: '*'
+      Tracing: Active
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./app
+      DockerTag: v1
+
+Outputs:
+  FastHTMLFunctionUrl:
+    Description: "Function URL for FastHTML function"
+    Value: !GetAtt FastHTMLFunctionUrl.FunctionUrl
+  FastHTMLFunction:
+    Description: "FastHTML Lambda Function ARN"
+    Value: !GetAtt FastHTMLFunction.Arn
