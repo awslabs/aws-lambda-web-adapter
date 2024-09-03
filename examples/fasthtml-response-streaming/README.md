@@ -8,7 +8,7 @@ This example shows streaming response from Amazon Bedrock with [FastHTML](https:
 
 ## How does it work?
 
-This example uses Anthropic Claude 3 model to generate bedtime stories. FastHTML provides the static web frontend and an inference API.  The inference API endpoint invokes Bedrock using Boto3, and streams the response. Both Lambda Web Adapter and function URL have response streaming mode enabled. So the response from Bedrock are streamed all the way back to the client. 
+This example uses Anthropic Claude 3 model to generate bedtime stories. FastHTML provides the static web frontend and an inference API.  The inference API endpoint invokes Bedrock using the [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python/tree/main), and streams the response. Both Lambda Web Adapter and function URL have response streaming mode enabled. So the response from Bedrock are streamed all the way back to the client. 
 
 This function is packaged as a Docker image. Here is the content of the Dockerfile. 
 

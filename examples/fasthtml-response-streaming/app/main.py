@@ -1,6 +1,5 @@
 from anthropic import AnthropicBedrock
 import secrets
-import json
 from fasthtml.common import *
 from starlette.responses import StreamingResponse
 import asyncio
@@ -43,7 +42,6 @@ async def story_generator(content):
     ) as stream:
         for text in stream.text_stream:
             # print(text, end="", flush=True)
-            print(content)
             response_txt += text
             yield to_xml(Div(
                         response_txt,
