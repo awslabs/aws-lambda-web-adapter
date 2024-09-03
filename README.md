@@ -201,6 +201,10 @@ The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, S
 - [SQS Express.js](examples/sqs-expressjs)
 - [Bedrock Agent FastAPI](examples/bedrock-agent-fastapi)
 - [Bedrock Agent FastAPI in Zip](examples/bedrock-agent-fastapi-zip)
+- [FastHTML](examples/fasthtml)
+- [FastHTML in Zip](examples/fasthtml-zip)
+- [FastHTML with Response Streaming](examples/fasthtml-response-streaming)
+- [FastHTML with Response Streaming in Zip](examples/fasthtml-response-streaming-zip)
 
 ## Acknowledgement
 
