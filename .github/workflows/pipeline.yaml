@@ -63,7 +63,7 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.3
 
       - name: Install cargo-nextest
-        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+        run: cargo install cargo-nextest --locked
 
       - name: linting
         run: |
@@ -98,7 +98,7 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.3
 
       - name: Install cargo-nextest
-        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+        run: cargo install cargo-nextest --locked
 
       - name: Add cargo pkg version to env vars
         run: |
@@ -295,7 +295,7 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.3
 
       - name: Install cargo-nextest
-        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+        run: cargo install cargo-nextest --locked
 
       - uses: actions/checkout@v3
 
@@ -364,7 +364,7 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.3
 
       - name: Install cargo-nextest
-        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+        run: cargo install cargo-nextest --locked
 
       - uses: actions/checkout@v3
 
