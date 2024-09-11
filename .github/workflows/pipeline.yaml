@@ -52,19 +52,18 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+        run: |
+            rustup target add x86_64-unknown-linux-musl
+            rustup target add aarch64-unknown-linux-musl
 
-      - uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.11.0
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
 
       - name: Configure cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
-      - uses: taiki-e/install-action@nextest
+      - name: Install cargo-nextest
+        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
 
       - name: linting
         run: |
@@ -88,26 +87,18 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          rustup target add aarch64-unknown-linux-musl
 
-      - uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.11.0
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
 
       - name: Configure cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
-      - uses: taiki-e/install-action@nextest
-
-      - name: Install Cargo Lambda
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        with:
-          repo: cargo-lambda/cargo-lambda
-          tag: v1.0.1
-          platform: linux
-          arch: x86_64
+      - name: Install cargo-nextest
+        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
 
       - name: Add cargo pkg version to env vars
         run: |
@@ -294,19 +285,17 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-          targets: x86_64-unknown-linux-musl
+        run: |
+            rustup target add x86_64-unknown-linux-musl
 
-      - uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.11.0
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
 
       - name: Configure cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
-      - uses: taiki-e/install-action@nextest
+      - name: Install cargo-nextest
+        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
 
       - uses: actions/checkout@v3
 
@@ -344,12 +333,12 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - uses: dkershner6/aws-ssm-getparameters-action@v1
-        with:
-          parameterPairs: "/lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint      = HTTPBIN_ZIP_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint           = HTTPBIN_ZIP_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT"
+      - name: retrive ssm parameters
+        run: |
+          export HTTPBIN_ZIP_REST_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint" --query "Parameter.Value" --output text)
+          export HTTPBIN_ZIP_HTTP_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint" --query "Parameter.Value" --output text)
+          export HTTPBIN_ZIP_ALB_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/zip/alb-endpoint" --query "Parameter.Value" --output text)
+          export HTTPBIN_ZIP_FURL_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/zip/function-url" --query "Parameter.Value" --output text)
 
       - name: run e2e tests
         run: |
@@ -365,19 +354,17 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-          targets: x86_64-unknown-linux-musl
+        run: |
+            rustup target add x86_64-unknown-linux-musl
 
-      - uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.11.0
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
 
       - name: Configure cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
-      - uses: taiki-e/install-action@nextest
+      - name: Install cargo-nextest
+        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
 
       - uses: actions/checkout@v3
 
@@ -416,12 +403,12 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - uses: dkershner6/aws-ssm-getparameters-action@v1
-        with:
-          parameterPairs: "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint      = HTTPBIN_OCI_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint      = HTTPBIN_OCI_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/oci/alb-endpoint           = HTTPBIN_OCI_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/oci/function-url           = HTTPBIN_OCI_FURL_ENDPOINT"
+      - name: retrive ssm parameters
+        run: |
+          export HTTPBIN_OCI_REST_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint" --query "Parameter.Value" --output text)
+          export HTTPBIN_OCI_HTTP_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint" --query "Parameter.Value" --output text)
+          export HTTPBIN_OCI_ALB_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/oci/alb-endpoint" --query "Parameter.Value" --output text)
+          export HTTPBIN_OCI_FURL_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/oci/function-url" --query "Parameter.Value" --output text)
 
       - name: run e2e tests
         run: |
