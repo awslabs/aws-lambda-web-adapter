@@ -110,7 +110,7 @@ jobs:
       - name: Tar files
         run: tar -cvf build-x86_64.tar build-x86_64
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: aws-sam-build-x86_64
           path: build-x86_64.tar
@@ -121,7 +121,7 @@ jobs:
       - name: Tar files
         run: tar -cvf build-arm64.tar build-arm64
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: aws-sam-build-arm64
           path: build-arm64.tar
@@ -170,7 +170,7 @@ jobs:
             --region ${BETA_REGION} \
             --output-template-file packaged-beta-x86_64.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-beta-x86_64.yaml
           path: packaged-beta-x86_64.yaml
@@ -192,7 +192,7 @@ jobs:
             --region ${BETA_REGION} \
             --output-template-file packaged-beta-arm64.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-beta-arm64.yaml
           path: packaged-beta-arm64.yaml
@@ -509,7 +509,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-gamma-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
           path: packaged-gamma-x86_64-${{ matrix.region }}.yaml
@@ -531,7 +531,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-gamma-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-gamma-arm64-${{ matrix.region }}.yaml
           path: packaged-gamma-arm64-${{ matrix.region }}.yaml
@@ -582,7 +582,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-prod-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-prod-x86_64-${{ matrix.region }}.yaml
           path: packaged-prod-x86_64-${{ matrix.region }}.yaml
@@ -604,7 +604,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-prod-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-prod-arm64-${{ matrix.region }}.yaml
           path: packaged-prod-arm64-${{ matrix.region }}.yaml
@@ -657,7 +657,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-china-gamma-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-china-gamma-x86_64-${{ matrix.region }}.yaml
           path: packaged-china-gamma-x86_64-${{ matrix.region }}.yaml
@@ -679,7 +679,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-china-gamma-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-china-gamma-arm64-${{ matrix.region }}.yaml
           path: packaged-china-gamma-arm64-${{ matrix.region }}.yaml
@@ -733,7 +733,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-china-prod-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-china-prod-x86_64-${{ matrix.region }}.yaml
           path: packaged-china-prod-x86_64-${{ matrix.region }}.yaml
@@ -755,7 +755,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-china-prod-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-china-prod-arm64-${{ matrix.region }}.yaml
           path: packaged-china-prod-arm64-${{ matrix.region }}.yaml
