@@ -333,19 +333,12 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - name: retrive ssm parameters
-        run: |
-          export HTTPBIN_ZIP_REST_ENDPOINT=https://httpbin-rest-zip.beta.adapter.awsguru.dev/
-          export HTTPBIN_ZIP_HTTP_ENDPOINT=https://httpbin-http-zip.beta.adapter.awsguru.dev/
-          export HTTPBIN_ZIP_ALB_ENDPOINT=https://httpbin-alb-zip.beta.adapter.awsguru.dev/
-          export HTTPBIN_ZIP_FURL_ENDPOINT=https://c26abn6izvm4xvbfs5baaflifm0hqvsn.lambda-url.ap-northeast-1.on.aws/
-
       - name: run e2e tests
         run: |
-          API_ENDPOINT=${HTTPBIN_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-rest-zip.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-http-zip.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-alb-zip.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://c26abn6izvm4xvbfs5baaflifm0hqvsn.lambda-url.ap-northeast-1.on.aws/ API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
 
   e2e-test-oci:
@@ -403,19 +396,12 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - name: retrive ssm parameters
-        run: |
-          export HTTPBIN_OCI_REST_ENDPOINT=https://httpbin-rest-oci.beta.adapter.awsguru.dev/
-          export HTTPBIN_OCI_HTTP_ENDPOINT=https://httpbin-http-oci.beta.adapter.awsguru.dev/
-          export HTTPBIN_OCI_ALB_ENDPOINT=https://httpbin-alb-oci.beta.adapter.awsguru.dev/
-          export HTTPBIN_OCI_FURL_ENDPOINT=https://3w6rb56t3lzefztvndn4zg3xru0taszm.lambda-url.ap-northeast-1.on.aws/
-
       - name: run e2e tests
         run: |
-          API_ENDPOINT=${HTTPBIN_OCI_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_OCI_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_OCI_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_OCI_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-rest-oci.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-http-oci.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-alb-oci.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://3w6rb56t3lzefztvndn4zg3xru0taszm.lambda-url.ap-northeast-1.on.aws/ API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
 
 
