@@ -335,10 +335,10 @@ jobs:
 
       - name: retrive ssm parameters
         run: |
-          export HTTPBIN_ZIP_REST_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint" --query "Parameter.Value" --output text)
-          export HTTPBIN_ZIP_HTTP_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint" --query "Parameter.Value" --output text)
-          export HTTPBIN_ZIP_ALB_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/zip/alb-endpoint" --query "Parameter.Value" --output text)
-          export HTTPBIN_ZIP_FURL_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/zip/function-url" --query "Parameter.Value" --output text)
+          export HTTPBIN_ZIP_REST_ENDPOINT=https://httpbin-rest-zip.beta.adapter.awsguru.dev/
+          export HTTPBIN_ZIP_HTTP_ENDPOINT=https://httpbin-http-zip.beta.adapter.awsguru.dev/
+          export HTTPBIN_ZIP_ALB_ENDPOINT=https://httpbin-alb-zip.beta.adapter.awsguru.dev/
+          export HTTPBIN_ZIP_FURL_ENDPOINT=https://c26abn6izvm4xvbfs5baaflifm0hqvsn.lambda-url.ap-northeast-1.on.aws/
 
       - name: run e2e tests
         run: |
@@ -405,10 +405,10 @@ jobs:
 
       - name: retrive ssm parameters
         run: |
-          export HTTPBIN_OCI_REST_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint" --query "Parameter.Value" --output text)
-          export HTTPBIN_OCI_HTTP_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint" --query "Parameter.Value" --output text)
-          export HTTPBIN_OCI_ALB_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/oci/alb-endpoint" --query "Parameter.Value" --output text)
-          export HTTPBIN_OCI_FURL_ENDPOINT=$(aws ssm get-parameter --name "/lambda-web-adapter/e2e/httpbin/oci/function-url" --query "Parameter.Value" --output text)
+          export HTTPBIN_OCI_REST_ENDPOINT=https://httpbin-rest-oci.beta.adapter.awsguru.dev/
+          export HTTPBIN_OCI_HTTP_ENDPOINT=https://httpbin-http-oci.beta.adapter.awsguru.dev/
+          export HTTPBIN_OCI_ALB_ENDPOINT=https://httpbin-alb-oci.beta.adapter.awsguru.dev/
+          export HTTPBIN_OCI_FURL_ENDPOINT=https://3w6rb56t3lzefztvndn4zg3xru0taszm.lambda-url.ap-northeast-1.on.aws/
 
       - name: run e2e tests
         run: |
