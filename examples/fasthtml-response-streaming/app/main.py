@@ -16,7 +16,7 @@ app, rt = fast_app(
     debug=True,
 )
 
-client = AnthropicBedrock(aws_region='us-east-1')
+client = AnthropicBedrock()
 
 def StoryInput():
     return Input(name='topic', id='topic-input', placeholder="Enter a topic for a bedtime story",
