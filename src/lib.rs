@@ -24,8 +24,10 @@ use std::{
     },
     time::Duration,
 };
-use tokio::net::TcpStream;
-use tokio::time::timeout;
+use tokio::{
+    net::TcpStream,
+    time::{timeout, Instant},
+};
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::{Service, ServiceBuilder};
 use tower_http::compression::CompressionLayer;
@@ -231,7 +233,14 @@ impl Adapter<HttpConnector, Body> {
     }
 
     async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
+        let start = Instant::now();
+        let interval = 5; // TODO: make this configurable?
+        let mut next_checkpoint = interval;
         Retry::spawn(FixedInterval::from_millis(10), || {
+            if start.elapsed().as_secs() > next_checkpoint {
+                tracing::debug!("app is not ready after {next_checkpoint}s");
+                next_checkpoint += interval;
+            }
             self.check_web_readiness(url, protocol)
         })
         .await
