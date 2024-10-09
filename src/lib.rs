@@ -247,10 +247,11 @@ impl Adapter<HttpConnector, Body> {
                             && response.status().as_u16() >= 100
                     } =>
                 {
+                    tracing::debug!("app is ready");
                     Ok(())
                 }
                 _ => {
-                    tracing::debug!("app is not ready");
+                    tracing::trace!("app is not ready");
                     Err(-1)
                 }
             },
