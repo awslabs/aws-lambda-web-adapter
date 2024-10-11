@@ -234,7 +234,7 @@ impl Adapter<HttpConnector, Body> {
 
     async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
         let start = Instant::now();
-        let interval = 5; // TODO: make this configurable?
+        let interval = 2; // TODO: make this configurable?
         let mut next_checkpoint = interval;
         Retry::spawn(FixedInterval::from_millis(10), || {
             if start.elapsed().as_secs() > next_checkpoint {
