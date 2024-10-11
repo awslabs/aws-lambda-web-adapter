@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  remix-zip
+
+  Sample SAM Template for remix-zip
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  RemixFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: run.sh
+      Runtime: nodejs20.x
+      MemorySize: 1024
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          RUST_LOG: info
+          PORT: 3000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:23
+      Events:
+        HttpEvents:
+          Type: HttpApi
+    Metadata:
+      BuildMethod: makefile
+
+Outputs:
+  RemixFunctionApi:
+    Description: "API Gateway endpoint URL for Prod stage for Remix function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+  RemixFunction:
+    Description: "Remix Lambda Function ARN"
+    Value: !GetAtt RemixFunction.Arn
+  RemixFunctionIamRole:
+    Description: "Implicit IAM Role created for Remix function"
+    Value: !GetAtt RemixFunctionRole.Arn
