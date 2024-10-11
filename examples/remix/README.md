@@ -8,7 +8,7 @@ The Remix application is created using the following command:
 npx create-remix@latest --template remix-run/remix/templates/express
 ```
 
-Using AWS Lambda Adapter, you can package this web application into Docker image, push to ECR, and deploy to Lambda, ECS/EKS, or EC2.
+Using AWS Lambda Web Adapter, you can package this web application into Docker image, push to ECR, and deploy to Lambda, ECS/EKS, or EC2.
 
 The application can be deployed in an AWS account using the [Serverless Application Model](https://github.com/awslabs/serverless-application-model). The `template.yaml` file in the root folder contains the application definition.
 
@@ -27,7 +27,7 @@ COPY --from=builder  /var/task/remix-app/build /var/task/build
 COPY --from=builder  /var/task/remix-app/node_modules /var/task/node_modules
 COPY --from=builder  /var/task/remix-app/server.js /var/task/server.js
 COPY --from=builder  /var/task/remix-app/package.json /var/task/package.json
-ENV NODE_ENV=production
+ENV NODE_ENV=production PORT=3000
 CMD ["node", "server.js"]
 ```
 
