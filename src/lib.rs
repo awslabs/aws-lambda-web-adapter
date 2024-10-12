@@ -238,7 +238,7 @@ impl Adapter<HttpConnector, Body> {
         let mut next_checkpoint = interval;
         Retry::spawn(FixedInterval::from_millis(10), || {
             if start.elapsed().as_secs() > next_checkpoint {
-                tracing::debug!(url = %url.to_string(), "app is not ready after {next_checkpoint}s");
+                tracing::info!(url = %url.to_string(), "app is not ready after {next_checkpoint}s");
                 next_checkpoint += interval;
             }
             self.check_web_readiness(url, protocol)
