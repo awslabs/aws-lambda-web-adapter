@@ -84,7 +84,7 @@ Open web browser to visit `http://localhost:3000/`
 In general, you can test your web app locally without simulating AWS Lambda execution environment. But if you want to simulate Lambda and API Gateway locally, you can use SAM CLI.
 
 ```shell
-sam local start-api --warm-containers EAGER --region us-west-2
+sam local start-api --warm-containers EAGER
 ```
 
 This command will start a local http endpoint and docker container to simulate API Gateway and Lambda. Please modify the region to match the actual region you are using. You can test it using `curl`, `postman`, and your web browser.
