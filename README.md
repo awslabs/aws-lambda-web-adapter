@@ -176,6 +176,7 @@ The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, S
 - [FastAPI with Background Tasks](examples/fastapi-background-tasks)
 - [FastAPI with Response Streaming](examples/fastapi-response-streaming)
 - [FastAPI with Response Streaming in Zip](examples/fastapi-response-streaming-zip)
+- [FastAPI Response Streaming Backend with IAM Auth](examples/fastapi-backend-only-response-streaming/)
 - [Flask](examples/flask)
 - [Flask in Zip](examples/flask-zip)
 - [Serverless Django](https://github.com/aws-hebrew-book/serverless-django)  by [@efi-mk](https://github.com/efi-mk)
