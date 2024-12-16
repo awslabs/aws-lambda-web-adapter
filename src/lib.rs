@@ -422,9 +422,9 @@ mod tests {
         );
         assert_eq!(parse_status_codes("500"), vec![500]);
         assert_eq!(parse_status_codes("500-502"), vec![500, 501, 502]);
-        assert_eq!(parse_status_codes("invalid"), vec![]);
-        assert_eq!(parse_status_codes("500-invalid"), vec![]);
-        assert_eq!(parse_status_codes(""), vec![]);
+        assert_eq!(parse_status_codes("invalid"), Vec::<u16>::new());
+        assert_eq!(parse_status_codes("500-invalid"), Vec::<u16>::new());
+        assert_eq!(parse_status_codes(""), Vec::<u16>::new());
     }
 
     #[tokio::test]
