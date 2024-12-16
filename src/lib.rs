@@ -412,10 +412,7 @@ mod tests {
 
     #[test]
     fn test_parse_status_codes() {
-        assert_eq!(
-            parse_status_codes("500,502-504,422"),
-            vec![500, 502, 503, 504, 422]
-        );
+        assert_eq!(parse_status_codes("500,502-504,422"), vec![500, 502, 503, 504, 422]);
         assert_eq!(
             parse_status_codes("500, 502-504, 422"), // with spaces
             vec![500, 502, 503, 504, 422]
