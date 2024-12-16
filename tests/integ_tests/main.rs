@@ -612,6 +612,38 @@ async fn test_http_content_encoding_suffix() {
 }
 
 #[tokio::test]
+async fn test_http_error_status_codes() {
+    // Start app server
+    let app_server = MockServer::start();
+    let error_endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/error");
+        then.status(502).body("Bad Gateway");
+    });
+
+    // Initialize adapter with error status codes
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        error_status_codes: Some(vec![500, 502, 503, 504]),
+        ..Default::default()
+    });
+
+    // Call the adapter service with request that should trigger error
+    let req = LambdaEventBuilder::new().with_path("/error").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let result = adapter.call(request).await;
+    assert!(result.is_err(), "Expected error response for status code 502");
+    assert!(result.unwrap_err().to_string().contains("502"));
+
+    // Assert endpoint was called
+    error_endpoint.assert();
+}
+
+#[tokio::test]
 async fn test_http_authorization_source() {
     // Start app server
     let app_server = MockServer::start();
