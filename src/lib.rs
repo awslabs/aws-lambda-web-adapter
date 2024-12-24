@@ -136,9 +136,18 @@ fn parse_status_codes(input: &str) -> Vec<u16> {
                         return (start..=end).collect::<Vec<_>>();
                     }
                 }
+                tracing::warn!("Failed to parse status code range: {}", part);
                 vec![]
             } else {
-                part.parse::<u16>().map_or(vec![], |code| vec![code])
+                part.parse::<u16>().map_or_else(
+                    |_| {
+                        if !part.is_empty() {
+                            tracing::warn!("Failed to parse status code: {}", part);
+                        }
+                        vec![]
+                    },
+                    |code| vec![code],
+                )
             }
         })
         .collect()
