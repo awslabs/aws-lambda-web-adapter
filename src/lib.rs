@@ -180,8 +180,12 @@ pub struct Adapter<C, B> {
 }
 
 impl Adapter<HttpConnector, Body> {
-    fn new_client() -> Arc<Client<HttpConnector, Body>> {
-        Arc::new(Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new()))
+    fn new_client(timeout_ms: u64) -> Arc<Client<HttpConnector, Body>> {
+        Arc::new(
+            Client::builder(hyper_util::rt::TokioExecutor::new())
+                .pool_idle_timeout(Duration::from_millis(timeout_ms))
+                .build(HttpConnector::new()),
+        )
     }
 
     /// Create a new HTTP Adapter instance.
@@ -202,7 +206,7 @@ impl Adapter<HttpConnector, Body> {
             .unwrap();
 
         Adapter {
-            client: Self::new_client(),
+            client: Self::new_client(options.client_idle_timeout_ms),
             healthcheck_url,
             healthcheck_protocol: options.readiness_check_protocol,
             healthcheck_min_unhealthy_status: options.readiness_check_min_unhealthy_status,
@@ -432,7 +436,7 @@ impl Service<Request> for Adapter<HttpConnector, Body> {
             // client timeout, create a new client with a new connection pool.
             // this is to prevent the pool from using a to-be-disconnected connection after restoring from Lambda SnapStart
             tracing::debug!("Client timeout, creating a new client");
-            self.client = Self::new_client();
+            self.client = Self::new_client(self.client_idle_timeout_ms);
         }
 
         let adapter = self.clone();
