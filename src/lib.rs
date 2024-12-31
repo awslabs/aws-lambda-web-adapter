@@ -79,6 +79,7 @@ pub struct AdapterOptions {
     pub invoke_mode: LambdaInvokeMode,
     pub authorization_source: Option<String>,
     pub error_status_codes: Option<Vec<u16>>,
+    pub client_idle_timeout_ms: u64,
 }
 
 impl Default for AdapterOptions {
@@ -120,6 +121,10 @@ impl Default for AdapterOptions {
             error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
                 .ok()
                 .map(|codes| parse_status_codes(&codes)),
+            client_idle_timeout_ms: env::var("AWS_LWA_CLIENT_IDLE_TIMEOUT_MS")
+                .ok()
+                .map(|s| s.parse().unwrap())
+                .unwrap_or(4000),
         }
     }
 }
@@ -176,7 +181,7 @@ impl Adapter<HttpConnector, Body> {
     /// to talk with the web server.
     pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector, Body> {
         let client = Client::builder(hyper_util::rt::TokioExecutor::new())
-            .pool_idle_timeout(Duration::from_secs(4))
+            .pool_idle_timeout(Duration::from_millis(options.client_idle_timeout_ms))
             .build(HttpConnector::new());
 
         let schema = "http";
