@@ -431,6 +431,7 @@ impl Service<Request> for Adapter<HttpConnector, Body> {
         {
             // client timeout, create a new client with a new connection pool.
             // this is to prevent the pool from using a to-be-disconnected connection after restoring from Lambda SnapStart
+            tracing::debug!("Client timeout, creating a new client");
             self.client = Self::new_client();
         }
 
