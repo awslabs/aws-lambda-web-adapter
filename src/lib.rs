@@ -13,7 +13,6 @@ use lambda_http::request::RequestContext;
 use lambda_http::Body;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
-use std::fmt::Debug;
 use std::{
     env,
     future::Future,
@@ -24,6 +23,7 @@ use std::{
     },
     time::Duration,
 };
+use std::{fmt::Debug, time::SystemTime};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_retry::{strategy::FixedInterval, Retry};
@@ -173,17 +173,21 @@ pub struct Adapter<C, B> {
     invoke_mode: LambdaInvokeMode,
     authorization_source: Option<String>,
     error_status_codes: Option<Vec<u16>>,
+    client_idle_timeout_ms: u64,
+    // be sure to use `SystemTime` (CLOCK_REALTIME) instead of `Duration` (CLOCK_MONOTONIC)
+    // to avoid issues when restored from Lambda SnapStart
+    last_invoke: SystemTime,
 }
 
 impl Adapter<HttpConnector, Body> {
+    fn new_client() -> Arc<Client<HttpConnector, Body>> {
+        Arc::new(Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new()))
+    }
+
     /// Create a new HTTP Adapter instance.
     /// This function initializes a new HTTP client
     /// to talk with the web server.
     pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector, Body> {
-        let client = Client::builder(hyper_util::rt::TokioExecutor::new())
-            .pool_idle_timeout(Duration::from_millis(options.client_idle_timeout_ms))
-            .build(HttpConnector::new());
-
         let schema = "http";
 
         let healthcheck_url = format!(
@@ -198,7 +202,7 @@ impl Adapter<HttpConnector, Body> {
             .unwrap();
 
         Adapter {
-            client: Arc::new(client),
+            client: Self::new_client(),
             healthcheck_url,
             healthcheck_protocol: options.readiness_check_protocol,
             healthcheck_min_unhealthy_status: options.readiness_check_min_unhealthy_status,
@@ -211,6 +215,9 @@ impl Adapter<HttpConnector, Body> {
             invoke_mode: options.invoke_mode,
             authorization_source: options.authorization_source.clone(),
             error_status_codes: options.error_status_codes.clone(),
+            client_idle_timeout_ms: options.client_idle_timeout_ms,
+            // it's ok to use `now` here since there is no connections in the connection pool yet
+            last_invoke: SystemTime::now(),
         }
     }
 }
@@ -414,7 +421,21 @@ impl Service<Request> for Adapter<HttpConnector, Body> {
     }
 
     fn call(&mut self, event: Request) -> Self::Future {
+        // validate client timeout
+        if self
+            .last_invoke
+            .elapsed()
+            .map(|d| d.as_millis() > self.client_idle_timeout_ms.into())
+            // if the last_invoke is in the future, it's ok to re-use the client
+            .unwrap_or(false)
+        {
+            // client timeout, create a new client with a new connection pool.
+            // this is to prevent the pool from using a to-be-disconnected connection after restoring from Lambda SnapStart
+            self.client = Self::new_client();
+        }
+
         let adapter = self.clone();
+        self.last_invoke = SystemTime::now();
         Box::pin(async move { adapter.fetch_response(event).await })
     }
 }
