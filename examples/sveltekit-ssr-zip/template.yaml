@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sveltekit-ssr-zip
+
+  Sample SAM Template for sveltekit-ssr-zip
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  SvelteKitSsrFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: app/build/
+      Handler: run.sh
+      Runtime: nodejs22.x
+      MemorySize: 1024
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          PORT: 8080
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:23
+      FunctionUrlConfig:
+        AuthType: NONE
+
+Outputs:
+  SvelteKitSsrFunctionUrlEndpoint:
+      Description: "SvelteKit SSR Function URL Endpoint"
+      Value:
+        Fn::GetAtt: SvelteKitSsrFunctionUrl.FunctionUrl
+  SvelteKitSsrFunction:
+    Description: "SvelteKit SSR Lambda Function ARN"
+    Value: !GetAtt SvelteKitSsrFunction.Arn
+  SvelteKitSsrFunctionIamRole:
+    Description: "Implicit IAM Role created for SvelteKit SSR function"
+    Value: !GetAtt SvelteKitSsrFunctionRole.Arn
