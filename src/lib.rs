@@ -1,6 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+mod readiness;
+
 use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode,
@@ -13,6 +15,7 @@ use lambda_http::request::RequestContext;
 use lambda_http::Body;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
+use readiness::Checkpoint;
 use std::fmt::Debug;
 use std::{
     env,
@@ -24,10 +27,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::{
-    net::TcpStream,
-    time::{timeout, Instant},
-};
+use tokio::{net::TcpStream, time::timeout};
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::{Service, ServiceBuilder};
 use tower_http::compression::CompressionLayer;
@@ -268,13 +268,11 @@ impl Adapter<HttpConnector, Body> {
     }
 
     async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
-        let start = Instant::now();
-        let interval = 2; // TODO: make this configurable?
-        let mut next_checkpoint = interval;
+        let mut checkpoint = Checkpoint::new();
         Retry::spawn(FixedInterval::from_millis(10), || {
-            if start.elapsed().as_secs() > next_checkpoint {
-                tracing::info!(url = %url.to_string(), "app is not ready after {next_checkpoint}s");
-                next_checkpoint += interval;
+            if checkpoint.lapsed() {
+                tracing::info!(url = %url.to_string(), "app is not ready after {}ms", checkpoint.next_ms());
+                checkpoint.increment();
             }
             self.check_web_readiness(url, protocol)
         })
