@@ -80,6 +80,7 @@ pub struct AdapterOptions {
     pub compression: bool,
     pub invoke_mode: LambdaInvokeMode,
     pub authorization_source: Option<String>,
+    pub error_status_codes: Option<Vec<u16>>,
 }
 
 impl Default for AdapterOptions {
@@ -118,8 +119,40 @@ impl Default for AdapterOptions {
                 .as_str()
                 .into(),
             authorization_source: env::var("AWS_LWA_AUTHORIZATION_SOURCE").ok(),
+            error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
+                .ok()
+                .map(|codes| parse_status_codes(&codes)),
         }
     }
+}
+
+fn parse_status_codes(input: &str) -> Vec<u16> {
+    input
+        .split(',')
+        .flat_map(|part| {
+            let part = part.trim();
+            if part.contains('-') {
+                let range: Vec<&str> = part.split('-').collect();
+                if range.len() == 2 {
+                    if let (Ok(start), Ok(end)) = (range[0].parse::<u16>(), range[1].parse::<u16>()) {
+                        return (start..=end).collect::<Vec<_>>();
+                    }
+                }
+                tracing::warn!("Failed to parse status code range: {}", part);
+                vec![]
+            } else {
+                part.parse::<u16>().map_or_else(
+                    |_| {
+                        if !part.is_empty() {
+                            tracing::warn!("Failed to parse status code: {}", part);
+                        }
+                        vec![]
+                    },
+                    |code| vec![code],
+                )
+            }
+        })
+        .collect()
 }
 
 #[derive(Clone)]
@@ -136,6 +169,7 @@ pub struct Adapter<C, B> {
     compression: bool,
     invoke_mode: LambdaInvokeMode,
     authorization_source: Option<String>,
+    error_status_codes: Option<Vec<u16>>,
 }
 
 impl Adapter<HttpConnector, Body> {
@@ -173,6 +207,7 @@ impl Adapter<HttpConnector, Body> {
             compression: options.compression,
             invoke_mode: options.invoke_mode,
             authorization_source: options.authorization_source.clone(),
+            error_status_codes: options.error_status_codes.clone(),
         }
     }
 }
@@ -351,6 +386,17 @@ impl Adapter<HttpConnector, Body> {
 
         let mut app_response = self.client.request(request).await?;
 
+        // Check if status code should trigger an error
+        if let Some(error_codes) = &self.error_status_codes {
+            let status = app_response.status().as_u16();
+            if error_codes.contains(&status) {
+                return Err(Error::from(format!(
+                    "Request failed with configured error status code: {}",
+                    status
+                )));
+            }
+        }
+
         // remove "transfer-encoding" from the response to support "sam local start-api"
         app_response.headers_mut().remove("transfer-encoding");
 
@@ -382,6 +428,20 @@ impl Service<Request> for Adapter<HttpConnector, Body> {
 mod tests {
     use super::*;
     use httpmock::{Method::GET, MockServer};
+
+    #[test]
+    fn test_parse_status_codes() {
+        assert_eq!(parse_status_codes("500,502-504,422"), vec![500, 502, 503, 504, 422]);
+        assert_eq!(
+            parse_status_codes("500, 502-504, 422"), // with spaces
+            vec![500, 502, 503, 504, 422]
+        );
+        assert_eq!(parse_status_codes("500"), vec![500]);
+        assert_eq!(parse_status_codes("500-502"), vec![500, 501, 502]);
+        assert_eq!(parse_status_codes("invalid"), Vec::<u16>::new());
+        assert_eq!(parse_status_codes("500-invalid"), Vec::<u16>::new());
+        assert_eq!(parse_status_codes(""), Vec::<u16>::new());
+    }
 
     #[tokio::test]
     async fn test_status_200_is_ok() {
