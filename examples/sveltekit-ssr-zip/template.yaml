@@ -14,7 +14,7 @@ Resources:
   SvelteKitSsrFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: app/build/
+      CodeUri: app
       Handler: run.sh
       Runtime: nodejs22.x
       MemorySize: 1024
@@ -28,6 +28,8 @@ Resources:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:23
       FunctionUrlConfig:
         AuthType: NONE
+    Metadata:
+      BuildMethod: makefile        
 
 Outputs:
   SvelteKitSsrFunctionUrlEndpoint:
