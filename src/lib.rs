@@ -1,6 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+mod readiness;
+
 use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode,
@@ -13,6 +15,7 @@ use lambda_http::request::RequestContext;
 use lambda_http::Body;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
+use readiness::Checkpoint;
 use std::{
     env,
     future::Future,
@@ -282,7 +285,12 @@ impl Adapter<HttpConnector, Body> {
     }
 
     async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
+        let mut checkpoint = Checkpoint::new();
         Retry::spawn(FixedInterval::from_millis(10), || {
+            if checkpoint.lapsed() {
+                tracing::info!(url = %url.to_string(), "app is not ready after {}ms", checkpoint.next_ms());
+                checkpoint.increment();
+            }
             self.check_web_readiness(url, protocol)
         })
         .await
@@ -298,10 +306,11 @@ impl Adapter<HttpConnector, Body> {
                             && response.status().as_u16() >= 100
                     } =>
                 {
+                    tracing::debug!("app is ready");
                     Ok(())
                 }
                 _ => {
-                    tracing::debug!("app is not ready");
+                    tracing::trace!("app is not ready");
                     Err(-1)
                 }
             },
