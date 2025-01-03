@@ -27,16 +27,16 @@ To get more information of Wrapper script, please read Lambda documentation [her
     1. `npm install --save-dev @sveltejs/adapter-node` to install sveltekit [node adapter](https://svelte.dev/docs/kit/adapter-node)
     1. `npm uninstall @sveltejs/adapter-auto` to remove unused auto adapter
     1. replace `import adapter from '@sveltejs/adapter-auto';` with `import adapter from '@sveltejs/adapter-node';` in `svelte.config.js`
+    1. add a `run.sh` [wrapper](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper) script:
+    ```sh
+    cat << EOF > ./build/run.sh
+    #!/bin/bash
 
-### Build SvelteKit SSR app for lambda
+    node index.js
+    EOF
+    ```
 
-run the build script from the `sveltekit-ssr-zip` directory
-
-```sh
-bash build.sh
-```
-
-### Create lambda and deploy SSR SvelteKit
+### Build and deploy SSR SvelteKit on Lambda
 
 Run the following commands to build and deploy the application to lambda. 
 
