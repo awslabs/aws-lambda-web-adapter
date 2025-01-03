@@ -420,6 +420,15 @@ impl Adapter<HttpConnector, Body> {
 
         Ok(app_response)
     }
+
+    /// Return whether the client has been idle for longer than the [`Self::client_idle_timeout_ms`].
+    fn client_timeout_has_expired(&self) -> bool {
+        self.last_invoke
+            .elapsed()
+            .map(|d| d.as_millis() > self.client_idle_timeout_ms.into())
+            // if the last_invoke is in the future, it's ok to re-use the client
+            .unwrap_or(false)
+    }
 }
 
 /// Implement a `Tower.Service` that sends the requests
@@ -434,14 +443,7 @@ impl Service<Request> for Adapter<HttpConnector, Body> {
     }
 
     fn call(&mut self, event: Request) -> Self::Future {
-        // validate client timeout
-        if self
-            .last_invoke
-            .elapsed()
-            .map(|d| d.as_millis() > self.client_idle_timeout_ms.into())
-            // if the last_invoke is in the future, it's ok to re-use the client
-            .unwrap_or(false)
-        {
+        if self.client_timeout_has_expired() {
             // client timeout, create a new client with a new connection pool.
             // this is to prevent the pool from using a to-be-disconnected connection after restoring from Lambda SnapStart
             tracing::debug!("Client timeout, creating a new client");
@@ -568,5 +570,17 @@ mod tests {
 
         // Assert app server's healthcheck endpoint got called
         healthcheck.assert();
+    }
+
+    #[test]
+    fn test_client_idle_timeout() {
+        let mut adapter = Adapter::new(&AdapterOptions::default());
+        assert!(!adapter.client_timeout_has_expired());
+
+        adapter.last_invoke = SystemTime::now() - Duration::from_millis(5000);
+        assert!(adapter.client_timeout_has_expired());
+
+        adapter.last_invoke = SystemTime::now() + Duration::from_millis(5000);
+        assert!(!adapter.client_timeout_has_expired());
     }
 }
