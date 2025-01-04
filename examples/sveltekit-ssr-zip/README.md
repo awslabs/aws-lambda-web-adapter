@@ -29,7 +29,7 @@ To get more information of Wrapper script, please read Lambda documentation [her
     1. replace `import adapter from '@sveltejs/adapter-auto';` with `import adapter from '@sveltejs/adapter-node';` in `svelte.config.js`
     1. add a `run.sh` [wrapper](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html#runtime-wrapper) script:
     ```sh
-    cat << EOF > ./build/run.sh
+    cat << EOF > ./run.sh
     #!/bin/bash
 
     node index.js
