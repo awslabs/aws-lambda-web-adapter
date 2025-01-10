@@ -211,6 +211,7 @@ The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, S
 - [FastHTML with Response Streaming in Zip](examples/fasthtml-response-streaming-zip)
 - [Remix](examples/remix/)
 - [Remix in Zip](examples/remix-zip/)
+- [Sveltekit SSR Zip](examples/sveltekit-ssr-zip/)
 
 ## Acknowledgement
 
