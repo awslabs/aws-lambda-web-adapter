@@ -1,0 +1,27 @@
+{
+  "name": "graphql-yoga",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.js && cp run.sh dist/",
+    "dev": "tsc --noEmit && node --loader ts-node/esm ./server.ts",
+    "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "preview": "node ./dist/server.js",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "cross-env": "^7.0.3",
+    "graphql": "^16.10.0",
+    "graphql-yoga": "^5.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@typescript-eslint/eslint-plugin": "^6.7.4",
+    "@typescript-eslint/parser": "^6.7.4",
+    "esbuild": "^0.25.1",
+    "eslint": "^8.38.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.1.6"
+  }
+}

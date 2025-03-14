@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Graphql Yoga response streaming
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 60
+
+Resources:
+  GraphqlYogaFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: app/
+      Handler: run.sh
+      Runtime: nodejs22.x
+      MemorySize: 256
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          AWS_LWA_INVOKE_MODE: response_stream
+          PORT: 4000
+          NODE_ENV: production
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:24
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+Outputs:
+  GraphqlYogaFunctionUrl:
+    Description: "Function URL for Graphql Yoga function"
+    Value: !Join 
+      - ''
+      - - !GetAtt GraphqlYogaFunctionUrl.FunctionUrl
+        - 'graphql'
+  GraphqlYogaFunction:
+    Description: "Graphql Yoga Lambda Function ARN"
+    Value: !GetAtt GraphqlYogaFunction.Arn
