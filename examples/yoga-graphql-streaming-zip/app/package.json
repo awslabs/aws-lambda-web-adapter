@@ -17,11 +17,11 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "@typescript-eslint/eslint-plugin": "^6.7.4",
-    "@typescript-eslint/parser": "^6.7.4",
+    "@typescript-eslint/eslint-plugin": "^8.26.1",
+    "@typescript-eslint/parser": "^8.26.1",
     "esbuild": "^0.25.1",
-    "eslint": "^8.38.0",
+    "eslint": "^9.22.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.1.6"
+    "typescript": "^5.8.2"
   }
 }
