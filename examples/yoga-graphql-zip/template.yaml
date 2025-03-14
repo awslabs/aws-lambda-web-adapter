@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Graphql Yoga Api
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 60
+
+Resources:
+  GraphqlYogaFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: app/
+      Handler: run.sh
+      Runtime: nodejs22.x
+      MemorySize: 256
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          PORT: 4000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:24
+      Events:
+        RootEvent:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: any
+        ProxyEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: any
+
+Outputs:
+  GraphqlYogaApi:
+    Description: "API Gateway endpoint URL for Prod stage for Graphql Yoga function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/graphql"
+  GraphqlYogaFunction:
+    Description: "Graphql Yoga Lambda Function ARN"
+    Value: !GetAtt GraphqlYogaFunction.Arn
+  GraphqlYogaRole:
+    Description: "Implicit IAM Role created for Graphql Yoga function"
+    Value: !GetAtt GraphqlYogaFunctionRole.Arn
