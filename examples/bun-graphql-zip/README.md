@@ -1,6 +1,6 @@
-# Yoga Graphql API example
+# Bun Server with graphql API Gateway example
 
-This example show how to use Lambda Web Adapter to run a yoga server application with via [AWS Lambda](https://aws.amazon.com/lambda) and API Gateway.
+This example show how to use Lambda Web Adapter to run a bun server application with via [AWS Lambda](https://aws.amazon.com/lambda) and API Gateway.
 
 ### Build and Deploy
 
@@ -22,7 +22,7 @@ When you open the API URL in a browser:
 2. See the results in the right panel
 3. Explore the API documentation using the "Docs" button
 
-Try this sample subscription query to test streaming:
+Try this sample query to test:
 
 ```graphql
 query {
@@ -33,8 +33,6 @@ query {
   }
 }
 ```
-
-You'll see each character stream in one by one with a small delay between them.
 
 For command line testing, you can use curl:
 
