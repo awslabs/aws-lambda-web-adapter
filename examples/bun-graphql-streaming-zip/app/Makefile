@@ -1,6 +1,6 @@
-.PHONY: build-GraphqlYogaFunction build
+.PHONY: build-BunGraphqlFunction build
 
-build-GraphqlYogaFunction:
+build-BunGraphqlFunction:
 				bun install
 				bun run build
 				mkdir -p $(ARTIFACTS_DIR)
@@ -8,4 +8,4 @@ build-GraphqlYogaFunction:
 				cp -r out/* $(ARTIFACTS_DIR)/
 
 build:
-				$(MAKE) build-GraphqlYogaFunction
+				$(MAKE) build-BunGraphqlFunction

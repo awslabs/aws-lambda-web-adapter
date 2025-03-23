@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Graphql Yoga Api
+  Bun Graphql Api
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -9,7 +9,7 @@ Globals:
     Timeout: 60
 
 Resources:
-  GraphqlYogaFunction:
+  BunGraphqlFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: makefile
@@ -40,12 +40,12 @@ Resources:
             Method: any
 
 Outputs:
-  GraphqlYogaApi:
-    Description: "API Gateway endpoint URL for Prod stage for Graphql Yoga function"
+  BunGraphqlApi:
+    Description: "API Gateway endpoint URL for Prod stage for Bun Graphql function"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/graphql"
-  GraphqlYogaFunction:
-    Description: "Graphql Yoga Lambda Function ARN"
-    Value: !GetAtt GraphqlYogaFunction.Arn
-  GraphqlYogaRole:
-    Description: "Implicit IAM Role created for Graphql Yoga function"
-    Value: !GetAtt GraphqlYogaFunctionRole.Arn
+  BunGraphqlFunction:
+    Description: "Bun Graphql Lambda Function ARN"
+    Value: !GetAtt BunGraphqlFunction.Arn
+  BunGraphqlRole:
+    Description: "Implicit IAM Role created for Bun Graphql function"
+    Value: !GetAtt BunGraphqlFunctionRole.Arn

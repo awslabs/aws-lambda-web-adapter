@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Graphql Yoga response streaming
+  Bun graphql response streaming
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -9,7 +9,7 @@ Globals:
     Timeout: 60
 
 Resources:
-  GraphqlYogaFunction:
+  BunGraphqlFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: makefile
@@ -24,8 +24,7 @@ Resources:
         Variables:
           AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
           AWS_LWA_INVOKE_MODE: response_stream
-          PORT: 4000
-          NODE_ENV: production
+          PORT: 3000
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:24
         - !Sub arn:aws:lambda:us-east-1:582637575117:layer:BunRuntimeArm64:1
@@ -34,12 +33,12 @@ Resources:
         InvokeMode: RESPONSE_STREAM
 
 Outputs:
-  GraphqlYogaFunctionUrl:
-    Description: "Function URL for Graphql Yoga function"
+  BunGraphqlFunctionUrl:
+    Description: "Function URL for Bun Graphql function"
     Value: !Join 
       - ''
-      - - !GetAtt GraphqlYogaFunctionUrl.FunctionUrl
+      - - !GetAtt BunGraphqlFunctionUrl.FunctionUrl
         - 'graphql'
-  GraphqlYogaFunction:
-    Description: "Graphql Yoga Lambda Function ARN"
-    Value: !GetAtt GraphqlYogaFunction.Arn
+  BunGraphqlFunction:
+    Description: "Bun Graphql Lambda Function ARN"
+    Value: !GetAtt BunGraphqlFunction.Arn
