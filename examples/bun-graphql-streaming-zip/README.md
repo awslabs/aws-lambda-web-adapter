@@ -1,6 +1,6 @@
-# Yoga Graphql response streaming example
+# Bun Server with graphql response streaming example
 
-This example show how to use Lambda Web Adapter to run a yoga server application with response streaming via a [AWS Lambda](https://aws.amazon.com/lambda) Function URL.
+This example show how to use the Lambda Web Adapter to run a bun server application with response streaming via a [AWS Lambda](https://aws.amazon.com/lambda) Function URL.
 
 ### Build and Deploy
 

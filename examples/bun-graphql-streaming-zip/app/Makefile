@@ -1,10 +1,11 @@
 .PHONY: build-GraphqlYogaFunction build
 
 build-GraphqlYogaFunction:
-				pnpm i
-				pnpm build
+				bun install
+				bun run build
 				mkdir -p $(ARTIFACTS_DIR)
-				cp -r dist/* $(ARTIFACTS_DIR)/
+				cp run.sh out/
+				cp -r out/* $(ARTIFACTS_DIR)/
 
 build:
 				$(MAKE) build-GraphqlYogaFunction
