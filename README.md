@@ -106,6 +106,7 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_PASS_THROUGH_PATH                                    | the path for receiving event payloads that are passed through from non-http triggers | "/events"  |
 | AWS_LWA_AUTHORIZATION_SOURCE                                 | a header name to be replaced to `Authorization` | None  |
 | AWS_LWA_ERROR_STATUS_CODES                                  | comma-separated list of HTTP status codes that will cause Lambda invocations to fail (e.g. "500,502-504,422") | None  |
+| AWS_LWA_CLIENT_IDLE_TIMEOUT_MS                               | HTTP client idle timeout in milliseconds                                             | "4000"    |
 
 > **Note:**
 > We use "AWS_LWA_" prefix to namespacing all environment variables used by Lambda Web Adapter. The original ones will be supported until we reach version 1.0.
@@ -139,6 +140,8 @@ Please check out [FastAPI with Response Streaming](examples/fastapi-response-str
 **AWS_LWA_AUTHORIZATION_SOURCE** - When set, Lambda Web Adapter replaces the specified header name to `Authorization` before proxying a request. This is useful when you use Lambda function URL with [IAM auth type](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html), which reserves Authorization header for IAM authentication, but you want to still use Authorization header for your backend apps. This feature is disabled by default.
 
 **AWS_LWA_ERROR_STATUS_CODES** - A comma-separated list of HTTP status codes that will cause Lambda invocations to fail. Supports individual codes and ranges (e.g. "500,502-504,422"). When the web application returns any of these status codes, the Lambda invocation will fail and trigger error handling behaviors like retries or DLQ processing. This is useful for treating certain HTTP errors as Lambda execution failures. This feature is disabled by default.
+
+**AWS_LWA_CLIENT_IDLE_TIMEOUT_MS** - HTTP client idle timeout in milliseconds. The default is 4000 milliseconds.
 
 ## Request Context
 
