@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Bun Graphql Api
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 60
+
+Resources:
+  BunGraphqlFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: app/
+      Handler: run.sh
+      Runtime: provided.al2023
+      Architectures:
+        - x86_64
+      MemorySize: 256
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          PORT: 3000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:24
+        - !Sub arn:aws:lambda:us-east-1:582637575117:layer:BunRuntimeX64:1
+      Events:
+        RootEvent:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: any
+        ProxyEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: any
+
+Outputs:
+  BunGraphqlApi:
+    Description: "API Gateway endpoint URL for Prod stage for Bun Graphql function"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/graphql"
+  BunGraphqlFunction:
+    Description: "Bun Graphql Lambda Function ARN"
+    Value: !GetAtt BunGraphqlFunction.Arn
+  BunGraphqlRole:
+    Description: "Implicit IAM Role created for Bun Graphql function"
+    Value: !GetAtt BunGraphqlFunctionRole.Arn

@@ -1,0 +1,13 @@
+/dist
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### VS Code ###
+.vscode/
+
+.aws-sam
+node_modules
