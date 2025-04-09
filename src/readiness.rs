@@ -16,7 +16,6 @@ use lambda_http::Body;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
 use readiness::Checkpoint;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::{
     env,
@@ -24,7 +23,7 @@ use std::{
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc,
     },
     time::Duration,
 };
@@ -68,6 +67,50 @@ impl From<&str> for LambdaInvokeMode {
     }
 }
 
+// Helper function to detect if application is a reactive framework
+fn detect_reactive_framework() -> bool {
+    // Check for Spring WebFlux
+    if env::var("SPRING_WEBFLUX_VERSION").is_ok() {
+        tracing::info!("Detected Spring WebFlux framework - enabling response streaming by default");
+        return true;
+    }
+    
+    // Check for Reactor (Core library used by WebFlux)
+    if env::var("REACTOR_VERSION").is_ok() {
+        tracing::info!("Detected Reactor framework - enabling response streaming by default");
+        return true;
+    }
+    
+    // Check for Vert.x (Another reactive framework)
+    if env::var("VERTX_VERSION").is_ok() {
+        tracing::info!("Detected Vert.x framework - enabling response streaming by default");
+        return true;
+    }
+    
+    // Check for Quarkus with reactive extensions
+    if env::var("QUARKUS_VERSION").is_ok() && 
+       (env::var("QUARKUS_REACTIVE").is_ok() || env::var("QUARKUS_MUTINY_VERSION").is_ok()) {
+        tracing::info!("Detected Quarkus with reactive extensions - enabling response streaming by default");
+        return true;
+    }
+    
+    // Check for Micronaut with reactive streams
+    if env::var("MICRONAUT_VERSION").is_ok() && env::var("MICRONAUT_REACTOR").is_ok() {
+        tracing::info!("Detected Micronaut with reactive extensions - enabling response streaming by default");
+        return true;
+    }
+    
+    // Environment variable override to force detection
+    if let Ok(value) = env::var("AWS_LWA_IS_REACTIVE_APPLICATION") {
+        if value.to_lowercase() == "true" {
+            tracing::info!("Reactive application explicitly configured via AWS_LWA_IS_REACTIVE_APPLICATION");
+            return true;
+        }
+    }
+    
+    false
+}
+
 pub struct AdapterOptions {
     pub host: String,
     pub port: String,
@@ -82,7 +125,6 @@ pub struct AdapterOptions {
     pub invoke_mode: LambdaInvokeMode,
     pub authorization_source: Option<String>,
     pub error_status_codes: Option<Vec<u16>>,
-    pub forward_context: bool, // New option to control context forwarding
 }
 
 impl Default for AdapterOptions {
@@ -116,19 +158,23 @@ impl Default for AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            invoke_mode: env::var("AWS_LWA_INVOKE_MODE")
-                .unwrap_or("buffered".to_string())
-                .as_str()
-                .into(),
+            // PERFORMANCE IMPROVEMENT: Auto-detect reactive frameworks and use streaming mode by default for them
+            invoke_mode: {
+                if let Ok(invoke_mode_str) = env::var("AWS_LWA_INVOKE_MODE") {
+                    invoke_mode_str.as_str().into()
+                } else {
+                    // If AWS_LWA_INVOKE_MODE isn't set explicitly, check for reactive frameworks
+                    if detect_reactive_framework() {
+                        LambdaInvokeMode::ResponseStream // Use streaming mode for reactive frameworks
+                    } else {
+                        LambdaInvokeMode::Buffered // Default to buffered mode for non-reactive apps
+                    }
+                }
+            },
             authorization_source: env::var("AWS_LWA_AUTHORIZATION_SOURCE").ok(),
             error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
                 .ok()
                 .map(|codes| parse_status_codes(&codes)),
-            // New option for controlling context forwarding with environment variable support
-            forward_context: env::var("AWS_LWA_FORWARD_CONTEXT")
-                .unwrap_or_else(|_| "true".to_string())
-                .parse()
-                .unwrap_or(true),
         }
     }
 }
@@ -162,9 +208,6 @@ fn parse_status_codes(input: &str) -> Vec<u16> {
         .collect()
 }
 
-// Type alias for context cache
-type ContextCache = Arc<Mutex<HashMap<String, HeaderValue>>>;
-
 #[derive(Clone)]
 pub struct Adapter<C, B> {
     client: Arc<Client<C, B>>,
@@ -180,10 +223,6 @@ pub struct Adapter<C, B> {
     invoke_mode: LambdaInvokeMode,
     authorization_source: Option<String>,
     error_status_codes: Option<Vec<u16>>,
-    forward_context: bool,
-    // Context cache for reducing serialization overhead
-    request_context_cache: ContextCache,
-    lambda_context_cache: ContextCache,
 }
 
 impl Adapter<HttpConnector, Body> {
@@ -208,8 +247,10 @@ impl Adapter<HttpConnector, Body> {
             .parse()
             .unwrap();
 
-        if !options.forward_context {
-            tracing::info!("Context forwarding is disabled - this can improve performance for high-throughput applications");
+        // Log the selected invoke mode to make configuration clear
+        tracing::info!("Lambda Web Adapter configured with invoke_mode: {:?}", options.invoke_mode);
+        if options.invoke_mode == LambdaInvokeMode::ResponseStream {
+            tracing::info!("Using response streaming mode - this significantly improves performance for reactive applications");
         }
 
         Adapter {
@@ -226,10 +267,6 @@ impl Adapter<HttpConnector, Body> {
             invoke_mode: options.invoke_mode,
             authorization_source: options.authorization_source.clone(),
             error_status_codes: options.error_status_codes.clone(),
-            forward_context: options.forward_context,
-            // Initialize context caches for better performance
-            request_context_cache: Arc::new(Mutex::new(HashMap::new())),
-            lambda_context_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -346,38 +383,6 @@ impl Adapter<HttpConnector, Body> {
         }
     }
 
-    // Helper function to get or create a cached header value for a context
-    fn get_or_create_context_header<T: serde::Serialize>(
-        &self,
-        context: &T,
-        cache: &ContextCache,
-        context_type: &str,
-    ) -> Result<HeaderValue, Error> {
-        // Generate a cache key based on the context
-        let context_json = serde_json::to_string(context)?;
-        
-        // Lock the cache and check if we have a cached value
-        let mut cache_lock = cache.lock().unwrap();
-        
-        if let Some(cached_value) = cache_lock.get(&context_json) {
-            // Cache hit - return the cached header value
-            return Ok(cached_value.clone());
-        }
-        
-        // Cache miss - create a new header value
-        let header_value = HeaderValue::from_bytes(context_json.as_bytes())?;
-        
-        // Store in cache for future use
-        cache_lock.insert(context_json, header_value.clone());
-        
-        // Log cache metrics periodically
-        if cache_lock.len() % 100 == 0 {
-            tracing::debug!("{} context cache size: {}", context_type, cache_lock.len());
-        }
-        
-        Ok(header_value)
-    }
-
     async fn fetch_response(&self, event: Request) -> Result<Response<Incoming>, Error> {
         if self.async_init && !self.ready_at_init.load(Ordering::SeqCst) {
             self.is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol)
@@ -402,32 +407,17 @@ impl Adapter<HttpConnector, Body> {
 
         let mut req_headers = parts.headers;
 
-        // PERFORMANCE IMPROVEMENT: Only add context headers if forwarding is enabled
-        if self.forward_context {
-            // Get or create cached header values for contexts to reduce serialization overhead
-            let request_context_header = self.get_or_create_context_header(
-                &request_context,
-                &self.request_context_cache,
-                "request"
-            )?;
-            
-            let lambda_context_header = self.get_or_create_context_header(
-                &lambda_context,
-                &self.lambda_context_cache,
-                "lambda"
-            )?;
+        // include request context in http header "x-amzn-request-context"
+        req_headers.insert(
+            HeaderName::from_static("x-amzn-request-context"),
+            HeaderValue::from_bytes(serde_json::to_string(&request_context)?.as_bytes())?,
+        );
 
-            // Add cached context headers
-            req_headers.insert(
-                HeaderName::from_static("x-amzn-request-context"),
-                request_context_header,
-            );
-
-            req_headers.insert(
-                HeaderName::from_static("x-amzn-lambda-context"),
-                lambda_context_header,
-            );
-        }
+        // include lambda context in http header "x-amzn-lambda-context"
+        req_headers.insert(
+            HeaderName::from_static("x-amzn-lambda-context"),
+            HeaderValue::from_bytes(serde_json::to_string(&lambda_context)?.as_bytes())?,
+        );
 
         if let Some(authorization_source) = self.authorization_source.as_deref() {
             if req_headers.contains_key(authorization_source) {
@@ -511,66 +501,62 @@ mod tests {
     }
     
     #[test]
-    fn test_forward_context_option() {
-        // Test that environment variable is correctly parsed
-        std::env::set_var("AWS_LWA_FORWARD_CONTEXT", "false");
-        let options = AdapterOptions::default();
-        assert_eq!(options.forward_context, false);
+    fn test_reactive_framework_detection() {
+        // Test with no frameworks detected
+        std::env::remove_var("SPRING_WEBFLUX_VERSION");
+        std::env::remove_var("REACTOR_VERSION");
+        std::env::remove_var("VERTX_VERSION");
+        std::env::remove_var("AWS_LWA_IS_REACTIVE_APPLICATION");
         
-        std::env::set_var("AWS_LWA_FORWARD_CONTEXT", "true");
-        let options = AdapterOptions::default();
-        assert_eq!(options.forward_context, true);
+        assert_eq!(detect_reactive_framework(), false);
         
-        // Reset
-        std::env::remove_var("AWS_LWA_FORWARD_CONTEXT");
+        // Test with Spring WebFlux detected
+        std::env::set_var("SPRING_WEBFLUX_VERSION", "5.3.20");
+        assert_eq!(detect_reactive_framework(), true);
+        std::env::remove_var("SPRING_WEBFLUX_VERSION");
+        
+        // Test with Reactor detected
+        std::env::set_var("REACTOR_VERSION", "3.4.17");
+        assert_eq!(detect_reactive_framework(), true);
+        std::env::remove_var("REACTOR_VERSION");
+        
+        // Test with Vert.x detected
+        std::env::set_var("VERTX_VERSION", "4.2.5");
+        assert_eq!(detect_reactive_framework(), true);
+        std::env::remove_var("VERTX_VERSION");
+        
+        // Test with environment variable override
+        std::env::set_var("AWS_LWA_IS_REACTIVE_APPLICATION", "true");
+        assert_eq!(detect_reactive_framework(), true);
+        std::env::remove_var("AWS_LWA_IS_REACTIVE_APPLICATION");
     }
-
-    #[tokio::test]
-    async fn test_context_caching() {
-        // Create a simple adapter
+    
+    #[test]
+    fn test_invoke_mode_selection() {
+        // Test default behavior - no reactive framework, no env var
+        std::env::remove_var("SPRING_WEBFLUX_VERSION");
+        std::env::remove_var("AWS_LWA_INVOKE_MODE");
+        
         let options = AdapterOptions::default();
-        let adapter = Adapter::new(&options);
+        assert_eq!(options.invoke_mode, LambdaInvokeMode::Buffered);
         
-        // Create a mock context
-        #[derive(serde::Serialize)]
-        struct TestContext {
-            id: String,
-            value: i32,
-        }
+        // Test with reactive framework detected
+        std::env::set_var("SPRING_WEBFLUX_VERSION", "5.3.20");
+        std::env::remove_var("AWS_LWA_INVOKE_MODE");
         
-        let test_context = TestContext {
-            id: "test".to_string(),
-            value: 42,
-        };
+        let options = AdapterOptions::default();
+        assert_eq!(options.invoke_mode, LambdaInvokeMode::ResponseStream);
         
-        // Test cache functionality
-        let cache = Arc::new(Mutex::new(HashMap::new()));
+        // Test with explicit environment variable - this should override framework detection
+        std::env::set_var("SPRING_WEBFLUX_VERSION", "5.3.20");
+        std::env::set_var("AWS_LWA_INVOKE_MODE", "buffered");
         
-        // First call should cache the value
-        let header1 = adapter.get_or_create_context_header(&test_context, &cache, "test").unwrap();
+        let options = AdapterOptions::default();
+        assert_eq!(options.invoke_mode, LambdaInvokeMode::Buffered);
         
-        // Second call with same context should return cached value
-        let header2 = adapter.get_or_create_context_header(&test_context, &cache, "test").unwrap();
-        
-        // Headers should be equal
-        assert_eq!(header1, header2);
-        
-        // Cache should have exactly one entry
-        assert_eq!(cache.lock().unwrap().len(), 1);
-        
-        // Different context should create new cache entry
-        let test_context2 = TestContext {
-            id: "test2".to_string(),
-            value: 43,
-        };
-        
-        let header3 = adapter.get_or_create_context_header(&test_context2, &cache, "test").unwrap();
-        
-        // This should be different from first header
-        assert_ne!(header1, header3);
-        
-        // Cache should now have two entries
-        assert_eq!(cache.lock().unwrap().len(), 2);
+        // Clean up
+        std::env::remove_var("SPRING_WEBFLUX_VERSION");
+        std::env::remove_var("AWS_LWA_INVOKE_MODE");
     }
 
     #[tokio::test]
