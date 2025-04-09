@@ -67,6 +67,144 @@ impl From<&str> for LambdaInvokeMode {
     }
 }
 
+// Helper function to detect if application is a reactive or async framework
+// This function efficiently checks for environment variables across multiple programming languages and frameworks
+fn detect_reactive_framework() -> bool {
+    // Core detection configuration - allows explicitly setting reactive mode
+    if let Ok(value) = env::var("AWS_LWA_IS_REACTIVE_APPLICATION") {
+        if value.to_lowercase() == "true" {
+            tracing::info!("Reactive application explicitly configured via AWS_LWA_IS_REACTIVE_APPLICATION");
+            return true;
+        } else if value.to_lowercase() == "false" {
+            tracing::info!("Non-reactive application explicitly configured via AWS_LWA_IS_REACTIVE_APPLICATION");
+            return false;
+        }
+    }
+    
+    // Allow disabling auto-detection completely
+    if let Ok(value) = env::var("AWS_LWA_DISABLE_FRAMEWORK_DETECTION") {
+        if value.to_lowercase() == "true" {
+            tracing::info!("Framework auto-detection disabled via AWS_LWA_DISABLE_FRAMEWORK_DETECTION");
+            return false;
+        }
+    }
+
+    // Define framework categories and their associated environment variables
+    let framework_categories = [
+        // Java-based frameworks
+        ("Java reactive", vec![
+            "SPRING_WEBFLUX_VERSION", 
+            "REACTOR_VERSION", 
+            "VERTX_VERSION", 
+            "VERTX_HOME",
+            "QUARKUS_REACTIVE", 
+            "QUARKUS_MUTINY_VERSION",
+            "MICRONAUT_REACTOR", 
+            "MICRONAUT_REACTIVE",
+            "HELIDON_REACTIVE",
+            "AKKA_VERSION", 
+            "AKKA_HTTP_VERSION"
+        ]),
+        
+        // Python-based frameworks
+        ("Python async", vec![
+            "FASTAPI_VERSION", 
+            "STARLETTE_VERSION", 
+            "SANIC_VERSION", 
+            "QUART_APP", 
+            "QUART_ENV",
+            "AIOHTTP_VERSION", 
+            "CHANNELS_VERSION", 
+            "PYTHON_ASYNC_APP"
+        ]),
+        
+        // Node.js frameworks
+        ("Node.js async", vec![
+            "NESTJS_VERSION", 
+            "FASTIFY_VERSION", 
+            "KOA_VERSION", 
+            "NODE_STREAMING_APP"
+        ]),
+        
+        // Ruby frameworks
+        ("Ruby async", vec![
+            "ASYNC_RUBY", 
+            "HANAMI_STREAMING"
+        ]),
+        
+        // PHP frameworks
+        ("PHP async", vec![
+            "REACTPHP_VERSION", 
+            "SWOOLE_VERSION", 
+            "LARAVEL_ASYNC"
+        ]),
+        
+        // Go frameworks
+        ("Go async", vec![
+            "GO_ASYNC_APP", 
+            "ECHO_VERSION"
+        ]),
+        
+        // Rust frameworks
+        ("Rust async", vec![
+            "ACTIX_WEB_VERSION", 
+            "ROCKET_VERSION"
+        ])
+    ];
+    
+    // Check for profile/settings that might indicate a reactive framework
+    let profile_indicators = [
+        ("SPRING_PROFILES_ACTIVE", "reactive"),
+        ("DJANGO_SETTINGS_MODULE", "channels"),
+        ("QUARKUS_VERSION", ""), // Just check existence for this one
+        ("MICRONAUT_VERSION", ""), // Just check existence for this one
+        ("LARAVEL_VERSION", "") // Just check existence for this one
+    ];
+    
+    // Check each framework category
+    for (category, env_vars) in &framework_categories {
+        for &env_var in env_vars {
+            if env::var(env_var).is_ok() {
+                tracing::info!("Detected {} framework ({}): enabling response streaming by default", 
+                              category, env_var);
+                return true;
+            }
+        }
+    }
+    
+    // Check profile indicators
+    for (env_var, indicator) in &profile_indicators {
+        if let Ok(value) = env::var(env_var) {
+            if indicator.is_empty() || value.contains(indicator) {
+                tracing::info!("Detected framework indicator {} ({}): enabling response streaming by default", 
+                              env_var, if indicator.is_empty() { "exists" } else { indicator });
+                return true;
+            }
+        }
+    }
+    
+    // Check for streaming content types
+    if env::var("AWS_LWA_CHECK_CONTENT_TYPES").unwrap_or_else(|_| "true".to_string()).to_lowercase() == "true" {
+        let streaming_content_types = ["text/event-stream", "application/octet-stream", "multipart/"];
+        
+        if let Ok(content_types) = env::var("HTTP_ACCEPT") {
+            let content_types = content_types.to_lowercase();
+            
+            for &streaming_type in &streaming_content_types {
+                if content_types.contains(streaming_type) {
+                    tracing::info!("Detected streaming content type {}: enabling response streaming by default", 
+                                  streaming_type);
+                    return true;
+                }
+            }
+        }
+    }
+    
+    // No reactive/streaming framework detected
+    tracing::debug!("No reactive/streaming framework detected - using default buffered mode");
+    false
+}
+
 pub struct AdapterOptions {
     pub host: String,
     pub port: String,
@@ -121,10 +259,21 @@ impl Default for AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            invoke_mode: env::var("AWS_LWA_INVOKE_MODE")
-                .unwrap_or("buffered".to_string())
-                .as_str()
-                .into(),
+            invoke_mode: if let Ok(invoke_mode_str) = env::var("AWS_LWA_INVOKE_MODE") {
+                // Explicit setting takes precedence
+                let mode = invoke_mode_str.as_str().into();
+                tracing::info!("Using explicitly configured invoke mode: {:?}", mode);
+                mode
+            } else {
+                // If AWS_LWA_INVOKE_MODE isn't set explicitly, check for reactive frameworks
+                if detect_reactive_framework() {
+                    tracing::info!("Reactive framework detected - using response streaming mode");
+                    LambdaInvokeMode::ResponseStream // Use streaming mode for reactive frameworks
+                } else {
+                    tracing::info!("No reactive framework detected - using default buffered mode");
+                    LambdaInvokeMode::Buffered // Default to buffered mode for non-reactive apps
+                }
+            },
             authorization_source: env::var("AWS_LWA_AUTHORIZATION_SOURCE").ok(),
             error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
                 .ok()
