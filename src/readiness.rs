@@ -81,13 +81,6 @@ pub struct AdapterOptions {
     pub invoke_mode: LambdaInvokeMode,
     pub authorization_source: Option<String>,
     pub error_status_codes: Option<Vec<u16>>,
-    // New options for HTTP client configuration
-    pub http_keepalive: Option<Duration>,
-    pub http_nodelay: bool,
-    pub http_reuse_address: bool,
-    pub http_pool_idle_timeout: Duration,
-    pub http_pool_max_idle: usize,
-    pub http_http2_only: bool,
 }
 
 impl Default for AdapterOptions {
@@ -129,33 +122,6 @@ impl Default for AdapterOptions {
             error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
                 .ok()
                 .map(|codes| parse_status_codes(&codes)),
-            // New HTTP client configuration with environment variable support
-            http_keepalive: env::var("AWS_LWA_HTTP_KEEPALIVE_SEC")
-                .ok()
-                .and_then(|v| v.parse::<u64>().ok())
-                .map(Duration::from_secs)
-                .or(Some(Duration::from_secs(30))), // Default to 30 seconds keepalive
-            http_nodelay: env::var("AWS_LWA_HTTP_NODELAY")
-                .unwrap_or_else(|_| "true".to_string())
-                .parse()
-                .unwrap_or(true),
-            http_reuse_address: env::var("AWS_LWA_HTTP_REUSE_ADDRESS")
-                .unwrap_or_else(|_| "true".to_string())
-                .parse()
-                .unwrap_or(true),
-            http_pool_idle_timeout: env::var("AWS_LWA_HTTP_POOL_IDLE_TIMEOUT_SEC")
-                .ok()
-                .and_then(|v| v.parse::<u64>().ok())
-                .map(Duration::from_secs)
-                .unwrap_or(Duration::from_secs(60)), // Default to 60 seconds (increased from 4)
-            http_pool_max_idle: env::var("AWS_LWA_HTTP_POOL_MAX_IDLE")
-                .ok()
-                .and_then(|v| v.parse::<usize>().ok())
-                .unwrap_or(32), // Default to 32 connections per host
-            http_http2_only: env::var("AWS_LWA_HTTP_HTTP2_ONLY")
-                .unwrap_or_else(|_| "false".to_string())
-                .parse()
-                .unwrap_or(false),
         }
     }
 }
@@ -211,35 +177,9 @@ impl Adapter<HttpConnector, Body> {
     /// This function initializes a new HTTP client
     /// to talk with the web server.
     pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector, Body> {
-        // PERFORMANCE IMPROVEMENT: Configure the HTTP connector with optimized settings
-        let mut connector = HttpConnector::new();
-        
-        // Set TCP keepalive to maintain persistent connections
-        if let Some(keepalive) = options.http_keepalive {
-            connector.set_keepalive(Some(keepalive));
-        }
-        
-        // Enable TCP_NODELAY to disable Nagle's algorithm and reduce latency
-        connector.set_nodelay(options.http_nodelay);
-        
-        // Enable SO_REUSEADDR for better socket handling
-        connector.set_reuse_address(options.http_reuse_address);
-        
-        // Configure an optimized HTTP client
-        let mut client_builder = Client::builder(hyper_util::rt::TokioExecutor::new())
-            .pool_idle_timeout(options.http_pool_idle_timeout)
-            .pool_max_idle_per_host(options.http_pool_max_idle);
-            
-        // Optionally use HTTP/2 only for better multiplexing
-        if options.http_http2_only {
-            client_builder = client_builder.http2_only(true);
-        }
-        
-        let client = client_builder.build(connector);
-
-        tracing::info!("HTTP client configured with keepalive: {:?}, nodelay: {}, pool_idle_timeout: {:?}, pool_max_idle: {}, http2_only: {}", 
-            options.http_keepalive, options.http_nodelay, options.http_pool_idle_timeout, 
-            options.http_pool_max_idle, options.http_http2_only);
+        let client = Client::builder(hyper_util::rt::TokioExecutor::new())
+            .pool_idle_timeout(Duration::from_secs(4))
+            .build(HttpConnector::new());
 
         let schema = "http";
 
@@ -281,16 +221,7 @@ impl Adapter<HttpConnector, Body> {
         tokio::task::spawn(async move {
             let aws_lambda_runtime_api: String =
                 env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
-            
-            // Use optimized HTTP connector for extension registration as well
-            let mut connector = HttpConnector::new();
-            connector.set_keepalive(Some(Duration::from_secs(30)));
-            connector.set_nodelay(true);
-            
-            let client = Client::builder(hyper_util::rt::TokioExecutor::new())
-                .pool_idle_timeout(Duration::from_secs(60))
-                .build(connector);
-                
+            let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new());
             let register_req = hyper::Request::builder()
                 .method(Method::POST)
                 .uri(format!("http://{aws_lambda_runtime_api}/2020-01-01/extension/register"))
@@ -449,7 +380,16 @@ impl Adapter<HttpConnector, Body> {
             headers.extend(req_headers);
         }
 
-        let request = builder.body(Body::from(body.to_vec()))?;
+        // PERFORMANCE IMPROVEMENT: Avoid unnecessary body.to_vec() calls which buffer the entire body
+        // This is particularly important for streaming/reactive applications
+        let request = match body {
+            // Use the body directly when it's already in a format that doesn't require copying
+            Body::Empty => builder.body(Body::Empty)?,
+            Body::Text(text) => builder.body(Body::Text(text))?,
+            Body::Binary(bin) => builder.body(Body::Binary(bin))?,
+            // Only fallback to to_vec() when absolutely necessary
+            _ => builder.body(Body::Binary(body.to_vec()))?,
+        };
 
         let mut app_response = self.client.request(request).await?;
 
@@ -605,33 +545,5 @@ mod tests {
 
         // Assert app server's healthcheck endpoint got called
         healthcheck.assert();
-    }
-    
-    #[test]
-    fn test_http_client_options() {
-        // Test that environment variables are correctly parsed
-        std::env::set_var("AWS_LWA_HTTP_KEEPALIVE_SEC", "60");
-        std::env::set_var("AWS_LWA_HTTP_NODELAY", "true");
-        std::env::set_var("AWS_LWA_HTTP_REUSE_ADDRESS", "true");
-        std::env::set_var("AWS_LWA_HTTP_POOL_IDLE_TIMEOUT_SEC", "120");
-        std::env::set_var("AWS_LWA_HTTP_POOL_MAX_IDLE", "64");
-        std::env::set_var("AWS_LWA_HTTP_HTTP2_ONLY", "true");
-        
-        let options = AdapterOptions::default();
-        
-        assert_eq!(options.http_keepalive, Some(Duration::from_secs(60)));
-        assert_eq!(options.http_nodelay, true);
-        assert_eq!(options.http_reuse_address, true);
-        assert_eq!(options.http_pool_idle_timeout, Duration::from_secs(120));
-        assert_eq!(options.http_pool_max_idle, 64);
-        assert_eq!(options.http_http2_only, true);
-        
-        // Clean up
-        std::env::remove_var("AWS_LWA_HTTP_KEEPALIVE_SEC");
-        std::env::remove_var("AWS_LWA_HTTP_NODELAY");
-        std::env::remove_var("AWS_LWA_HTTP_REUSE_ADDRESS");
-        std::env::remove_var("AWS_LWA_HTTP_POOL_IDLE_TIMEOUT_SEC");
-        std::env::remove_var("AWS_LWA_HTTP_POOL_MAX_IDLE");
-        std::env::remove_var("AWS_LWA_HTTP_HTTP2_ONLY");
     }
 }
