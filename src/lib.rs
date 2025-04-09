@@ -380,7 +380,16 @@ impl Adapter<HttpConnector, Body> {
             headers.extend(req_headers);
         }
 
-        let request = builder.body(Body::from(body.to_vec()))?;
+        // PERFORMANCE IMPROVEMENT: Avoid unnecessary body.to_vec() calls which buffer the entire body
+        // This is particularly important for streaming/reactive applications
+        let request = match body {
+            // Use the body directly when it's already in a format that doesn't require copying
+            Body::Empty => builder.body(Body::Empty)?,
+            Body::Text(text) => builder.body(Body::Text(text))?,
+            Body::Binary(bin) => builder.body(Body::Binary(bin))?,
+            // Only fallback to to_vec() when absolutely necessary
+            _ => builder.body(Body::Binary(body.to_vec()))?,
+        };
 
         let mut app_response = self.client.request(request).await?;
 
