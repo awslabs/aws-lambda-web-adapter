@@ -67,50 +67,6 @@ impl From<&str> for LambdaInvokeMode {
     }
 }
 
-// Helper function to detect if application is a reactive framework
-fn detect_reactive_framework() -> bool {
-    // Check for Spring WebFlux
-    if env::var("SPRING_WEBFLUX_VERSION").is_ok() {
-        tracing::info!("Detected Spring WebFlux framework - enabling response streaming by default");
-        return true;
-    }
-    
-    // Check for Reactor (Core library used by WebFlux)
-    if env::var("REACTOR_VERSION").is_ok() {
-        tracing::info!("Detected Reactor framework - enabling response streaming by default");
-        return true;
-    }
-    
-    // Check for Vert.x (Another reactive framework)
-    if env::var("VERTX_VERSION").is_ok() {
-        tracing::info!("Detected Vert.x framework - enabling response streaming by default");
-        return true;
-    }
-    
-    // Check for Quarkus with reactive extensions
-    if env::var("QUARKUS_VERSION").is_ok() && 
-       (env::var("QUARKUS_REACTIVE").is_ok() || env::var("QUARKUS_MUTINY_VERSION").is_ok()) {
-        tracing::info!("Detected Quarkus with reactive extensions - enabling response streaming by default");
-        return true;
-    }
-    
-    // Check for Micronaut with reactive streams
-    if env::var("MICRONAUT_VERSION").is_ok() && env::var("MICRONAUT_REACTOR").is_ok() {
-        tracing::info!("Detected Micronaut with reactive extensions - enabling response streaming by default");
-        return true;
-    }
-    
-    // Environment variable override to force detection
-    if let Ok(value) = env::var("AWS_LWA_IS_REACTIVE_APPLICATION") {
-        if value.to_lowercase() == "true" {
-            tracing::info!("Reactive application explicitly configured via AWS_LWA_IS_REACTIVE_APPLICATION");
-            return true;
-        }
-    }
-    
-    false
-}
-
 pub struct AdapterOptions {
     pub host: String,
     pub port: String,
@@ -125,6 +81,13 @@ pub struct AdapterOptions {
     pub invoke_mode: LambdaInvokeMode,
     pub authorization_source: Option<String>,
     pub error_status_codes: Option<Vec<u16>>,
+    // New options for HTTP client configuration
+    pub http_keepalive: Option<Duration>,
+    pub http_nodelay: bool,
+    pub http_reuse_address: bool,
+    pub http_pool_idle_timeout: Duration,
+    pub http_pool_max_idle: usize,
+    pub http_http2_only: bool,
 }
 
 impl Default for AdapterOptions {
@@ -158,23 +121,41 @@ impl Default for AdapterOptions {
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            // PERFORMANCE IMPROVEMENT: Auto-detect reactive frameworks and use streaming mode by default for them
-            invoke_mode: {
-                if let Ok(invoke_mode_str) = env::var("AWS_LWA_INVOKE_MODE") {
-                    invoke_mode_str.as_str().into()
-                } else {
-                    // If AWS_LWA_INVOKE_MODE isn't set explicitly, check for reactive frameworks
-                    if detect_reactive_framework() {
-                        LambdaInvokeMode::ResponseStream // Use streaming mode for reactive frameworks
-                    } else {
-                        LambdaInvokeMode::Buffered // Default to buffered mode for non-reactive apps
-                    }
-                }
-            },
+            invoke_mode: env::var("AWS_LWA_INVOKE_MODE")
+                .unwrap_or("buffered".to_string())
+                .as_str()
+                .into(),
             authorization_source: env::var("AWS_LWA_AUTHORIZATION_SOURCE").ok(),
             error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
                 .ok()
                 .map(|codes| parse_status_codes(&codes)),
+            // New HTTP client configuration with environment variable support
+            http_keepalive: env::var("AWS_LWA_HTTP_KEEPALIVE_SEC")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .map(Duration::from_secs)
+                .or(Some(Duration::from_secs(30))), // Default to 30 seconds keepalive
+            http_nodelay: env::var("AWS_LWA_HTTP_NODELAY")
+                .unwrap_or_else(|_| "true".to_string())
+                .parse()
+                .unwrap_or(true),
+            http_reuse_address: env::var("AWS_LWA_HTTP_REUSE_ADDRESS")
+                .unwrap_or_else(|_| "true".to_string())
+                .parse()
+                .unwrap_or(true),
+            http_pool_idle_timeout: env::var("AWS_LWA_HTTP_POOL_IDLE_TIMEOUT_SEC")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .map(Duration::from_secs)
+                .unwrap_or(Duration::from_secs(60)), // Default to 60 seconds (increased from 4)
+            http_pool_max_idle: env::var("AWS_LWA_HTTP_POOL_MAX_IDLE")
+                .ok()
+                .and_then(|v| v.parse::<usize>().ok())
+                .unwrap_or(32), // Default to 32 connections per host
+            http_http2_only: env::var("AWS_LWA_HTTP_HTTP2_ONLY")
+                .unwrap_or_else(|_| "false".to_string())
+                .parse()
+                .unwrap_or(false),
         }
     }
 }
@@ -230,9 +211,35 @@ impl Adapter<HttpConnector, Body> {
     /// This function initializes a new HTTP client
     /// to talk with the web server.
     pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector, Body> {
-        let client = Client::builder(hyper_util::rt::TokioExecutor::new())
-            .pool_idle_timeout(Duration::from_secs(4))
-            .build(HttpConnector::new());
+        // PERFORMANCE IMPROVEMENT: Configure the HTTP connector with optimized settings
+        let mut connector = HttpConnector::new();
+        
+        // Set TCP keepalive to maintain persistent connections
+        if let Some(keepalive) = options.http_keepalive {
+            connector.set_keepalive(Some(keepalive));
+        }
+        
+        // Enable TCP_NODELAY to disable Nagle's algorithm and reduce latency
+        connector.set_nodelay(options.http_nodelay);
+        
+        // Enable SO_REUSEADDR for better socket handling
+        connector.set_reuse_address(options.http_reuse_address);
+        
+        // Configure an optimized HTTP client
+        let mut client_builder = Client::builder(hyper_util::rt::TokioExecutor::new())
+            .pool_idle_timeout(options.http_pool_idle_timeout)
+            .pool_max_idle_per_host(options.http_pool_max_idle);
+            
+        // Optionally use HTTP/2 only for better multiplexing
+        if options.http_http2_only {
+            client_builder = client_builder.http2_only(true);
+        }
+        
+        let client = client_builder.build(connector);
+
+        tracing::info!("HTTP client configured with keepalive: {:?}, nodelay: {}, pool_idle_timeout: {:?}, pool_max_idle: {}, http2_only: {}", 
+            options.http_keepalive, options.http_nodelay, options.http_pool_idle_timeout, 
+            options.http_pool_max_idle, options.http_http2_only);
 
         let schema = "http";
 
@@ -246,12 +253,6 @@ impl Adapter<HttpConnector, Body> {
         let domain = format!("{}://{}:{}", schema, options.host, options.port)
             .parse()
             .unwrap();
-
-        // Log the selected invoke mode to make configuration clear
-        tracing::info!("Lambda Web Adapter configured with invoke_mode: {:?}", options.invoke_mode);
-        if options.invoke_mode == LambdaInvokeMode::ResponseStream {
-            tracing::info!("Using response streaming mode - this significantly improves performance for reactive applications");
-        }
 
         Adapter {
             client: Arc::new(client),
@@ -280,7 +281,16 @@ impl Adapter<HttpConnector, Body> {
         tokio::task::spawn(async move {
             let aws_lambda_runtime_api: String =
                 env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
-            let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new());
+            
+            // Use optimized HTTP connector for extension registration as well
+            let mut connector = HttpConnector::new();
+            connector.set_keepalive(Some(Duration::from_secs(30)));
+            connector.set_nodelay(true);
+            
+            let client = Client::builder(hyper_util::rt::TokioExecutor::new())
+                .pool_idle_timeout(Duration::from_secs(60))
+                .build(connector);
+                
             let register_req = hyper::Request::builder()
                 .method(Method::POST)
                 .uri(format!("http://{aws_lambda_runtime_api}/2020-01-01/extension/register"))
@@ -499,65 +509,6 @@ mod tests {
         assert_eq!(parse_status_codes("500-invalid"), Vec::<u16>::new());
         assert_eq!(parse_status_codes(""), Vec::<u16>::new());
     }
-    
-    #[test]
-    fn test_reactive_framework_detection() {
-        // Test with no frameworks detected
-        std::env::remove_var("SPRING_WEBFLUX_VERSION");
-        std::env::remove_var("REACTOR_VERSION");
-        std::env::remove_var("VERTX_VERSION");
-        std::env::remove_var("AWS_LWA_IS_REACTIVE_APPLICATION");
-        
-        assert_eq!(detect_reactive_framework(), false);
-        
-        // Test with Spring WebFlux detected
-        std::env::set_var("SPRING_WEBFLUX_VERSION", "5.3.20");
-        assert_eq!(detect_reactive_framework(), true);
-        std::env::remove_var("SPRING_WEBFLUX_VERSION");
-        
-        // Test with Reactor detected
-        std::env::set_var("REACTOR_VERSION", "3.4.17");
-        assert_eq!(detect_reactive_framework(), true);
-        std::env::remove_var("REACTOR_VERSION");
-        
-        // Test with Vert.x detected
-        std::env::set_var("VERTX_VERSION", "4.2.5");
-        assert_eq!(detect_reactive_framework(), true);
-        std::env::remove_var("VERTX_VERSION");
-        
-        // Test with environment variable override
-        std::env::set_var("AWS_LWA_IS_REACTIVE_APPLICATION", "true");
-        assert_eq!(detect_reactive_framework(), true);
-        std::env::remove_var("AWS_LWA_IS_REACTIVE_APPLICATION");
-    }
-    
-    #[test]
-    fn test_invoke_mode_selection() {
-        // Test default behavior - no reactive framework, no env var
-        std::env::remove_var("SPRING_WEBFLUX_VERSION");
-        std::env::remove_var("AWS_LWA_INVOKE_MODE");
-        
-        let options = AdapterOptions::default();
-        assert_eq!(options.invoke_mode, LambdaInvokeMode::Buffered);
-        
-        // Test with reactive framework detected
-        std::env::set_var("SPRING_WEBFLUX_VERSION", "5.3.20");
-        std::env::remove_var("AWS_LWA_INVOKE_MODE");
-        
-        let options = AdapterOptions::default();
-        assert_eq!(options.invoke_mode, LambdaInvokeMode::ResponseStream);
-        
-        // Test with explicit environment variable - this should override framework detection
-        std::env::set_var("SPRING_WEBFLUX_VERSION", "5.3.20");
-        std::env::set_var("AWS_LWA_INVOKE_MODE", "buffered");
-        
-        let options = AdapterOptions::default();
-        assert_eq!(options.invoke_mode, LambdaInvokeMode::Buffered);
-        
-        // Clean up
-        std::env::remove_var("SPRING_WEBFLUX_VERSION");
-        std::env::remove_var("AWS_LWA_INVOKE_MODE");
-    }
 
     #[tokio::test]
     async fn test_status_200_is_ok() {
@@ -654,5 +605,33 @@ mod tests {
 
         // Assert app server's healthcheck endpoint got called
         healthcheck.assert();
+    }
+    
+    #[test]
+    fn test_http_client_options() {
+        // Test that environment variables are correctly parsed
+        std::env::set_var("AWS_LWA_HTTP_KEEPALIVE_SEC", "60");
+        std::env::set_var("AWS_LWA_HTTP_NODELAY", "true");
+        std::env::set_var("AWS_LWA_HTTP_REUSE_ADDRESS", "true");
+        std::env::set_var("AWS_LWA_HTTP_POOL_IDLE_TIMEOUT_SEC", "120");
+        std::env::set_var("AWS_LWA_HTTP_POOL_MAX_IDLE", "64");
+        std::env::set_var("AWS_LWA_HTTP_HTTP2_ONLY", "true");
+        
+        let options = AdapterOptions::default();
+        
+        assert_eq!(options.http_keepalive, Some(Duration::from_secs(60)));
+        assert_eq!(options.http_nodelay, true);
+        assert_eq!(options.http_reuse_address, true);
+        assert_eq!(options.http_pool_idle_timeout, Duration::from_secs(120));
+        assert_eq!(options.http_pool_max_idle, 64);
+        assert_eq!(options.http_http2_only, true);
+        
+        // Clean up
+        std::env::remove_var("AWS_LWA_HTTP_KEEPALIVE_SEC");
+        std::env::remove_var("AWS_LWA_HTTP_NODELAY");
+        std::env::remove_var("AWS_LWA_HTTP_REUSE_ADDRESS");
+        std::env::remove_var("AWS_LWA_HTTP_POOL_IDLE_TIMEOUT_SEC");
+        std::env::remove_var("AWS_LWA_HTTP_POOL_MAX_IDLE");
+        std::env::remove_var("AWS_LWA_HTTP_HTTP2_ONLY");
     }
 }
