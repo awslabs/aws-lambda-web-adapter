@@ -449,7 +449,7 @@ impl Adapter<HttpConnector, Body> {
             headers.extend(req_headers);
         }
 
-        // PERFORMANCE IMPROVEMENT: Avoid unnecessary body.to_vec() calls which buffer the entire body
+        // Avoid unnecessary body.to_vec() calls which buffer the entire body
         // This is particularly important for streaming/reactive applications
         let request = match body {
             // Use the body directly when it's already in a format that doesn't require copying
@@ -615,6 +615,8 @@ mod tests {
         // Assert app server's healthcheck endpoint got called
         healthcheck.assert();
     }
+    
+    #[test]
     fn test_http_client_options() {
         // Test that environment variables are correctly parsed
         std::env::set_var("AWS_LWA_HTTP_KEEPALIVE_SEC", "60");
