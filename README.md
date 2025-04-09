@@ -106,7 +106,7 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_PASS_THROUGH_PATH                                    | the path for receiving event payloads that are passed through from non-http triggers | "/events"  |
 | AWS_LWA_AUTHORIZATION_SOURCE                                 | a header name to be replaced to `Authorization` | None  |
 | AWS_LWA_ERROR_STATUS_CODES                                  | comma-separated list of HTTP status codes that will cause Lambda invocations to fail (e.g. "500,502-504,422") | None  |
-| AWS_LWA_PROXY_LAMBDA_RUNTIME_API                             | overwrites `AWS_LAMBDA_RUNTIME_API` to allow proxying request (not affecting registration) | None  |
+| AWS_LWA_LAMBDA_RUNTIME_API_PROXY                              | overwrites `AWS_LAMBDA_RUNTIME_API` to allow proxying request (not affecting registration)                    | None       |
 
 > **Note:**
 > We use "AWS_LWA_" prefix to namespacing all environment variables used by Lambda Web Adapter. The original ones will be supported until we reach version 1.0.
@@ -172,6 +172,10 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 ## Non-HTTP Event Triggers
 
 The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, SNS, S3, DynamoDB, Kinesis, Kafka, EventBridge, and Bedrock Agents. The adapter forwards the event payload to the web application via http post to a path defined by the `AWS_LWA_PASS_THROUGH_PATH` environment variable. By default, this path is set to `/events`. Upon receiving the event payload from the request body, the web application should processes it and returns the results as a JSON response. Please checkout [SQS Express.js](examples/sqs-expressjs) and [Bedrock Agent FastAPI in Zip](examples/bedrock-agent-fastapi-zip) examples.
+
+## Intercepting request and response
+
+The `AWS_LWA_LAMBDA_RUNTIME_API_PROXY` environment varible makes the Lambda Web Adapter redirect the requests to a custom proxy URL. The proxy can then intercept the requests of the [Lambda runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html), and apply arbitrary operations such as inspection or modification. Possible applications are tracing, payload capturing, obfuscation of sensitive data, headers modification. Note that the payload of the request received by the web application is wrapped inside the GET response body. This proxy _does not_ affect the extension registering API and is meant to be used only to interact with the data received and sent by the web application
 
 ## Examples
 
