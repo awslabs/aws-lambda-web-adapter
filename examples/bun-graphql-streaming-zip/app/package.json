@@ -1,0 +1,24 @@
+{
+  "name": "graphql-yoga",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "module": "server.ts",
+  "scripts": {
+    "dev": "bun run server.ts",
+    "build": "bun build --target=bun --entrypoints ./server.ts --outfile=./out/server.js",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "cross-env": "^7.0.3",
+    "graphql": "^16.10.0",
+    "graphql-yoga": "^5.13.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.8.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
