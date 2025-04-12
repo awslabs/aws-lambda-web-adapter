@@ -310,6 +310,13 @@ impl Adapter<HttpConnector, Body> {
         let compression = self.compression;
         let invoke_mode = self.invoke_mode;
 
+        if let Ok(runtime_proxy) = env::var("AWS_LWA_LAMBDA_RUNTIME_API_PROXY") {
+            // overwrite the env variable since
+            // LambdaInvokeMode::Buffered => lambda_http::run(svc).await,
+            // calls the lambda lambda_runtime::run which doesn't allow to change the client URI
+            env::set_var("AWS_LAMBDA_RUNTIME_API", runtime_proxy);
+        }
+
         if compression {
             let svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(self);
             match invoke_mode {
