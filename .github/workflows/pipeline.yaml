@@ -46,7 +46,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -76,7 +76,7 @@ jobs:
 
   build:
     needs: [ test ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
 
@@ -129,7 +129,7 @@ jobs:
   package-beta:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -219,7 +219,7 @@ jobs:
   deploy-beta:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ package-beta ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -282,7 +282,7 @@ jobs:
   e2e-test-zip:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ deploy-beta ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Install stable toolchain
         run: |
@@ -344,7 +344,7 @@ jobs:
   e2e-test-oci:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ deploy-beta ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Install stable toolchain
         run: |
@@ -408,7 +408,7 @@ jobs:
   load-gamma-matrix:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -419,7 +419,7 @@ jobs:
   load-prod-matrix:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -430,7 +430,7 @@ jobs:
   load-china-prod-matrix:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -441,7 +441,7 @@ jobs:
   load-china-gamma-matrix:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -452,7 +452,7 @@ jobs:
   package-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-gamma-matrix ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
     steps:
@@ -525,7 +525,7 @@ jobs:
   package-prod:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-prod-matrix ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
     steps:
@@ -598,7 +598,7 @@ jobs:
   package-china-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-china-gamma-matrix ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-china-gamma-matrix.outputs.matrix)}}
     steps:
@@ -674,7 +674,7 @@ jobs:
   package-china-prod:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-china-prod-matrix ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-china-prod-matrix.outputs.matrix)}}
     steps:
@@ -749,7 +749,7 @@ jobs:
   load-gamma-matrix2:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci, package-gamma ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -760,7 +760,7 @@ jobs:
   deploy-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ load-gamma-matrix2 ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
     steps:
@@ -826,7 +826,7 @@ jobs:
   load-prod-matrix2:
     if: ${{ github.event_name == 'release' }}
     needs: [ deploy-gamma, package-prod ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -837,7 +837,7 @@ jobs:
   deploy-prod:
     if: ${{ github.event_name == 'release' }}
     needs: [ load-prod-matrix2 ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     environment: prod
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
@@ -905,7 +905,7 @@ jobs:
   load-china-gamma-matrix2:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci, package-china-gamma ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -916,7 +916,7 @@ jobs:
   deploy-china-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ load-china-gamma-matrix2 ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     environment: prod
     strategy:
       matrix: ${{fromJSON(needs.load-china-gamma-matrix2.outputs.matrix)}}
@@ -986,7 +986,7 @@ jobs:
   load-china-prod-matrix2:
     if: ${{ github.event_name == 'release' }}
     needs: [ deploy-china-gamma, package-china-prod ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -997,7 +997,7 @@ jobs:
   deploy-china-prod:
     if: ${{ github.event_name == 'release' }}
     needs: [ load-china-prod-matrix2 ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     environment: prod
     strategy:
       matrix: ${{fromJSON(needs.load-china-prod-matrix2.outputs.matrix)}}
@@ -1067,7 +1067,7 @@ jobs:
   publish-to-public-ecr:
     if: ${{ github.event_name == 'release' }}
     needs: [ deploy-prod ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
 
