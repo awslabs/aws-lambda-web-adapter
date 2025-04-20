@@ -60,7 +60,7 @@ jobs:
         run: pip3 install cargo-lambda
 
       - name: Configure cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.8
 
       - name: Install cargo-nextest
         run: cargo install cargo-nextest --locked
@@ -95,7 +95,7 @@ jobs:
         run: pip3 install cargo-lambda
 
       - name: Configure cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.8
 
       - name: Install cargo-nextest
         run: cargo install cargo-nextest --locked
@@ -292,7 +292,7 @@ jobs:
         run: pip3 install cargo-lambda
 
       - name: Configure cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.8
 
       - name: Install cargo-nextest
         run: cargo install cargo-nextest --locked
@@ -354,7 +354,7 @@ jobs:
         run: pip3 install cargo-lambda
 
       - name: Configure cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.8
 
       - name: Install cargo-nextest
         run: cargo install cargo-nextest --locked
