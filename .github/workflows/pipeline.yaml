@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install stable toolchain
         run: |
@@ -78,7 +78,7 @@ jobs:
     needs: [ test ]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
@@ -131,7 +131,7 @@ jobs:
     needs: [ build ]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -221,7 +221,7 @@ jobs:
     needs: [ package-beta ]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -297,7 +297,7 @@ jobs:
       - name: Install cargo-nextest
         run: cargo install cargo-nextest --locked
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
@@ -359,7 +359,7 @@ jobs:
       - name: Install cargo-nextest
         run: cargo install cargo-nextest --locked
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
@@ -412,7 +412,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
@@ -423,7 +423,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
   
@@ -434,7 +434,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-prod.json)}" >> $GITHUB_OUTPUT
   
@@ -445,7 +445,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-gamma.json)}" >> $GITHUB_OUTPUT
 
@@ -456,7 +456,7 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -529,7 +529,7 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -602,7 +602,7 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-china-gamma-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -678,7 +678,7 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-china-prod-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -753,7 +753,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
@@ -764,7 +764,7 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -830,7 +830,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
 
@@ -842,7 +842,7 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -909,7 +909,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-gamma.json)}" >> $GITHUB_OUTPUT
 
@@ -921,7 +921,7 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-china-gamma-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -990,7 +990,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-prod.json)}" >> $GITHUB_OUTPUT
 
@@ -1002,7 +1002,7 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.load-china-prod-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -1069,7 +1069,7 @@ jobs:
     needs: [ deploy-prod ]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4
