@@ -81,6 +81,7 @@ pub struct AdapterOptions {
     pub invoke_mode: LambdaInvokeMode,
     pub authorization_source: Option<String>,
     pub error_status_codes: Option<Vec<u16>>,
+    pub strip_response_headers: Option<Vec<String>>,
 }
 
 impl Default for AdapterOptions {
@@ -122,6 +123,9 @@ impl Default for AdapterOptions {
             error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
                 .ok()
                 .map(|codes| parse_status_codes(&codes)),
+            strip_response_headers: env::var("AWS_LWA_STRIP_RESPONSE_HEADERS")
+                .ok()
+                .map(|h| h.split(',').map(|s| s.trim().to_string()).collect()),
         }
     }
 }
@@ -170,6 +174,7 @@ pub struct Adapter<C, B> {
     invoke_mode: LambdaInvokeMode,
     authorization_source: Option<String>,
     error_status_codes: Option<Vec<u16>>,
+    strip_response_headers: Option<Vec<String>>,
 }
 
 impl Adapter<HttpConnector, Body> {
@@ -208,6 +213,7 @@ impl Adapter<HttpConnector, Body> {
             invoke_mode: options.invoke_mode,
             authorization_source: options.authorization_source.clone(),
             error_status_codes: options.error_status_codes.clone(),
+            strip_response_headers: options.strip_response_headers.clone(),
         }
     }
 }
@@ -404,6 +410,17 @@ impl Adapter<HttpConnector, Body> {
 
         // remove "transfer-encoding" from the response to support "sam local start-api"
         app_response.headers_mut().remove("transfer-encoding");
+
+        // Remove any configured headers from the response
+        if let Some(headers_to_strip) = &self.strip_response_headers {
+            for header_name in headers_to_strip {
+                if let Ok(name) = HeaderName::from_bytes(header_name.as_bytes()) {
+                    app_response.headers_mut().remove(&name);
+                } else {
+                    tracing::warn!("Invalid header name to strip: {}", header_name);
+                }
+            }
+        }
 
         tracing::debug!(status = %app_response.status(), body_size = ?app_response.body().size_hint().lower(),
             app_headers = ?app_response.headers().clone(), "responding to lambda event");
