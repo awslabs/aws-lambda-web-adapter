@@ -217,6 +217,8 @@ The `AWS_LWA_LAMBDA_RUNTIME_API_PROXY` environment varible makes the Lambda Web 
 - [Remix](examples/remix/)
 - [Remix in Zip](examples/remix-zip/)
 - [Sveltekit SSR Zip](examples/sveltekit-ssr-zip/)
+- [Datadog](examples/datadog)
+- [Datadog in Zip](examples/datadog-zip)
 
 ## Acknowledgement
 
