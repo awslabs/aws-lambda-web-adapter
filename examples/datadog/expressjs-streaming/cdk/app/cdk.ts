@@ -4,6 +4,7 @@ import {
   DockerImageCode,
   FunctionUrlAuthType,
   Architecture,
+  InvokeMode,
 } from "aws-cdk-lib/aws-lambda";
 import * as path from "path";
 
@@ -28,6 +29,7 @@ class LwaStack extends Stack {
 
     const functionUrl = lwa_lambda.addFunctionUrl({
       authType: FunctionUrlAuthType.NONE,
+      invokeMode: InvokeMode.RESPONSE_STREAM,
     });
 
     new CfnOutput(this, "LambdaFunctionUrl", {
@@ -40,6 +42,7 @@ class LwaStack extends Stack {
       "127.0.0.1:9002"
     );
 
+    lwa_lambda.addEnvironment("AWS_LWA_INVOKE_MODE", "response_stream");
     lwa_lambda.addEnvironment("DD_TRACE_PARTIAL_FLUSH_MIN_SPANS", "1");
     lwa_lambda.addEnvironment("DD_TRACE_PARTIAL_FLUSH_ENABLED", "false");
     lwa_lambda.addEnvironment("DD_API_KEY", process.env.DD_API_KEY || "");

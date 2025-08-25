@@ -3,6 +3,7 @@ import {
   DockerImageFunction,
   DockerImageCode,
   FunctionUrlAuthType,
+  Architecture,
 } from "aws-cdk-lib/aws-lambda";
 import * as path from "path";
 
@@ -17,10 +18,12 @@ class LwaStack extends Stack {
         path.join(__dirname, "../../lambda-asset"),
         {
           cacheDisabled: true,
-        },
+        }
       ),
       functionName: id + "-lambda",
       timeout: Duration.seconds(9),
+      // Optional: Specify the architecture of the docker image if it's not X86_64
+      architecture: Architecture.ARM_64,
     });
 
     const functionUrl = lwa_lambda.addFunctionUrl({
@@ -34,7 +37,7 @@ class LwaStack extends Stack {
 
     lwa_lambda.addEnvironment(
       "AWS_LWA_LAMBDA_RUNTIME_API_PROXY",
-      "127.0.0.1:9002",
+      "127.0.0.1:9002"
     );
 
     lwa_lambda.addEnvironment("DD_TRACE_PARTIAL_FLUSH_MIN_SPANS", "1");

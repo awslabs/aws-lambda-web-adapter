@@ -1,5 +1,6 @@
 FROM public.ecr.aws/docker/library/node:slim
 
+# APM support for responsestreaming mode requires v84+
 COPY --from=public.ecr.aws/datadog/lambda-extension:84 /opt/. /opt/
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
 
