@@ -14,7 +14,7 @@ Action groups define the tasks that you want your agent to help customers carry 
 
 - A Lambda function that defines the business logic for the action that your agent will carry out.
 
-In this example, we build a FastAPI app to query S3 buckets in the user's AWS account. The FastAPI apps automatically generate OpenAPI schema. And Lambda Web Adapter passes through the Bedrock Agent Action invocation payload to the FastAPI at path `/events` via Lambda Web Adapter's new non-http pass through feature. In the FastAPI app, a middleware intercepts the payload to `/evets` route, transforms it into a http request, and continues to invoke the correct FastAPI routes. In this way, developers can build a Bedrocket Agent Action Group with a single Lambda Function.
+In this example, we build a FastAPI app to query S3 buckets in the user's AWS account. The FastAPI apps automatically generate OpenAPI schema. And Lambda Web Adapter passes through the Bedrock Agent Action invocation payload to the FastAPI at path `/events` via Lambda Web Adapter's new non-http pass through feature. In the FastAPI app, a middleware intercepts the payload to `/events` route, transforms it into a http request, and continues to invoke the correct FastAPI routes. In this way, developers can build a Bedrocket Agent Action Group with a single Lambda Function.
 
 ## Pre-requisites
 
