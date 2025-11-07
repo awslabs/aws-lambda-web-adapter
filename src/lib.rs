@@ -165,7 +165,7 @@ pub struct Adapter<C, B> {
     ready_at_init: Arc<AtomicBool>,
     domain: Url,
     base_path: Option<String>,
-    path_through_path: String,
+    pass_through_path: String,
     compression: bool,
     invoke_mode: LambdaInvokeMode,
     authorization_source: Option<String>,
@@ -201,7 +201,7 @@ impl Adapter<HttpConnector, Body> {
             healthcheck_min_unhealthy_status: options.readiness_check_min_unhealthy_status,
             domain,
             base_path: options.base_path.clone(),
-            path_through_path: options.pass_through_path.clone(),
+            pass_through_path: options.pass_through_path.clone(),
             async_init: options.async_init,
             ready_at_init: Arc::new(AtomicBool::new(false)),
             compression: options.compression,
@@ -350,7 +350,7 @@ impl Adapter<HttpConnector, Body> {
         }
 
         if matches!(request_context, RequestContext::PassThrough) && parts.method == Method::POST {
-            path = self.path_through_path.as_str();
+            path = self.pass_through_path.as_str();
         }
 
         let mut req_headers = parts.headers;
