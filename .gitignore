@@ -10,3 +10,4 @@ samconfig.toml
 **/bin/*
 **/.idea/*
 
+.aider.*

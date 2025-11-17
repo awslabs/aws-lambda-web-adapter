@@ -1,6 +1,6 @@
 ## How to build it?
 
-AWS Lambda Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime).
+AWS Lambda Web Adapter is written in Rust and based on [AWS Lambda Rust Runtime](https://github.com/awslabs/aws-lambda-rust-runtime).
 AWS Lambda executes functions in x86_64 Amazon Linux Environment. We need to compile the adapter to that environment.
 
 ### Clone the repo
@@ -13,7 +13,7 @@ $ cd aws-lambda-adapter
 ```
 
 ### Compiling with Docker
-On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Adapter with docker.
+On x86_64 Windows, Linux and macOS, you can run one command to compile Lambda Web Adapter with docker.
 The Dockerfile is [here](../Dockerfile). [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) should have been installed and configured.
 
 ```shell
@@ -24,7 +24,7 @@ Once the build completes, it creates two docker images:
 - "aws-lambda-adapter:latest-x86_64" for x86_64.
 - "aws-lambda-adapter:latest-aarch64" for arm64.
 
-AWS Lambda Adapter binary is packaged as '/opt/bootstrap' inside each docker image. "aws-lambda-adapter:latest" is tagged to the same image as "aws-lambda-adapter:latest-x86_64".
+AWS Lambda Web Adapter binary is packaged as '/opt/bootstrap' inside each docker image. "aws-lambda-adapter:latest" is tagged to the same image as "aws-lambda-adapter:latest-x86_64".
 
 ### Compiling on macOS
 
@@ -56,15 +56,15 @@ linker = "x86_64-unknown-linux-musl-gcc"
 linker = "aarch64-unknown-linux-musl-gcc"'> .cargo/config
 ```
 
-Now we can cross compile AWS Lambda Adapter.
+Now we can cross compile AWS Lambda Web Adapter.
 
 ```shell
 $ CC=x86_64-unknown-linux-musl-gcc cargo build --release --target=x86_64-unknown-linux-musl --features vendored
 $ CC=aarch64-unknown-linux-musl-gcc cargo build --release --target=aarch64-unknown-linux-musl --features vendored
 ```
 
-Lambda Adapter binary for x86_64 will be placed at `target/x86_64-unknown-linux-musl/release/bootstrap`.
-Lambda Adapter binary for arm64 will be placed at `target/aarch64-unknown-linux-musl/release/bootstrap`.
+Lambda Web Adapter binary for x86_64 will be placed at `target/x86_64-unknown-linux-musl/release/bootstrap`.
+Lambda Web Adapter binary for arm64 will be placed at `target/aarch64-unknown-linux-musl/release/bootstrap`.
 
 Finally, run the following command to package lambda adapter into two container images for x86_64 and aarch64.
 

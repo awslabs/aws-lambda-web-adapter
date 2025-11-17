@@ -46,25 +46,24 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+        run: |
+            rustup target add x86_64-unknown-linux-musl
+            rustup target add aarch64-unknown-linux-musl
 
-      - uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.11.0
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
 
       - name: Configure cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.8
 
-      - uses: taiki-e/install-action@nextest
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked
 
       - name: linting
         run: |
@@ -77,9 +76,9 @@ jobs:
 
   build:
     needs: [ test ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
@@ -88,26 +87,18 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          rustup target add aarch64-unknown-linux-musl
 
-      - uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.11.0
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
 
       - name: Configure cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.8
 
-      - uses: taiki-e/install-action@nextest
-
-      - name: Install Cargo Lambda
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        with:
-          repo: cargo-lambda/cargo-lambda
-          tag: v1.0.1
-          platform: linux
-          arch: x86_64
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked
 
       - name: Add cargo pkg version to env vars
         run: |
@@ -119,7 +110,7 @@ jobs:
       - name: Tar files
         run: tar -cvf build-x86_64.tar build-x86_64
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: aws-sam-build-x86_64
           path: build-x86_64.tar
@@ -130,7 +121,7 @@ jobs:
       - name: Tar files
         run: tar -cvf build-arm64.tar build-arm64
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: aws-sam-build-arm64
           path: build-arm64.tar
@@ -138,9 +129,9 @@ jobs:
   package-beta:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -179,7 +170,7 @@ jobs:
             --region ${BETA_REGION} \
             --output-template-file packaged-beta-x86_64.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-beta-x86_64.yaml
           path: packaged-beta-x86_64.yaml
@@ -201,7 +192,7 @@ jobs:
             --region ${BETA_REGION} \
             --output-template-file packaged-beta-arm64.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-beta-arm64.yaml
           path: packaged-beta-arm64.yaml
@@ -228,9 +219,9 @@ jobs:
   deploy-beta:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ package-beta ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -291,24 +282,22 @@ jobs:
   e2e-test-zip:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ deploy-beta ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-          targets: x86_64-unknown-linux-musl
+        run: |
+            rustup target add x86_64-unknown-linux-musl
 
-      - uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.11.0
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
 
       - name: Configure cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.8
 
-      - uses: taiki-e/install-action@nextest
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
@@ -344,42 +333,33 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - uses: dkershner6/aws-ssm-getparameters-action@v1
-        with:
-          parameterPairs: "/lambda-web-adapter/e2e/httpbin/zip/rest-api-endpoint      = HTTPBIN_ZIP_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/http-api-endpoint      = HTTPBIN_ZIP_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/alb-endpoint           = HTTPBIN_ZIP_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/zip/function-url           = HTTPBIN_ZIP_FURL_ENDPOINT"
-
       - name: run e2e tests
         run: |
-          API_ENDPOINT=${HTTPBIN_ZIP_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_ZIP_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-rest-zip.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-http-zip.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-alb-zip.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://c26abn6izvm4xvbfs5baaflifm0hqvsn.lambda-url.ap-northeast-1.on.aws/ API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
 
   e2e-test-oci:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ deploy-beta ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-          targets: x86_64-unknown-linux-musl
+        run: |
+            rustup target add x86_64-unknown-linux-musl
 
-      - uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.11.0
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
 
       - name: Configure cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.8
 
-      - uses: taiki-e/install-action@nextest
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
@@ -416,74 +396,67 @@ jobs:
             --no-fail-on-empty-changeset \
             --role-arn ${BETA_CLOUDFORMATION_EXECUTION_ROLE}
 
-      - uses: dkershner6/aws-ssm-getparameters-action@v1
-        with:
-          parameterPairs: "/lambda-web-adapter/e2e/httpbin/oci/rest-api-endpoint      = HTTPBIN_OCI_REST_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/oci/http-api-endpoint      = HTTPBIN_OCI_HTTP_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/oci/alb-endpoint           = HTTPBIN_OCI_ALB_ENDPOINT,
-                             /lambda-web-adapter/e2e/httpbin/oci/function-url           = HTTPBIN_OCI_FURL_ENDPOINT"
-
       - name: run e2e tests
         run: |
-          API_ENDPOINT=${HTTPBIN_OCI_REST_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_OCI_HTTP_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_OCI_ALB_ENDPOINT} API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
-          API_ENDPOINT=${HTTPBIN_OCI_FURL_ENDPOINT} API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-rest-oci.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-http-oci.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://httpbin-alb-oci.beta.adapter.awsguru.dev/ API_AUTH_TYPE="open" cargo nextest run --run-ignored ignored-only --profile ci
+          API_ENDPOINT=https://3w6rb56t3lzefztvndn4zg3xru0taszm.lambda-url.ap-northeast-1.on.aws/ API_AUTH_TYPE="iam" cargo nextest run --run-ignored ignored-only --profile ci
 
 
 
   load-gamma-matrix:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
   load-prod-matrix:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
   
   load-china-prod-matrix:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-prod.json)}" >> $GITHUB_OUTPUT
   
   load-china-gamma-matrix:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-gamma.json)}" >> $GITHUB_OUTPUT
 
   package-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-gamma-matrix ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -522,7 +495,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-gamma-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-gamma-x86_64-${{ matrix.region }}.yaml
           path: packaged-gamma-x86_64-${{ matrix.region }}.yaml
@@ -544,7 +517,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-gamma-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-gamma-arm64-${{ matrix.region }}.yaml
           path: packaged-gamma-arm64-${{ matrix.region }}.yaml
@@ -552,11 +525,11 @@ jobs:
   package-prod:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-prod-matrix ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -595,7 +568,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-prod-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-prod-x86_64-${{ matrix.region }}.yaml
           path: packaged-prod-x86_64-${{ matrix.region }}.yaml
@@ -617,7 +590,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-prod-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-prod-arm64-${{ matrix.region }}.yaml
           path: packaged-prod-arm64-${{ matrix.region }}.yaml
@@ -625,11 +598,11 @@ jobs:
   package-china-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-china-gamma-matrix ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-china-gamma-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -670,7 +643,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-china-gamma-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-china-gamma-x86_64-${{ matrix.region }}.yaml
           path: packaged-china-gamma-x86_64-${{ matrix.region }}.yaml
@@ -692,7 +665,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-china-gamma-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-china-gamma-arm64-${{ matrix.region }}.yaml
           path: packaged-china-gamma-arm64-${{ matrix.region }}.yaml
@@ -701,11 +674,11 @@ jobs:
   package-china-prod:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ build, load-china-prod-matrix ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-china-prod-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -746,7 +719,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-china-prod-x86_64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-china-prod-x86_64-${{ matrix.region }}.yaml
           path: packaged-china-prod-x86_64-${{ matrix.region }}.yaml
@@ -768,7 +741,7 @@ jobs:
             --region ${{ matrix.region }} \
             --output-template-file packaged-china-prod-arm64-${{ matrix.region }}.yaml
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packaged-china-prod-arm64-${{ matrix.region }}.yaml
           path: packaged-china-prod-arm64-${{ matrix.region }}.yaml
@@ -776,22 +749,22 @@ jobs:
   load-gamma-matrix2:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci, package-gamma ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/gamma.json)}" >> $GITHUB_OUTPUT
 
   deploy-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ load-gamma-matrix2 ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: ${{fromJSON(needs.load-gamma-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -853,23 +826,23 @@ jobs:
   load-prod-matrix2:
     if: ${{ github.event_name == 'release' }}
     needs: [ deploy-gamma, package-prod ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/prod.json)}" >> $GITHUB_OUTPUT
 
   deploy-prod:
     if: ${{ github.event_name == 'release' }}
     needs: [ load-prod-matrix2 ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     environment: prod
     strategy:
       matrix: ${{fromJSON(needs.load-prod-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -932,23 +905,23 @@ jobs:
   load-china-gamma-matrix2:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ e2e-test-zip, e2e-test-oci, package-china-gamma ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-gamma.json)}" >> $GITHUB_OUTPUT
 
   deploy-china-gamma:
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'release' }}
     needs: [ load-china-gamma-matrix2 ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     environment: prod
     strategy:
       matrix: ${{fromJSON(needs.load-china-gamma-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -1013,23 +986,23 @@ jobs:
   load-china-prod-matrix2:
     if: ${{ github.event_name == 'release' }}
     needs: [ deploy-china-gamma, package-china-prod ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: set-matrix
         run: echo "matrix={\"include\":$(jq -r tostring .github/workflows/cn-prod.json)}" >> $GITHUB_OUTPUT
 
   deploy-china-prod:
     if: ${{ github.event_name == 'release' }}
     needs: [ load-china-prod-matrix2 ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     environment: prod
     strategy:
       matrix: ${{fromJSON(needs.load-china-prod-matrix2.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8"
@@ -1094,9 +1067,9 @@ jobs:
   publish-to-public-ecr:
     if: ${{ github.event_name == 'release' }}
     needs: [ deploy-prod ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Assume the github runner role
         uses: aws-actions/configure-aws-credentials@v4

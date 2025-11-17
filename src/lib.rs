@@ -1,6 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+mod readiness;
+
 use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode,
@@ -13,6 +15,7 @@ use lambda_http::request::RequestContext;
 use lambda_http::Body;
 pub use lambda_http::Error;
 use lambda_http::{Request, RequestExt, Response};
+use readiness::Checkpoint;
 use std::fmt::Debug;
 use std::{
     env,
@@ -24,8 +27,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::net::TcpStream;
-use tokio::time::timeout;
+use tokio::{net::TcpStream, time::timeout};
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tower::{Service, ServiceBuilder};
 use tower_http::compression::CompressionLayer;
@@ -78,6 +80,7 @@ pub struct AdapterOptions {
     pub compression: bool,
     pub invoke_mode: LambdaInvokeMode,
     pub authorization_source: Option<String>,
+    pub error_status_codes: Option<Vec<u16>>,
 }
 
 impl Default for AdapterOptions {
@@ -116,8 +119,40 @@ impl Default for AdapterOptions {
                 .as_str()
                 .into(),
             authorization_source: env::var("AWS_LWA_AUTHORIZATION_SOURCE").ok(),
+            error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
+                .ok()
+                .map(|codes| parse_status_codes(&codes)),
         }
     }
+}
+
+fn parse_status_codes(input: &str) -> Vec<u16> {
+    input
+        .split(',')
+        .flat_map(|part| {
+            let part = part.trim();
+            if part.contains('-') {
+                let range: Vec<&str> = part.split('-').collect();
+                if range.len() == 2 {
+                    if let (Ok(start), Ok(end)) = (range[0].parse::<u16>(), range[1].parse::<u16>()) {
+                        return (start..=end).collect::<Vec<_>>();
+                    }
+                }
+                tracing::warn!("Failed to parse status code range: {}", part);
+                vec![]
+            } else {
+                part.parse::<u16>().map_or_else(
+                    |_| {
+                        if !part.is_empty() {
+                            tracing::warn!("Failed to parse status code: {}", part);
+                        }
+                        vec![]
+                    },
+                    |code| vec![code],
+                )
+            }
+        })
+        .collect()
 }
 
 #[derive(Clone)]
@@ -134,6 +169,7 @@ pub struct Adapter<C, B> {
     compression: bool,
     invoke_mode: LambdaInvokeMode,
     authorization_source: Option<String>,
+    error_status_codes: Option<Vec<u16>>,
 }
 
 impl Adapter<HttpConnector, Body> {
@@ -171,6 +207,7 @@ impl Adapter<HttpConnector, Body> {
             compression: options.compression,
             invoke_mode: options.invoke_mode,
             authorization_source: options.authorization_source.clone(),
+            error_status_codes: options.error_status_codes.clone(),
         }
     }
 }
@@ -231,7 +268,12 @@ impl Adapter<HttpConnector, Body> {
     }
 
     async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
+        let mut checkpoint = Checkpoint::new();
         Retry::spawn(FixedInterval::from_millis(10), || {
+            if checkpoint.lapsed() {
+                tracing::info!(url = %url.to_string(), "app is not ready after {}ms", checkpoint.next_ms());
+                checkpoint.increment();
+            }
             self.check_web_readiness(url, protocol)
         })
         .await
@@ -247,10 +289,11 @@ impl Adapter<HttpConnector, Body> {
                             && response.status().as_u16() >= 100
                     } =>
                 {
+                    tracing::debug!("app is ready");
                     Ok(())
                 }
                 _ => {
-                    tracing::debug!("app is not ready");
+                    tracing::trace!("app is not ready");
                     Err(-1)
                 }
             },
@@ -266,6 +309,13 @@ impl Adapter<HttpConnector, Body> {
     pub async fn run(self) -> Result<(), Error> {
         let compression = self.compression;
         let invoke_mode = self.invoke_mode;
+
+        if let Ok(runtime_proxy) = env::var("AWS_LWA_LAMBDA_RUNTIME_API_PROXY") {
+            // overwrite the env variable since
+            // LambdaInvokeMode::Buffered => lambda_http::run(svc).await,
+            // calls the lambda lambda_runtime::run which doesn't allow to change the client URI
+            env::set_var("AWS_LAMBDA_RUNTIME_API", runtime_proxy);
+        }
 
         if compression {
             let svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(self);
@@ -341,6 +391,17 @@ impl Adapter<HttpConnector, Body> {
 
         let mut app_response = self.client.request(request).await?;
 
+        // Check if status code should trigger an error
+        if let Some(error_codes) = &self.error_status_codes {
+            let status = app_response.status().as_u16();
+            if error_codes.contains(&status) {
+                return Err(Error::from(format!(
+                    "Request failed with configured error status code: {}",
+                    status
+                )));
+            }
+        }
+
         // remove "transfer-encoding" from the response to support "sam local start-api"
         app_response.headers_mut().remove("transfer-encoding");
 
@@ -372,6 +433,20 @@ impl Service<Request> for Adapter<HttpConnector, Body> {
 mod tests {
     use super::*;
     use httpmock::{Method::GET, MockServer};
+
+    #[test]
+    fn test_parse_status_codes() {
+        assert_eq!(parse_status_codes("500,502-504,422"), vec![500, 502, 503, 504, 422]);
+        assert_eq!(
+            parse_status_codes("500, 502-504, 422"), // with spaces
+            vec![500, 502, 503, 504, 422]
+        );
+        assert_eq!(parse_status_codes("500"), vec![500]);
+        assert_eq!(parse_status_codes("500-502"), vec![500, 501, 502]);
+        assert_eq!(parse_status_codes("invalid"), Vec::<u16>::new());
+        assert_eq!(parse_status_codes("500-invalid"), Vec::<u16>::new());
+        assert_eq!(parse_status_codes(""), Vec::<u16>::new());
+    }
 
     #[tokio::test]
     async fn test_status_200_is_ok() {

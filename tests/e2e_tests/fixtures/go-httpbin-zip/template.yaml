@@ -59,7 +59,7 @@ Resources:
     Properties:
       CodeUri: ./app
       Handler: bootstrap
-      Runtime: provided.al2
+      Runtime: provided.al2023
       MemorySize: 256
       Environment:
         Variables:

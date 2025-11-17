@@ -28,7 +28,7 @@ AWS Lambda Web Adapter work with Lambda functions packaged as both docker images
 To use Lambda Web Adapter with docker images, package your web app (http api) in a Dockerfile, and add one line to copy Lambda Web Adapter binary to /opt/extensions inside your container:
 
 ```dockerfile
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
 ```
 
 [Non-AWS base images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html) may be used since the [Runtime Interface Client](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html#images-ric) ships with the Lambda Web Adapter.
@@ -42,7 +42,7 @@ Below is a Dockerfile for [an example nodejs application](examples/expressjs).
 
 ```dockerfile
 FROM public.ecr.aws/docker/library/node:20-slim
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
 ENV PORT=7000
 WORKDIR "/var/task"
 ADD src/package.json /var/task/package.json
@@ -61,15 +61,15 @@ AWS Lambda Web Adapter also works with AWS managed Lambda runtimes. You need to 
 1. attach Lambda Web Adapter layer to your function.
    #### AWS Commercial Regions
 
-   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:23`
-   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:23`
+   1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25`
+   2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:25`
 
    #### AWS China Regions
 
    1. cn-north-1 (Beijing)
-      - x86_64: `arn:aws-cn:lambda:cn-north-1:041581134020:layer:LambdaAdapterLayerX86:23`
+      - x86_64: `arn:aws-cn:lambda:cn-north-1:041581134020:layer:LambdaAdapterLayerX86:25`
    2. cn-northwest-1 (Ningxia)
-      - x86_64: `arn:aws-cn:lambda:cn-northwest-1:069767869989:layer:LambdaAdapterLayerX86:23`
+      - x86_64: `arn:aws-cn:lambda:cn-northwest-1:069767869989:layer:LambdaAdapterLayerX86:25`
 
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`.
 3. set function handler to your web application start up script. e.g. `run.sh`.
@@ -105,6 +105,8 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_INVOKE_MODE                                          | Lambda function invoke mode: "buffered" or "response_stream", default is "buffered"  | "buffered" |
 | AWS_LWA_PASS_THROUGH_PATH                                    | the path for receiving event payloads that are passed through from non-http triggers | "/events"  |
 | AWS_LWA_AUTHORIZATION_SOURCE                                 | a header name to be replaced to `Authorization` | None  |
+| AWS_LWA_ERROR_STATUS_CODES                                  | comma-separated list of HTTP status codes that will cause Lambda invocations to fail (e.g. "500,502-504,422") | None  |
+| AWS_LWA_LAMBDA_RUNTIME_API_PROXY                              | overwrites `AWS_LAMBDA_RUNTIME_API` to allow proxying request (not affecting registration)                    | None       |
 
 > **Note:**
 > We use "AWS_LWA_" prefix to namespacing all environment variables used by Lambda Web Adapter. The original ones will be supported until we reach version 1.0.
@@ -136,6 +138,8 @@ Please check out [FastAPI with Response Streaming](examples/fastapi-response-str
 **AWS_LWA_PASS_THROUGH_PATH** - Path to receive events payloads passed through from non-http event triggers. The default is "/events".
 
 **AWS_LWA_AUTHORIZATION_SOURCE** - When set, Lambda Web Adapter replaces the specified header name to `Authorization` before proxying a request. This is useful when you use Lambda function URL with [IAM auth type](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html), which reserves Authorization header for IAM authentication, but you want to still use Authorization header for your backend apps. This feature is disabled by default.
+
+**AWS_LWA_ERROR_STATUS_CODES** - A comma-separated list of HTTP status codes that will cause Lambda invocations to fail. Supports individual codes and ranges (e.g. "500,502-504,422"). When the web application returns any of these status codes, the Lambda invocation will fail and trigger error handling behaviors like retries or DLQ processing. This is useful for treating certain HTTP errors as Lambda execution failures. This feature is disabled by default.
 
 ## Request Context
 
@@ -169,6 +173,10 @@ Please note that `sam local` starts a Lambda Runtime Interface Emulator on port 
 
 The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, SNS, S3, DynamoDB, Kinesis, Kafka, EventBridge, and Bedrock Agents. The adapter forwards the event payload to the web application via http post to a path defined by the `AWS_LWA_PASS_THROUGH_PATH` environment variable. By default, this path is set to `/events`. Upon receiving the event payload from the request body, the web application should processes it and returns the results as a JSON response. Please checkout [SQS Express.js](examples/sqs-expressjs) and [Bedrock Agent FastAPI in Zip](examples/bedrock-agent-fastapi-zip) examples.
 
+## Intercepting request and response
+
+The `AWS_LWA_LAMBDA_RUNTIME_API_PROXY` environment varible makes the Lambda Web Adapter redirect the requests to a custom proxy URL. The proxy can then intercept the requests of the [Lambda runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html), and apply arbitrary operations such as inspection or modification. Possible applications are tracing, payload capturing, obfuscation of sensitive data, headers modification. Note that the payload of the request received by the web application is wrapped inside the GET response body. This proxy _does not_ affect the extension registering API and is meant to be used only to interact with the data received and sent by the web application
+
 ## Examples
 
 - [FastAPI](examples/fastapi)
@@ -176,6 +184,7 @@ The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, S
 - [FastAPI with Background Tasks](examples/fastapi-background-tasks)
 - [FastAPI with Response Streaming](examples/fastapi-response-streaming)
 - [FastAPI with Response Streaming in Zip](examples/fastapi-response-streaming-zip)
+- [FastAPI Response Streaming Backend with IAM Auth](examples/fastapi-backend-only-response-streaming/)
 - [Flask](examples/flask)
 - [Flask in Zip](examples/flask-zip)
 - [Serverless Django](https://github.com/aws-hebrew-book/serverless-django)  by [@efi-mk](https://github.com/efi-mk)
@@ -205,6 +214,11 @@ The Lambda Web Adapter also supports all non-HTTP event triggers, such as SQS, S
 - [FastHTML in Zip](examples/fasthtml-zip)
 - [FastHTML with Response Streaming](examples/fasthtml-response-streaming)
 - [FastHTML with Response Streaming in Zip](examples/fasthtml-response-streaming-zip)
+- [Remix](examples/remix/)
+- [Remix in Zip](examples/remix-zip/)
+- [Sveltekit SSR Zip](examples/sveltekit-ssr-zip/)
+- [Datadog](examples/datadog)
+- [Datadog in Zip](examples/datadog-zip)
 
 ## Acknowledgement
 
