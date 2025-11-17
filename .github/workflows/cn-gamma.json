@@ -4,7 +4,7 @@
       "cloudformation_execution_role": "arn:aws-cn:iam::336678493554:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-1CDG186WIXL49",
       "image_repository": "336678493554.dkr.ecr.cn-north-1.amazonaws.com.cn/aws-sam-cli-managed-gamma-pipeline-resources-imagerepository-jfceoqzu6uhe",
       "pipeline_execution_role": "arn:aws-cn:iam::336678493554:role/aws-sam-cli-managed-gamma-pi-PipelineExecutionRole-ZO7FHGWQREIE",
-      "arm64_supported": false,
+      "arm64_supported": true,
       "region": "cn-north-1"
     },
     {
@@ -12,7 +12,7 @@
       "cloudformation_execution_role": "arn:aws-cn:iam::336815664844:role/aws-sam-cli-managed-gamma-CloudFormationExecutionR-GLTF2A1D149Y",
       "image_repository": "336815664844.dkr.ecr.cn-northwest-1.amazonaws.com.cn/aws-sam-cli-managed-gamma-pipeline-resources-imagerepository-yhde61uzmjpx",
       "pipeline_execution_role": "arn:aws-cn:iam::336815664844:role/aws-sam-cli-managed-gamma-pi-PipelineExecutionRole-1ANKMP1054CRU",
-      "arm64_supported": false,
+      "arm64_supported": true,
       "region": "cn-northwest-1"
     }
   ]
