@@ -693,21 +693,17 @@ async fn test_http_context_multi_headers() {
     let test_endpoint = app_server.mock(|when, then| {
         when.method(GET)
             .path("/")
-            .matches(|req| {
-                req.headers
-                    .as_ref()
-                    .unwrap()
+            .is_true(|req| {
+                req.headers()
                     .iter()
-                    .filter(|(key, _value)| key == "x-amzn-lambda-context")
+                    .filter(|(key, _value)| *key == "x-amzn-lambda-context")
                     .count()
                     == 1
             })
-            .matches(|req| {
-                req.headers
-                    .as_ref()
-                    .unwrap()
+            .is_true(|req| {
+                req.headers()
                     .iter()
-                    .filter(|(key, _value)| key == "x-amzn-request-context")
+                    .filter(|(key, _value)| *key == "x-amzn-request-context")
                     .count()
                     == 1
             });
