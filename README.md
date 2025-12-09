@@ -105,8 +105,9 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_INVOKE_MODE                                          | Lambda function invoke mode: "buffered" or "response_stream", default is "buffered"  | "buffered" |
 | AWS_LWA_PASS_THROUGH_PATH                                    | the path for receiving event payloads that are passed through from non-http triggers | "/events"  |
 | AWS_LWA_AUTHORIZATION_SOURCE                                 | a header name to be replaced to `Authorization` | None  |
-| AWS_LWA_ERROR_STATUS_CODES                                  | comma-separated list of HTTP status codes that will cause Lambda invocations to fail (e.g. "500,502-504,422") | None  |
-| AWS_LWA_LAMBDA_RUNTIME_API_PROXY                              | overwrites `AWS_LAMBDA_RUNTIME_API` to allow proxying request (not affecting registration)                    | None       |
+| AWS_LWA_ERROR_STATUS_CODES                                   | comma-separated list of HTTP status codes that will cause Lambda invocations to fail (e.g. "500,502-504,422") | None  |
+| AWS_LWA_LAMBDA_RUNTIME_API_PROXY                             | overwrites `AWS_LAMBDA_RUNTIME_API` to allow proxying request (not affecting registration)                    | None       |
+| AWS_LWA_STRIP_RESPONSE_HEADERS                               | comma-separated list of HTTP response headers to remove from responses               | None       |
 
 > **Note:**
 > We use "AWS_LWA_" prefix to namespacing all environment variables used by Lambda Web Adapter. The original ones will be supported until we reach version 1.0.
@@ -132,6 +133,8 @@ When enabled, this will compress responses unless it's an image as determined by
 
 **AWS_LWA_INVOKE_MODE** - Lambda function invoke mode, this should match Function Url invoke mode. The default is "buffered". When configured as "response_stream", Lambda Web Adapter will stream response to Lambda service [blog](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/).
 Please check out [FastAPI with Response Streaming](examples/fastapi-response-streaming) example.
+
+**AWS_LWA_STRIP_RESPONSE_HEADERS** - Allows you to specify a list of HTTP response headers that should be removed from responses before they are sent back to the client. This is useful when you want to prevent certain headers from being exposed or when you need to override headers set by your web application framework. For example, setting `AWS_LWA_STRIP_RESPONSE_HEADERS=x-powered-by,server` will remove the `X-Powered-By` and `Server` headers from all responses. Multiple headers should be specified as a comma-separated list.
 
 **AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS** - allows you to customize which HTTP status codes are considered healthy and which ones are not
 
