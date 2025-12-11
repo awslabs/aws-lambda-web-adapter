@@ -85,20 +85,22 @@ impl LambdaEventBuilder {
 
     pub fn build(self) -> LambdaRequest {
         match self.event_type {
-            LambdaEventType::ALB => LambdaRequest::Alb(AlbTargetGroupRequest {
-                http_method: self.method,
-                path: Some(self.path),
-                query_string_parameters: QueryMap::from(self.query.clone()),
-                multi_value_query_string_parameters: QueryMap::from(self.query),
-                headers: self.headers.clone(),
-                multi_value_headers: self.headers,
-                is_base64_encoded: false,
-                body: self.body,
-                request_context: AlbTargetGroupRequestContext {
-                    elb: ElbContext {
-                        target_group_arn: Some("arn:aws:us-east-1:123456789:elb/Foo".into()),
-                    },
-                },
+            LambdaEventType::ALB => LambdaRequest::Alb({
+                let mut elb_context = ElbContext::default();
+                elb_context.target_group_arn = Some("arn:aws:us-east-1:123456789:elb/Foo".into());
+                let mut request_context = AlbTargetGroupRequestContext::default();
+                request_context.elb = elb_context;
+                let mut alb_request = AlbTargetGroupRequest::default();
+                alb_request.http_method = self.method;
+                alb_request.path = Some(self.path);
+                alb_request.query_string_parameters = QueryMap::from(self.query.clone());
+                alb_request.multi_value_query_string_parameters = QueryMap::from(self.query);
+                alb_request.headers = self.headers.clone();
+                alb_request.multi_value_headers = self.headers;
+                alb_request.is_base64_encoded = false;
+                alb_request.body = self.body;
+                alb_request.request_context = request_context;
+                alb_request
             }),
         }
     }
