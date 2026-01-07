@@ -260,9 +260,9 @@ dependencies = [
 
 [[package]]
 name = "aws_lambda_events"
-version = "1.0.1"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac59c9b189a3bd75146633e1c87f35fb727f53b03c7f331af789ff1293a9f350"
+checksum = "ca106ceeb46420f22b33b863f8a667214afbf6b0457bc209f8c97de2282bedae"
 dependencies = [
  "base64",
  "bytes",
@@ -1234,9 +1234,9 @@ dependencies = [
 
 [[package]]
 name = "lambda_http"
-version = "1.0.1"
+version = "1.1.0-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a106755a9079a3ed20b4262e32c9a5efa127c97546cb2ecf69bbf3d17dbf970b"
+checksum = "12ca353a921b753e2a464cf3286381a0be7cdb6cc6e685daa2fdc5b95a6f4402"
 dependencies = [
  "aws_lambda_events",
  "bytes",
@@ -1259,9 +1259,9 @@ dependencies = [
 
 [[package]]
 name = "lambda_runtime"
-version = "1.0.1"
+version = "1.1.0-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46e566d19773ae483b0d32cc6045c5420d7b3eec6192ecb1c26ffa4e0091388a"
+checksum = "3ef345d40ef6f1bcfb051a06cee05ed3cf8815ef32552610b8327b9675788615"
 dependencies = [
  "async-stream",
  "base64",
@@ -1284,9 +1284,9 @@ dependencies = [
 
 [[package]]
 name = "lambda_runtime_api_client"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c039f06329949692a81a993ede4cfaa6abab3ac8e72590cf7c5e6a64a9ec7b1"
+checksum = "7b4873061514cb57ffb6a599b77c46c65d6d783efe9bad8fd56b7cba7f0459ef"
 dependencies = [
  "bytes",
  "futures-channel",
