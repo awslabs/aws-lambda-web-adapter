@@ -40,13 +40,12 @@ Resources:
           AWS_LWA_INVOKE_MODE: response_stream
           PORT: 8000
       Layers:
-        # - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
-        - arn:aws:lambda:us-west-2:048972532408:layer:LambdaAdapterLayerX86:8
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:26
       CapacityProviderConfig:
         Arn: !GetAtt LMICapacityProvider.Arn
         PerExecutionEnvironmentMaxConcurrency: 64
       FunctionUrlConfig:
-        AuthType: AWS_IAM
+        AuthType: NONE
         InvokeMode: RESPONSE_STREAM
 
 Outputs:

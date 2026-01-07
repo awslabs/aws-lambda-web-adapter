@@ -3,9 +3,6 @@ from fastapi.responses import StreamingResponse
 import asyncio
 import uuid
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 app = FastAPI()
 
 @app.get("/health")
@@ -21,8 +18,8 @@ async def streamer(request_id: str):
         await asyncio.sleep(0.05)
 
 
-@app.get("/{path:path}")
-async def index(path: str, request: Request):
+@app.get("/")
+async def index():
     """Stream response - each concurrent request gets a unique ID."""
     request_id = str(uuid.uuid4())[:8]
     return StreamingResponse(streamer(request_id), media_type="text/plain")
