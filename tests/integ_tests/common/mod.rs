@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -42,6 +43,7 @@ pub struct LambdaEventBuilder {
     headers: HeaderMap,
     event_type: LambdaEventType,
     body: Option<String>,
+    is_base64_encoded: bool,
 }
 
 impl LambdaEventBuilder {
@@ -53,6 +55,7 @@ impl LambdaEventBuilder {
             headers: HeaderMap::new(),
             event_type: LambdaEventType::ALB,
             body: None,
+            is_base64_encoded: false,
         }
     }
 
@@ -83,6 +86,19 @@ impl LambdaEventBuilder {
         self
     }
 
+    pub fn with_body(mut self, body: &str) -> Self {
+        self.body = Some(body.into());
+        self
+    }
+
+    /// Set a binary body. The bytes will be base64-encoded and is_base64_encoded set to true,
+    /// which is how ALB/API Gateway sends binary data to Lambda.
+    pub fn with_binary_body(mut self, body: &[u8]) -> Self {
+        self.body = Some(STANDARD.encode(body));
+        self.is_base64_encoded = true;
+        self
+    }
+
     pub fn build(self) -> LambdaRequest {
         match self.event_type {
             LambdaEventType::ALB => LambdaRequest::Alb({
@@ -97,7 +113,7 @@ impl LambdaEventBuilder {
                 alb_request.multi_value_query_string_parameters = QueryMap::from(self.query);
                 alb_request.headers = self.headers.clone();
                 alb_request.multi_value_headers = self.headers;
-                alb_request.is_base64_encoded = false;
+                alb_request.is_base64_encoded = self.is_base64_encoded;
                 alb_request.body = self.body;
                 alb_request.request_context = request_context;
                 alb_request

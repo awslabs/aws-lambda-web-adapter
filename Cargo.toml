@@ -55,10 +55,16 @@ hyper-rustls = "0.27"
 aws-sigv4 = "1.2.3"
 aws-credential-types = "1.2.0"
 percent-encoding = "2.3.0"
+base64 = "0.22.1"
+criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 
 [[bin]]
 name = "lambda-adapter"
 path = "src/main.rs"
+
+[[bench]]
+name = "e2e_body_forwarding"
+harness = false
 
 [profile.release]
 strip = true

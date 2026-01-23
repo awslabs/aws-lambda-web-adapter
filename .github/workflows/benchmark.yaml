@@ -1,0 +1,145 @@
+name: Benchmark
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "benches/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        run: rustup update stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-bench-
+
+      - name: Run benchmarks on PR branch
+        run: |
+          cargo bench --bench e2e_body_forwarding -- --noplot --save-baseline pr
+          
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          clean: false
+
+      - name: Run benchmarks on main branch
+        run: |
+          cargo bench --bench e2e_body_forwarding -- --noplot --save-baseline main
+
+      - name: Checkout PR branch again for comparison
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Install critcmp
+        run: cargo install critcmp
+
+      - name: Compare benchmarks
+        id: compare
+        run: |
+          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          critcmp main pr >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for regressions > 10%
+          REGRESSION=$(critcmp main pr --threshold 10 --filter-by-regression 2>&1 || true)
+          if [ -n "$REGRESSION" ] && [ "$REGRESSION" != "group,benchmark,main,pr,factor" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## ⚠️ Performance Regression Detected (>10%)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$REGRESSION" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "regression=true" >> $GITHUB_OUTPUT
+            echo "$REGRESSION"
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ No significant performance regression detected." >> $GITHUB_STEP_SUMMARY
+            echo "regression=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = process.env.GITHUB_STEP_SUMMARY;
+            
+            // Read the step summary
+            const summaryContent = fs.readFileSync(summary, 'utf8');
+            
+            const body = `### 📊 Benchmark Comparison
+            
+            ${summaryContent}
+            
+            <details>
+            <summary>Benchmark Details</summary>
+            
+            - Baseline: \`main\` branch
+            - Comparison: This PR
+            - Threshold: 10% regression triggers warning
+            
+            </details>`;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('📊 Benchmark Comparison')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+      - name: Fail if regression detected
+        if: steps.compare.outputs.regression == 'true'
+        run: |
+          echo "Performance regression >10% detected!"
+          exit 1

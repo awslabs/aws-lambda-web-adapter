@@ -367,6 +367,84 @@ async fn test_http_post_put_delete() {
 }
 
 #[tokio::test]
+async fn test_http_request_body_forwarded() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // Test 1: Text body (JSON)
+    let json_endpoint = app_server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/json")
+            .header("content-type", "application/json")
+            .body(r#"{"name":"test","value":123}"#);
+        then.status(201).body("JSON Created");
+    });
+
+    // Test 2: Empty body
+    let empty_endpoint = app_server.mock(|when, then| {
+        when.method(POST).path("/api/empty").body("");
+        then.status(204);
+    });
+
+    // Test 3: Binary body (with base64 encoding as ALB/API Gateway would send)
+    let binary_data: Vec<u8> = vec![0x00, 0x01, 0x02, 0xFF, 0xFE, 0x89, 0x50, 0x4E, 0x47];
+    let expected_binary = binary_data.clone();
+    let binary_endpoint = app_server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/binary")
+            .is_true(move |req| req.body().as_ref() == expected_binary.as_slice());
+        then.status(200).body("Binary OK");
+    });
+
+    // Initialize adapter
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        ..Default::default()
+    });
+
+    // Test Text body (Body::Text)
+    let json_req = LambdaEventBuilder::new()
+        .with_method(Method::POST)
+        .with_path("/api/json")
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"name":"test","value":123}"#)
+        .build();
+    let mut json_request = Request::from(json_req);
+    add_lambda_context_to_request(&mut json_request);
+    let json_response = adapter.call(json_request).await.expect("JSON request failed");
+    json_endpoint.assert();
+    assert_eq!(201, json_response.status());
+    assert_eq!("JSON Created", body_to_string(json_response).await);
+
+    // Test Empty body (Body::Empty)
+    let empty_req = LambdaEventBuilder::new()
+        .with_method(Method::POST)
+        .with_path("/api/empty")
+        .build();
+    let mut empty_request = Request::from(empty_req);
+    add_lambda_context_to_request(&mut empty_request);
+    let empty_response = adapter.call(empty_request).await.expect("Empty request failed");
+    empty_endpoint.assert();
+    assert_eq!(204, empty_response.status());
+
+    // Test Binary body (Body::Binary)
+    let binary_req = LambdaEventBuilder::new()
+        .with_method(Method::POST)
+        .with_path("/api/binary")
+        .with_binary_body(&binary_data)
+        .build();
+    let mut binary_request = Request::from(binary_req);
+    add_lambda_context_to_request(&mut binary_request);
+    let binary_response = adapter.call(binary_request).await.expect("Binary request failed");
+    binary_endpoint.assert();
+    assert_eq!(200, binary_response.status());
+    assert_eq!("Binary OK", body_to_string(binary_response).await);
+}
+
+#[tokio::test]
 async fn test_http_compress() {
     // Start app server
     let app_server = MockServer::start();

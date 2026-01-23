@@ -387,7 +387,15 @@ impl Adapter<HttpConnector, Body> {
             headers.extend(req_headers);
         }
 
-        let request = builder.body(Body::from(body.to_vec()))?;
+        // Convert body without copying by moving ownership of the underlying data
+        let body_bytes = match body {
+            Body::Empty => Vec::new(),
+            Body::Text(s) => s.into_bytes(),
+            Body::Binary(b) => b,
+            // Body is marked #[non_exhaustive], handle future variants
+            _ => body.to_vec(),
+        };
+        let request = builder.body(Body::Binary(body_bytes))?;
 
         let mut app_response = self.client.request(request).await?;
 
