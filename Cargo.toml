@@ -55,6 +55,7 @@ hyper-rustls = "0.27"
 aws-sigv4 = "1.2.3"
 aws-credential-types = "1.2.0"
 percent-encoding = "2.3.0"
+base64 = "0.22.1"
 
 [[bin]]
 name = "lambda-adapter"

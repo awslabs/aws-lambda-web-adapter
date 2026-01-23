@@ -1121,6 +1121,7 @@ version = "0.9.1"
 dependencies = [
  "aws-credential-types",
  "aws-sigv4",
+ "base64",
  "bytes",
  "flate2",
  "http 1.4.0",
