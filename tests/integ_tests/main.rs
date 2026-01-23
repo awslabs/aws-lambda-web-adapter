@@ -382,9 +382,7 @@ async fn test_http_request_body_forwarded() {
 
     // Test 2: Empty body
     let empty_endpoint = app_server.mock(|when, then| {
-        when.method(POST)
-            .path("/api/empty")
-            .body("");
+        when.method(POST).path("/api/empty").body("");
         then.status(204);
     });
 

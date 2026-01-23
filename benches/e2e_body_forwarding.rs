@@ -55,7 +55,7 @@ fn bench_text_body(c: &mut Criterion) {
     });
 
     let mut group = c.benchmark_group("e2e_text_body");
-    
+
     // Reduce sample size for faster CI runs while maintaining statistical validity
     group.sample_size(50);
 
@@ -123,7 +123,7 @@ fn bench_binary_body(c: &mut Criterion) {
     });
 
     let mut group = c.benchmark_group("e2e_binary_body");
-    
+
     // Reduce sample size for faster CI runs
     group.sample_size(50);
 
@@ -145,43 +145,47 @@ fn bench_binary_body(c: &mut Criterion) {
     for target_size in target_encoded_sizes {
         // Calculate binary size needed to produce target encoded size
         let binary_size = target_size * 3 / 4;
-        
+
         // Pre-encode to exclude base64 encoding time from benchmark
         let body_content: Vec<u8> = vec![0xAB; binary_size];
         let body_base64 = STANDARD.encode(&body_content);
-        
+
         // Throughput based on base64-encoded size (actual payload size)
         group.throughput(Throughput::Bytes(body_base64.len() as u64));
 
-        group.bench_with_input(BenchmarkId::from_parameter(body_base64.len()), &target_size, |b, &_size| {
-            let adapter = Adapter::new(&AdapterOptions {
-                host: app_server.host(),
-                port: app_server.port().to_string(),
-                readiness_check_port: app_server.port().to_string(),
-                readiness_check_path: "/".to_string(),
-                ..Default::default()
-            });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(body_base64.len()),
+            &target_size,
+            |b, &_size| {
+                let adapter = Adapter::new(&AdapterOptions {
+                    host: app_server.host(),
+                    port: app_server.port().to_string(),
+                    readiness_check_port: app_server.port().to_string(),
+                    readiness_check_path: "/".to_string(),
+                    ..Default::default()
+                });
 
-            let body = body_base64.clone();
+                let body = body_base64.clone();
 
-            b.to_async(&rt).iter(|| {
-                let body = body.clone();
-                let mut adapter = adapter.clone();
-                async move {
-                    let req = LambdaEventBuilder::new()
-                        .with_method(Method::POST)
-                        .with_path("/api/data")
-                        .with_header("content-type", "application/octet-stream")
-                        .with_base64_body(&body)
-                        .build();
+                b.to_async(&rt).iter(|| {
+                    let body = body.clone();
+                    let mut adapter = adapter.clone();
+                    async move {
+                        let req = LambdaEventBuilder::new()
+                            .with_method(Method::POST)
+                            .with_path("/api/data")
+                            .with_header("content-type", "application/octet-stream")
+                            .with_base64_body(&body)
+                            .build();
 
-                    let mut request = Request::from(req);
-                    add_lambda_context(&mut request);
+                        let mut request = Request::from(req);
+                        add_lambda_context(&mut request);
 
-                    adapter.call(request).await.expect("Request failed")
-                }
-            });
-        });
+                        adapter.call(request).await.expect("Request failed")
+                    }
+                });
+            },
+        );
     }
 
     group.finish();

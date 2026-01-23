@@ -66,10 +66,10 @@ impl LambdaEventBuilder {
     pub fn build(self) -> LambdaRequest {
         let mut elb_context = ElbContext::default();
         elb_context.target_group_arn = Some("arn:aws:us-east-1:123456789:elb/Foo".into());
-        
+
         let mut request_context = AlbTargetGroupRequestContext::default();
         request_context.elb = elb_context;
-        
+
         let mut alb_request = AlbTargetGroupRequest::default();
         alb_request.http_method = self.method;
         alb_request.path = Some(self.path);
@@ -80,7 +80,7 @@ impl LambdaEventBuilder {
         alb_request.is_base64_encoded = self.is_base64_encoded;
         alb_request.body = self.body;
         alb_request.request_context = request_context;
-        
+
         LambdaRequest::Alb(alb_request)
     }
 }
