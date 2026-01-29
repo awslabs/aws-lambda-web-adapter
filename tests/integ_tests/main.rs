@@ -824,6 +824,62 @@ async fn test_http_context_multi_headers() {
     assert_eq!("OK", body_to_string(response).await);
 }
 
+#[tokio::test]
+async fn test_http_strip_response_headers() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // An endpoint that returns multiple headers
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/");
+        then.status(200)
+            .header("x-custom-header", "value")
+            .header("server", "test-server")
+            .header("content-type", "application/json")
+            .body("{}");
+    });
+
+    // Initialize adapter with headers to strip
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        strip_response_headers: Some(vec!["x-custom-header".to_string(), "server".to_string()]),
+        ..Default::default()
+    });
+
+    // Prepare request
+    let req = LambdaEventBuilder::new().with_path("/").build();
+
+    // Convert to Request object and add Lambda Context
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    // Call the adapter service with request
+    let response = adapter.call(request).await.expect("Request failed");
+
+    // Assert endpoint was called once
+    test_endpoint.assert();
+
+    // Verify headers were stripped
+    assert!(
+        !response.headers().contains_key("x-custom-header"),
+        "x-custom-header should be stripped"
+    );
+    assert!(
+        !response.headers().contains_key("server"),
+        "server header should be stripped"
+    );
+
+    // Verify other headers remain
+    assert!(
+        response.headers().contains_key("content-type"),
+        "content-type header should remain"
+    );
+    assert_eq!("{}", body_to_string(response).await);
+}
+
 async fn body_to_string(res: Response<Incoming>) -> String {
     let body_bytes = res.collect().await.unwrap().to_bytes();
     String::from_utf8_lossy(&body_bytes).to_string()
