@@ -367,16 +367,14 @@ impl Adapter<HttpConnector, Body> {
     }
 
     /// Run the adapter to take events from Lambda.
+    /// 
+    /// # Safety
+    /// 
+    /// If AWS_LWA_LAMBDA_RUNTIME_API_PROXY is set, it must be set BEFORE
+    /// calling this function to avoid race conditions with environment variable access.
     pub async fn run(self) -> Result<(), Error> {
         let compression = self.compression;
         let invoke_mode = self.invoke_mode;
-
-        if let Ok(runtime_proxy) = env::var("AWS_LWA_LAMBDA_RUNTIME_API_PROXY") {
-            // overwrite the env variable since
-            // LambdaInvokeMode::Buffered => lambda_http::run(svc).await,
-            // calls the lambda lambda_runtime::run which doesn't allow to change the client URI
-            env::set_var("AWS_LAMBDA_RUNTIME_API", runtime_proxy);
-        }
 
         if compression {
             let svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(self);
@@ -389,6 +387,27 @@ impl Adapter<HttpConnector, Body> {
                 LambdaInvokeMode::Buffered => lambda_http::run(self).await,
                 LambdaInvokeMode::ResponseStream => lambda_http::run_with_streaming_response(self).await,
             }
+        }
+    }
+
+    /// Apply runtime API proxy configuration if set.
+    /// 
+    /// This must be called BEFORE starting the tokio runtime to avoid
+    /// race conditions with environment variable modification in a multi-threaded context.
+    /// 
+    /// # Safety Note
+    /// 
+    /// This function uses `env::set_var` which will be marked unsafe in future Rust versions
+    /// due to potential race conditions in multi-threaded contexts. It MUST be called before
+    /// any threads are spawned (i.e., before starting the tokio runtime).
+    pub fn apply_runtime_proxy_config() {
+        if let Ok(runtime_proxy) = env::var("AWS_LWA_LAMBDA_RUNTIME_API_PROXY") {
+            // We need to overwrite the env variable because lambda_http::run()
+            // calls lambda_runtime::run() which doesn't allow changing the client URI.
+            //
+            // This is safe here because it's called before the tokio runtime starts,
+            // ensuring no other threads exist yet.
+            env::set_var("AWS_LAMBDA_RUNTIME_API", runtime_proxy);
         }
     }
 
