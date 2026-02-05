@@ -663,7 +663,7 @@ async fn test_http_content_encoding_suffix() {
         when.method(GET).path("/json");
         then.status(200)
             .header("content-type", "application/graphql-response+json; charset=utf-8")
-            .body(json_data.to_owned());
+            .body(&json_data);
     });
 
     // Initialize adapter and do readiness check
