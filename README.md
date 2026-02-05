@@ -94,13 +94,14 @@ The readiness check port/path and traffic port can be configured using environme
 
 | Environment Variable                                         | Description                                                                          | Default    |
 |--------------------------------------------------------------|--------------------------------------------------------------------------------------|------------|
-| AWS_LWA_PORT / PORT*                                         | traffic port                                                                         | "8080"     |
-| AWS_LWA_READINESS_CHECK_PORT / READINESS_CHECK_PORT*         | readiness check port, default to the traffic port                                    | PORT       |
-| AWS_LWA_READINESS_CHECK_PATH / READINESS_CHECK_PATH*         | readiness check path                                                                 | "/"        |
-| AWS_LWA_READINESS_CHECK_PROTOCOL / READINESS_CHECK_PROTOCOL* | readiness check protocol: "http" or "tcp", default is "http"                         | "http"     |
+| AWS_LWA_PORT                                                 | traffic port                                                                         | "8080"     |
+| AWS_LWA_HOST                                                 | traffic host                                                                         | "127.0.0.1"|
+| AWS_LWA_READINESS_CHECK_PORT                                 | readiness check port, default to the traffic port                                    | AWS_LWA_PORT |
+| AWS_LWA_READINESS_CHECK_PATH                                 | readiness check path                                                                 | "/"        |
+| AWS_LWA_READINESS_CHECK_PROTOCOL                             | readiness check protocol: "http" or "tcp", default is "http"                         | "http"     |
 | AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS                 | The minimum HTTP status code that is considered unhealthy                            | "500"      |
-| AWS_LWA_ASYNC_INIT / ASYNC_INIT*                             | enable asynchronous initialization for long initialization functions                 | "false"    |
-| AWS_LWA_REMOVE_BASE_PATH / REMOVE_BASE_PATH*                 | the base path to be removed from request path                                        | None       |
+| AWS_LWA_ASYNC_INIT                                           | enable asynchronous initialization for long initialization functions                 | "false"    |
+| AWS_LWA_REMOVE_BASE_PATH                                     | the base path to be removed from request path                                        | None       |
 | AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip compression for response body                                            | "false"    |
 | AWS_LWA_INVOKE_MODE                                          | Lambda function invoke mode: "buffered" or "response_stream", default is "buffered"  | "buffered" |
 | AWS_LWA_PASS_THROUGH_PATH                                    | the path for receiving event payloads that are passed through from non-http triggers | "/events"  |
@@ -108,24 +109,25 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_ERROR_STATUS_CODES                                  | comma-separated list of HTTP status codes that will cause Lambda invocations to fail (e.g. "500,502-504,422") | None  |
 | AWS_LWA_LAMBDA_RUNTIME_API_PROXY                              | overwrites `AWS_LAMBDA_RUNTIME_API` to allow proxying request (not affecting registration)                    | None       |
 
-> **Note:**
-> We use "AWS_LWA_" prefix to namespacing all environment variables used by Lambda Web Adapter. The original ones will be supported until we reach version 1.0.
-
-**AWS_LWA_PORT / PORT** - Lambda Web Adapter will send traffic to this port. This is the port your web application listening on. Inside Lambda execution environment,
+**AWS_LWA_PORT** - Lambda Web Adapter will send traffic to this port. This is the port your web application listening on. Inside Lambda execution environment,
 the web application runs as a non-root user, and not allowed to listen on ports lower than 1024. Please also avoid port 9001 and 3000.
-Lambda Runtime API is on port 9001. CloudWatch Lambda Insight extension uses port 3000.  
+Lambda Runtime API is on port 9001. CloudWatch Lambda Insight extension uses port 3000.
 
-**AWS_LWA_ASYNC_INIT / ASYNC_INIT** - Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization, and it is free.
+> **Deprecation Notice:** The following non-namespaced environment variables are deprecated and will be removed in version 2.0:
+> `PORT`, `HOST`, `READINESS_CHECK_PORT`, `READINESS_CHECK_PATH`, `READINESS_CHECK_PROTOCOL`, `REMOVE_BASE_PATH`, `ASYNC_INIT`.
+> Please migrate to the `AWS_LWA_` prefixed versions.  
+
+**AWS_LWA_ASYNC_INIT** - Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization, and it is free.
 If a lambda function couldn't complete the initialization within 10 seconds, Lambda will restart the function, and bill for the initialization.
 To help functions to use this 10 seconds free initialization time and avoid the restart, Lambda Web Adapter supports asynchronous initialization.
 When this feature is enabled, Lambda Web Adapter performs readiness check up to 9.8 seconds. If the web app is not ready by then,
 Lambda Web Adapter signals to Lambda service that the init is completed, and continues readiness check in the handler.
 This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ASYNC_INIT` to `true`.
 
-**AWS_LWA_REMOVE_BASE_PATH / REMOVE_BASE_PATH** - The value of this environment variable tells the adapter whether the application is running under a base path.
+**AWS_LWA_REMOVE_BASE_PATH** - The value of this environment variable tells the adapter whether the application is running under a base path.
 For example, you could have configured your API Gateway to have a /orders/{proxy+} and a /catalog/{proxy+} resource.
 Each resource is handled by a separate Lambda functions. For this reason, the application inside Lambda may not be aware of the fact that the /orders path exists.
-Use REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the application. Defaults to empty string. Checkout [SpringBoot](examples/springboot) example.
+Use AWS_LWA_REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the application. Defaults to empty string. Checkout [SpringBoot](examples/springboot) example.
 
 **AWS_LWA_ENABLE_COMPRESSION** - Lambda Web Adapter supports gzip compression for response body. This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ENABLE_COMPRESSION` to `true`.
 When enabled, this will compress responses unless it's an image as determined by the content-type starting with `image` or the response is less than 32 bytes. This will also compress HTTP/1.1 chunked streaming response.

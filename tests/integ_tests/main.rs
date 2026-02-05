@@ -29,17 +29,14 @@ use tower_http::compression::{CompressionBody, CompressionLayer};
 
 #[test]
 fn test_adapter_options_from_env() {
-    env::set_var("PORT", "3000");
-    env::set_var("HOST", "localhost");
-    env::set_var("READINESS_CHECK_PORT", "8000");
-    env::set_var("READINESS_CHECK_PROTOCOL", "TCP");
-    env::set_var("READINESS_CHECK_PATH", "/healthcheck");
-    env::set_var("REMOVE_BASE_PATH", "/prod");
-    env::set_var("ASYNC_INIT", "true");
+    env::set_var("AWS_LWA_PORT", "3000");
+    env::set_var("AWS_LWA_HOST", "localhost");
+    env::set_var("AWS_LWA_READINESS_CHECK_PORT", "8000");
+    env::set_var("AWS_LWA_READINESS_CHECK_PROTOCOL", "TCP");
+    env::set_var("AWS_LWA_READINESS_CHECK_PATH", "/healthcheck");
+    env::set_var("AWS_LWA_REMOVE_BASE_PATH", "/prod");
+    env::set_var("AWS_LWA_ASYNC_INIT", "true");
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
-    env::set_var("AWS_LWA_ENABLE_TLS", "true");
-    env::set_var("AWS_LWA_TLS_SERVER_NAME", "api.example.com");
-    env::remove_var("AWS_LWA_TLS_CERT_FILE");
     env::set_var("AWS_LWA_INVOKE_MODE", "buffered");
     env::set_var("AWS_LWA_AUTHORIZATION_SOURCE", "auth-token");
 
@@ -93,7 +90,6 @@ fn test_adapter_options_from_namespaced_env() {
 #[test]
 fn test_readiness_check_port_fallback_to_lwa_port() {
     env::remove_var("AWS_LWA_READINESS_CHECK_PORT");
-    env::remove_var("READINESS_CHECK_PORT");
     env::set_var("AWS_LWA_PORT", "3000");
 
     // Initialize adapter with env options

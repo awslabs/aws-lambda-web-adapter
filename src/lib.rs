@@ -83,31 +83,69 @@ pub struct AdapterOptions {
     pub error_status_codes: Option<Vec<u16>>,
 }
 
+/// Helper to get env var with deprecation warning for old name
+fn get_env_with_deprecation(new_name: &str, old_name: &str, default: &str) -> String {
+    if let Ok(val) = env::var(new_name) {
+        return val;
+    }
+    if let Ok(val) = env::var(old_name) {
+        tracing::warn!(
+            "Environment variable '{}' is deprecated and will be removed in version 2.0. Please use '{}' instead.",
+            old_name,
+            new_name
+        );
+        return val;
+    }
+    default.to_string()
+}
+
+/// Helper to get optional env var with deprecation warning for old name
+fn get_optional_env_with_deprecation(new_name: &str, old_name: &str) -> Option<String> {
+    if let Ok(val) = env::var(new_name) {
+        return Some(val);
+    }
+    if let Ok(val) = env::var(old_name) {
+        tracing::warn!(
+            "Environment variable '{}' is deprecated and will be removed in version 2.0. Please use '{}' instead.",
+            old_name,
+            new_name
+        );
+        return Some(val);
+    }
+    None
+}
+
 impl Default for AdapterOptions {
     fn default() -> Self {
+        let port = get_env_with_deprecation("AWS_LWA_PORT", "PORT", "8080");
+
         AdapterOptions {
-            host: env::var("AWS_LWA_HOST").unwrap_or(env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string())),
-            port: env::var("AWS_LWA_PORT").unwrap_or(env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
-            readiness_check_port: env::var("AWS_LWA_READINESS_CHECK_PORT").unwrap_or(
-                env::var("READINESS_CHECK_PORT").unwrap_or(
-                    env::var("AWS_LWA_PORT")
-                        .unwrap_or_else(|_| env::var("PORT").unwrap_or_else(|_| "8080".to_string())),
-                ),
+            host: get_env_with_deprecation("AWS_LWA_HOST", "HOST", "127.0.0.1"),
+            port: port.clone(),
+            readiness_check_port: get_env_with_deprecation(
+                "AWS_LWA_READINESS_CHECK_PORT",
+                "READINESS_CHECK_PORT",
+                &port,
             ),
             readiness_check_min_unhealthy_status: env::var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS")
                 .unwrap_or_else(|_| "500".to_string())
                 .parse()
                 .unwrap_or(500),
-            readiness_check_path: env::var("AWS_LWA_READINESS_CHECK_PATH")
-                .unwrap_or(env::var("READINESS_CHECK_PATH").unwrap_or_else(|_| "/".to_string())),
-            readiness_check_protocol: env::var("AWS_LWA_READINESS_CHECK_PROTOCOL")
-                .unwrap_or(env::var("READINESS_CHECK_PROTOCOL").unwrap_or_else(|_| "HTTP".to_string()))
-                .as_str()
-                .into(),
-            base_path: env::var("AWS_LWA_REMOVE_BASE_PATH").map_or_else(|_| env::var("REMOVE_BASE_PATH").ok(), Some),
+            readiness_check_path: get_env_with_deprecation(
+                "AWS_LWA_READINESS_CHECK_PATH",
+                "READINESS_CHECK_PATH",
+                "/",
+            ),
+            readiness_check_protocol: get_env_with_deprecation(
+                "AWS_LWA_READINESS_CHECK_PROTOCOL",
+                "READINESS_CHECK_PROTOCOL",
+                "HTTP",
+            )
+            .as_str()
+            .into(),
+            base_path: get_optional_env_with_deprecation("AWS_LWA_REMOVE_BASE_PATH", "REMOVE_BASE_PATH"),
             pass_through_path: env::var("AWS_LWA_PASS_THROUGH_PATH").unwrap_or_else(|_| "/events".to_string()),
-            async_init: env::var("AWS_LWA_ASYNC_INIT")
-                .unwrap_or(env::var("ASYNC_INIT").unwrap_or_else(|_| "false".to_string()))
+            async_init: get_env_with_deprecation("AWS_LWA_ASYNC_INIT", "ASYNC_INIT", "false")
                 .parse()
                 .unwrap_or(false),
             compression: env::var("AWS_LWA_ENABLE_COMPRESSION")
@@ -115,7 +153,7 @@ impl Default for AdapterOptions {
                 .parse()
                 .unwrap_or(false),
             invoke_mode: env::var("AWS_LWA_INVOKE_MODE")
-                .unwrap_or("buffered".to_string())
+                .unwrap_or_else(|_| "buffered".to_string())
                 .as_str()
                 .into(),
             authorization_source: env::var("AWS_LWA_AUTHORIZATION_SOURCE").ok(),
