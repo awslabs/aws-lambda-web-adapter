@@ -73,7 +73,11 @@ pub struct AdapterOptions {
     pub readiness_check_port: String,
     pub readiness_check_path: String,
     pub readiness_check_protocol: Protocol,
+    /// Deprecated: Use readiness_check_healthy_status instead
+    #[deprecated(since = "1.0.0", note = "Use readiness_check_healthy_status instead")]
     pub readiness_check_min_unhealthy_status: u16,
+    /// List of HTTP status codes considered healthy for readiness check
+    pub readiness_check_healthy_status: Vec<u16>,
     pub base_path: Option<String>,
     pub pass_through_path: String,
     pub async_init: bool,
@@ -116,8 +120,31 @@ fn get_optional_env_with_deprecation(new_name: &str, old_name: &str) -> Option<S
 }
 
 impl Default for AdapterOptions {
+    #[allow(deprecated)]
     fn default() -> Self {
         let port = get_env_with_deprecation("AWS_LWA_PORT", "PORT", "8080");
+
+        // Handle readiness check healthy status codes
+        // New env var takes precedence, then fall back to deprecated min_unhealthy_status
+        let readiness_check_healthy_status = if let Ok(val) = env::var("AWS_LWA_READINESS_CHECK_HEALTHY_STATUS") {
+            parse_status_codes(&val)
+        } else if let Ok(val) = env::var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS") {
+            tracing::warn!(
+                "Environment variable 'AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS' is deprecated. \
+                Please use 'AWS_LWA_READINESS_CHECK_HEALTHY_STATUS' instead (e.g., '100-499')."
+            );
+            let min_unhealthy: u16 = val.parse().unwrap_or(500);
+            (100..min_unhealthy).collect()
+        } else {
+            // Default: 100-499 (same as previous default of min_unhealthy=500)
+            (100..500).collect()
+        };
+
+        // For backward compatibility, also set the deprecated field
+        let readiness_check_min_unhealthy_status = env::var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS")
+            .unwrap_or_else(|_| "500".to_string())
+            .parse()
+            .unwrap_or(500);
 
         AdapterOptions {
             host: get_env_with_deprecation("AWS_LWA_HOST", "HOST", "127.0.0.1"),
@@ -127,10 +154,8 @@ impl Default for AdapterOptions {
                 "READINESS_CHECK_PORT",
                 &port,
             ),
-            readiness_check_min_unhealthy_status: env::var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS")
-                .unwrap_or_else(|_| "500".to_string())
-                .parse()
-                .unwrap_or(500),
+            readiness_check_min_unhealthy_status,
+            readiness_check_healthy_status,
             readiness_check_path: get_env_with_deprecation(
                 "AWS_LWA_READINESS_CHECK_PATH",
                 "READINESS_CHECK_PATH",
@@ -198,7 +223,7 @@ pub struct Adapter<C, B> {
     client: Arc<Client<C, B>>,
     healthcheck_url: Url,
     healthcheck_protocol: Protocol,
-    healthcheck_min_unhealthy_status: u16,
+    healthcheck_healthy_status: Vec<u16>,
     async_init: bool,
     ready_at_init: Arc<AtomicBool>,
     domain: Url,
@@ -261,7 +286,7 @@ impl Adapter<HttpConnector, Body> {
             client: Arc::new(client),
             healthcheck_url,
             healthcheck_protocol: options.readiness_check_protocol,
-            healthcheck_min_unhealthy_status: options.readiness_check_min_unhealthy_status,
+            healthcheck_healthy_status: options.readiness_check_healthy_status.clone(),
             domain,
             base_path: options.base_path.clone(),
             pass_through_path: options.pass_through_path.clone(),
@@ -371,12 +396,7 @@ impl Adapter<HttpConnector, Body> {
                     .expect("BUG: healthcheck_url should be valid - validated in Adapter::new()");
 
                 match self.client.get(uri).await {
-                    Ok(response)
-                        if {
-                            self.healthcheck_min_unhealthy_status > response.status().as_u16()
-                                && response.status().as_u16() >= 100
-                        } =>
-                    {
+                    Ok(response) if self.healthcheck_healthy_status.contains(&response.status().as_u16()) => {
                         tracing::debug!("app is ready");
                         Ok(())
                     }
@@ -646,13 +666,15 @@ mod tests {
             then.status(403).body("OK");
         });
 
-        // Prepare adapter configuration
+        // Prepare adapter configuration - only 200-399 are healthy
+        #[allow(deprecated)]
         let options = AdapterOptions {
             host: app_server.host(),
             port: app_server.port().to_string(),
             readiness_check_port: app_server.port().to_string(),
             readiness_check_path: "/healthcheck".to_string(),
             readiness_check_min_unhealthy_status: 400,
+            readiness_check_healthy_status: (200..400).collect(),
             ..Default::default()
         };
 

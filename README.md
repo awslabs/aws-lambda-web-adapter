@@ -99,7 +99,7 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_READINESS_CHECK_PORT                                 | readiness check port, default to the traffic port                                    | AWS_LWA_PORT |
 | AWS_LWA_READINESS_CHECK_PATH                                 | readiness check path                                                                 | "/"        |
 | AWS_LWA_READINESS_CHECK_PROTOCOL                             | readiness check protocol: "http" or "tcp", default is "http"                         | "http"     |
-| AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS                 | The minimum HTTP status code that is considered unhealthy                            | "500"      |
+| AWS_LWA_READINESS_CHECK_HEALTHY_STATUS                       | HTTP status codes considered healthy (e.g., "200-399" or "200,201,204,301-399")      | "100-499"  |
 | AWS_LWA_ASYNC_INIT                                           | enable asynchronous initialization for long initialization functions                 | "false"    |
 | AWS_LWA_REMOVE_BASE_PATH                                     | the base path to be removed from request path                                        | None       |
 | AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip compression for response body                                            | "false"    |
@@ -115,7 +115,9 @@ Lambda Runtime API is on port 9001. CloudWatch Lambda Insight extension uses por
 
 > **Deprecation Notice:** The following non-namespaced environment variables are deprecated and will be removed in version 2.0:
 > `PORT`, `HOST`, `READINESS_CHECK_PORT`, `READINESS_CHECK_PATH`, `READINESS_CHECK_PROTOCOL`, `REMOVE_BASE_PATH`, `ASYNC_INIT`.
-> Please migrate to the `AWS_LWA_` prefixed versions.  
+> Please migrate to the `AWS_LWA_` prefixed versions.
+>
+> Additionally, `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` is deprecated. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` instead.  
 
 **AWS_LWA_ASYNC_INIT** - Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization, and it is free.
 If a lambda function couldn't complete the initialization within 10 seconds, Lambda will restart the function, and bill for the initialization.

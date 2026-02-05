@@ -60,7 +60,7 @@ fn test_adapter_options_from_env() {
 fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_PORT", "3000");
     env::set_var("AWS_LWA_HOST", "localhost");
-    env::set_var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS", "400");
+    env::set_var("AWS_LWA_READINESS_CHECK_HEALTHY_STATUS", "200-399");
     env::set_var("AWS_LWA_READINESS_CHECK_PORT", "8000");
     env::set_var("AWS_LWA_READINESS_CHECK_PROTOCOL", "TCP");
     env::set_var("AWS_LWA_READINESS_CHECK_PATH", "/healthcheck");
@@ -69,13 +69,17 @@ fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
     env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
     env::set_var("AWS_LWA_AUTHORIZATION_SOURCE", "auth-token");
+    env::remove_var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS");
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
     Adapter::new(&options).expect("Failed to create adapter");
 
     assert_eq!("3000", options.port);
-    assert_eq!(400, options.readiness_check_min_unhealthy_status);
+    // Check that healthy status codes are 200-399
+    assert!(options.readiness_check_healthy_status.contains(&200));
+    assert!(options.readiness_check_healthy_status.contains(&399));
+    assert!(!options.readiness_check_healthy_status.contains(&400));
     assert_eq!("localhost", options.host);
     assert_eq!("8000", options.readiness_check_port);
     assert_eq!("/healthcheck", options.readiness_check_path);
