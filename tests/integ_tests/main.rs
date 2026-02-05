@@ -45,7 +45,7 @@ fn test_adapter_options_from_env() {
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
-    Adapter::new(&options);
+    Adapter::new(&options).expect("Failed to create adapter");
 
     assert_eq!("3000", options.port);
     assert_eq!("localhost", options.host);
@@ -75,7 +75,7 @@ fn test_adapter_options_from_namespaced_env() {
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
-    Adapter::new(&options);
+    Adapter::new(&options).expect("Failed to create adapter");
 
     assert_eq!("3000", options.port);
     assert_eq!(400, options.readiness_check_min_unhealthy_status);
@@ -98,7 +98,7 @@ fn test_readiness_check_port_fallback_to_lwa_port() {
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
-    Adapter::new(&options);
+    Adapter::new(&options).expect("Failed to create adapter");
 
     assert_eq!("3000", options.readiness_check_port);
 }
@@ -122,7 +122,7 @@ async fn test_http_readiness_check() {
     };
 
     // Initialize adapter and do readiness check
-    let mut adapter = Adapter::new(&options);
+    let mut adapter = Adapter::new(&options).expect("Failed to create adapter");
     adapter.check_init_health().await;
 
     // Assert app server's healthcheck endpoint got called

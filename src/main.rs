@@ -16,13 +16,13 @@ async fn main() -> Result<(), Error> {
     let options = AdapterOptions::default();
 
     // create an adapter
-    let mut adapter = Adapter::new(&options);
+    let mut adapter = Adapter::new(&options)?;
     // register the adapter as an extension
     adapter.register_default_extension();
     // check if the web application is ready
     adapter.check_init_health().await;
     // start lambda runtime after the web application is ready
-    adapter.run().await.expect("lambda runtime failed");
+    adapter.run().await?;
 
     Ok(())
 }

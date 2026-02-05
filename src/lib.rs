@@ -174,27 +174,52 @@ pub struct Adapter<C, B> {
 
 impl Adapter<HttpConnector, Body> {
     /// Create a new HTTP Adapter instance.
-    /// This function initializes a new HTTP client
-    /// to talk with the web server.
-    pub fn new(options: &AdapterOptions) -> Adapter<HttpConnector, Body> {
+    /// This function initializes a new HTTP client to talk with the web server.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The configured host, port, or readiness check path contain invalid URL characters
+    /// - TCP protocol is configured but the URL is missing host or port
+    pub fn new(options: &AdapterOptions) -> Result<Adapter<HttpConnector, Body>, Error> {
         let client = Client::builder(hyper_util::rt::TokioExecutor::new())
             .pool_idle_timeout(Duration::from_secs(4))
             .build(HttpConnector::new());
 
         let schema = "http";
 
-        let healthcheck_url = format!(
+        let healthcheck_url: Url = format!(
             "{}://{}:{}{}",
             schema, options.host, options.readiness_check_port, options.readiness_check_path
         )
         .parse()
-        .unwrap();
+        .map_err(|e| {
+            Error::from(format!(
+                "Invalid healthcheck URL configuration (host={}, port={}, path={}): {}",
+                options.host, options.readiness_check_port, options.readiness_check_path, e
+            ))
+        })?;
 
-        let domain = format!("{}://{}:{}", schema, options.host, options.port)
+        let domain: Url = format!("{}://{}:{}", schema, options.host, options.port)
             .parse()
-            .unwrap();
+            .map_err(|e| {
+                Error::from(format!(
+                    "Invalid domain URL configuration (host={}, port={}): {}",
+                    options.host, options.port, e
+                ))
+            })?;
 
-        Adapter {
+        // Validate TCP protocol requirements
+        if options.readiness_check_protocol == Protocol::Tcp {
+            if healthcheck_url.host().is_none() {
+                return Err(Error::from("TCP readiness check requires a valid host in the URL"));
+            }
+            if healthcheck_url.port().is_none() {
+                return Err(Error::from("TCP readiness check requires a port in the URL"));
+            }
+        }
+
+        Ok(Adapter {
             client: Arc::new(client),
             healthcheck_url,
             healthcheck_protocol: options.readiness_check_protocol,
@@ -208,7 +233,7 @@ impl Adapter<HttpConnector, Body> {
             invoke_mode: options.invoke_mode,
             authorization_source: options.authorization_source.clone(),
             error_status_codes: options.error_status_codes.clone(),
-        }
+        })
     }
 }
 
@@ -230,27 +255,27 @@ impl Adapter<HttpConnector, Body> {
         let aws_lambda_runtime_api: String =
             env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
         let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new());
-        
+
         let register_req = hyper::Request::builder()
             .method(Method::POST)
             .uri(format!("http://{aws_lambda_runtime_api}/2020-01-01/extension/register"))
             .header("Lambda-Extension-Name", "lambda-adapter")
             .body(Body::from("{ \"events\": [] }"))?;
-        
+
         let register_res = client.request(register_req).await?;
-        
+
         if register_res.status() != StatusCode::OK {
             return Err(Error::from(format!(
                 "Extension registration failed with status: {}",
                 register_res.status()
             )));
         }
-        
+
         let extension_id = register_res
             .headers()
             .get("Lambda-Extension-Identifier")
             .ok_or_else(|| Error::from("Missing Lambda-Extension-Identifier header"))?;
-        
+
         let next_req = hyper::Request::builder()
             .method(Method::GET)
             .uri(format!(
@@ -258,9 +283,9 @@ impl Adapter<HttpConnector, Body> {
             ))
             .header("Lambda-Extension-Identifier", extension_id)
             .body(Body::Empty)?;
-        
+
         client.request(next_req).await?;
-        
+
         Ok(())
     }
 
@@ -299,26 +324,45 @@ impl Adapter<HttpConnector, Body> {
 
     async fn check_web_readiness(&self, url: &Url, protocol: &Protocol) -> Result<(), i8> {
         match protocol {
-            Protocol::Http => match self.client.get(url.to_string().parse().unwrap()).await {
-                Ok(response)
-                    if {
-                        self.healthcheck_min_unhealthy_status > response.status().as_u16()
-                            && response.status().as_u16() >= 100
-                    } =>
-                {
-                    tracing::debug!("app is ready");
-                    Ok(())
+            Protocol::Http => {
+                // url is already validated in Adapter::new(), this conversion should always succeed
+                // If it fails, it indicates a programming error, not a runtime condition
+                let uri: http::Uri = url
+                    .as_str()
+                    .parse()
+                    .expect("BUG: healthcheck_url should be valid - validated in Adapter::new()");
+
+                match self.client.get(uri).await {
+                    Ok(response)
+                        if {
+                            self.healthcheck_min_unhealthy_status > response.status().as_u16()
+                                && response.status().as_u16() >= 100
+                        } =>
+                    {
+                        tracing::debug!("app is ready");
+                        Ok(())
+                    }
+                    _ => {
+                        tracing::trace!("app is not ready");
+                        Err(-1)
+                    }
                 }
-                _ => {
-                    tracing::trace!("app is not ready");
-                    Err(-1)
+            }
+            Protocol::Tcp => {
+                // url is already validated in Adapter::new(), host and port should exist
+                // If they don't, it indicates a programming error, not a runtime condition
+                let host = url
+                    .host_str()
+                    .expect("BUG: healthcheck_url should have host - validated in Adapter::new()");
+                let port = url
+                    .port()
+                    .expect("BUG: healthcheck_url should have port - validated in Adapter::new()");
+
+                match TcpStream::connect(format!("{}:{}", host, port)).await {
+                    Ok(_) => Ok(()),
+                    Err(_) => Err(-1),
                 }
-            },
-            Protocol::Tcp => match TcpStream::connect(format!("{}:{}", url.host().unwrap(), url.port().unwrap())).await
-            {
-                Ok(_) => Ok(()),
-                Err(_) => Err(-1),
-            },
+            }
         }
     }
 
@@ -385,8 +429,7 @@ impl Adapter<HttpConnector, Body> {
         );
 
         if let Some(authorization_source) = self.authorization_source.as_deref() {
-            if req_headers.contains_key(authorization_source) {
-                let original = req_headers.remove(authorization_source).unwrap();
+            if let Some(original) = req_headers.remove(authorization_source) {
                 req_headers.insert("authorization", original);
             } else {
                 tracing::warn!("\"{}\" header not found in request headers", authorization_source);
@@ -492,7 +535,7 @@ mod tests {
         };
 
         // Initialize adapter and do readiness check
-        let adapter = Adapter::new(&options);
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
 
         let url = adapter.healthcheck_url.clone();
         let protocol = adapter.healthcheck_protocol;
@@ -524,7 +567,7 @@ mod tests {
         };
 
         // Initialize adapter and do readiness check
-        let adapter = Adapter::new(&options);
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
 
         let url = adapter.healthcheck_url.clone();
         let protocol = adapter.healthcheck_protocol;
@@ -557,7 +600,7 @@ mod tests {
         };
 
         // Initialize adapter and do readiness check
-        let adapter = Adapter::new(&options);
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
 
         let url = adapter.healthcheck_url.clone();
         let protocol = adapter.healthcheck_protocol;
