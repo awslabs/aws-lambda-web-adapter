@@ -219,32 +219,49 @@ impl Adapter<HttpConnector, Body> {
     pub fn register_default_extension(&self) {
         // register as an external extension
         tokio::task::spawn(async move {
-            let aws_lambda_runtime_api: String =
-                env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
-            let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new());
-            let register_req = hyper::Request::builder()
-                .method(Method::POST)
-                .uri(format!("http://{aws_lambda_runtime_api}/2020-01-01/extension/register"))
-                .header("Lambda-Extension-Name", "lambda-adapter")
-                .body(Body::from("{ \"events\": [] }"))
-                .unwrap();
-            let register_res = client.request(register_req).await.unwrap();
-            if register_res.status() != StatusCode::OK {
-                panic!("extension registration failure");
+            if let Err(e) = Self::register_extension_internal().await {
+                tracing::error!(error = %e, "Extension registration failed - terminating process");
+                std::process::exit(1);
             }
-            let next_req = hyper::Request::builder()
-                .method(Method::GET)
-                .uri(format!(
-                    "http://{aws_lambda_runtime_api}/2020-01-01/extension/event/next"
-                ))
-                .header(
-                    "Lambda-Extension-Identifier",
-                    register_res.headers().get("Lambda-Extension-Identifier").unwrap(),
-                )
-                .body(Body::Empty)
-                .unwrap();
-            client.request(next_req).await.unwrap();
         });
+    }
+
+    async fn register_extension_internal() -> Result<(), Error> {
+        let aws_lambda_runtime_api: String =
+            env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
+        let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new());
+        
+        let register_req = hyper::Request::builder()
+            .method(Method::POST)
+            .uri(format!("http://{aws_lambda_runtime_api}/2020-01-01/extension/register"))
+            .header("Lambda-Extension-Name", "lambda-adapter")
+            .body(Body::from("{ \"events\": [] }"))?;
+        
+        let register_res = client.request(register_req).await?;
+        
+        if register_res.status() != StatusCode::OK {
+            return Err(Error::from(format!(
+                "Extension registration failed with status: {}",
+                register_res.status()
+            )));
+        }
+        
+        let extension_id = register_res
+            .headers()
+            .get("Lambda-Extension-Identifier")
+            .ok_or_else(|| Error::from("Missing Lambda-Extension-Identifier header"))?;
+        
+        let next_req = hyper::Request::builder()
+            .method(Method::GET)
+            .uri(format!(
+                "http://{aws_lambda_runtime_api}/2020-01-01/extension/event/next"
+            ))
+            .header("Lambda-Extension-Identifier", extension_id)
+            .body(Body::Empty)?;
+        
+        client.request(next_req).await?;
+        
+        Ok(())
     }
 
     /// Check if the web server has been initialized.
