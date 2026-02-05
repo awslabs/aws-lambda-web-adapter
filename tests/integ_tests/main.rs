@@ -145,7 +145,8 @@ async fn test_http_basic_request() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new().with_path("/hello").build();
@@ -184,7 +185,8 @@ async fn test_http_headers() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new()
@@ -228,7 +230,8 @@ async fn test_http_path_encoding() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new().with_path("/Año_1234").build();
@@ -270,7 +273,8 @@ async fn test_http_query_params() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new()
@@ -321,7 +325,8 @@ async fn test_http_post_put_delete() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare requests
     let post_req = LambdaEventBuilder::new()
@@ -403,7 +408,8 @@ async fn test_http_request_body_forwarded() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Test Text body (Body::Text)
     let json_req = LambdaEventBuilder::new()
@@ -463,7 +469,8 @@ async fn test_http_compress() {
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
 
@@ -511,7 +518,8 @@ async fn test_http_compress_disallowed_type() {
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new()
@@ -562,7 +570,8 @@ async fn test_http_compress_already_compressed() {
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
 
@@ -613,7 +622,8 @@ async fn test_http_context_headers() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new().with_path("/").build();
@@ -663,7 +673,8 @@ async fn test_http_content_encoding_suffix() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new().with_path("/json").build();
@@ -706,7 +717,8 @@ async fn test_http_error_status_codes() {
         readiness_check_path: "/healthcheck".to_string(),
         error_status_codes: Some(vec![500, 502, 503, 504]),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Call the adapter service with request that should trigger error
     let req = LambdaEventBuilder::new().with_path("/error").build();
@@ -738,7 +750,8 @@ async fn test_http_authorization_source() {
         readiness_check_path: "/healthcheck".to_string(),
         authorization_source: Some("auth-token".to_string()),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new()
@@ -795,7 +808,8 @@ async fn test_http_context_multi_headers() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new()

@@ -367,9 +367,9 @@ impl Adapter<HttpConnector, Body> {
     }
 
     /// Run the adapter to take events from Lambda.
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// If AWS_LWA_LAMBDA_RUNTIME_API_PROXY is set, it must be set BEFORE
     /// calling this function to avoid race conditions with environment variable access.
     pub async fn run(self) -> Result<(), Error> {
@@ -391,12 +391,12 @@ impl Adapter<HttpConnector, Body> {
     }
 
     /// Apply runtime API proxy configuration if set.
-    /// 
+    ///
     /// This must be called BEFORE starting the tokio runtime to avoid
     /// race conditions with environment variable modification in a multi-threaded context.
-    /// 
+    ///
     /// # Safety Note
-    /// 
+    ///
     /// This function uses `env::set_var` which will be marked unsafe in future Rust versions
     /// due to potential race conditions in multi-threaded contexts. It MUST be called before
     /// any threads are spawned (i.e., before starting the tokio runtime).

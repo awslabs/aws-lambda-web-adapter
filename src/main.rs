@@ -22,10 +22,7 @@ async fn async_main() -> Result<(), Error> {
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .from_env_lossy();
-    tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .without_time()
-        .init();
+    tracing_subscriber::fmt().with_env_filter(filter).without_time().init();
 
     // get configuration options from environment variables
     let options = AdapterOptions::default();
