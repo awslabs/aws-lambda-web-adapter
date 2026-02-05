@@ -383,11 +383,7 @@ impl Default for AdapterOptions {
             ),
             readiness_check_min_unhealthy_status,
             readiness_check_healthy_status,
-            readiness_check_path: get_env_with_deprecation(
-                "AWS_LWA_READINESS_CHECK_PATH",
-                "READINESS_CHECK_PATH",
-                "/",
-            ),
+            readiness_check_path: get_env_with_deprecation("AWS_LWA_READINESS_CHECK_PATH", "READINESS_CHECK_PATH", "/"),
             readiness_check_protocol: get_env_with_deprecation(
                 "AWS_LWA_READINESS_CHECK_PROTOCOL",
                 "READINESS_CHECK_PROTOCOL",

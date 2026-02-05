@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lambda_web_adapter::{Adapter, AdapterOptions, Error};
-use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 fn main() -> Result<(), Error> {
     // Apply runtime proxy configuration BEFORE starting tokio runtime
@@ -18,11 +17,10 @@ fn main() -> Result<(), Error> {
 }
 
 async fn async_main() -> Result<(), Error> {
-    // setup tracing subscriber for logging
-    let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
-        .from_env_lossy();
-    tracing_subscriber::fmt().with_env_filter(filter).without_time().init();
+    // Initialize tracing with Lambda's advanced logging controls support.
+    // This respects AWS_LAMBDA_LOG_LEVEL and AWS_LAMBDA_LOG_FORMAT environment variables
+    // set by Lambda's advanced logging configuration.
+    lambda_http::tracing::init_default_subscriber();
 
     // get configuration options from environment variables
     let options = AdapterOptions::default();
