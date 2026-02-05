@@ -145,6 +145,21 @@ Please check out [FastAPI with Response Streaming](examples/fastapi-response-str
 
 **AWS_LWA_ERROR_STATUS_CODES** - A comma-separated list of HTTP status codes that will cause Lambda invocations to fail. Supports individual codes and ranges (e.g. "500,502-504,422"). When the web application returns any of these status codes, the Lambda invocation will fail and trigger error handling behaviors like retries or DLQ processing. This is useful for treating certain HTTP errors as Lambda execution failures. This feature is disabled by default.
 
+## Logging
+
+Lambda Web Adapter supports [Lambda's Advanced Logging Controls](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-logs.html#monitoring-cloudwatchlogs-advanced). You can configure log level and log format through the Lambda console, API, or CLI under Monitoring and operations tools > Logging configuration.
+
+Lambda Web Adapter reads the following environment variables set by Lambda:
+
+| Environment Variable     | Description                                                      | Default |
+|--------------------------|------------------------------------------------------------------|---------|
+| AWS_LAMBDA_LOG_LEVEL     | Log level: DEBUG, INFO, WARN, ERROR. Takes precedence over RUST_LOG | INFO    |
+| AWS_LAMBDA_LOG_FORMAT    | Log format: JSON or TEXT                                         | TEXT    |
+
+You can also set `RUST_LOG` environment variable as a fallback if `AWS_LAMBDA_LOG_LEVEL` is not configured.
+
+When log format is set to `JSON`, log entries are formatted as JSON objects, making them easier to query with CloudWatch Logs Insights.
+
 ## Request Context
 
 **Request Context** is metadata API Gateway sends to Lambda for a request. It usually contains requestId, requestTime, apiId, identity, and authorizer. Identity and authorizer are useful to get client identity for authorization. API Gateway Developer Guide contains more details [here](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format).  
