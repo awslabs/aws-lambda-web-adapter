@@ -83,7 +83,8 @@ fn bench_text_body(c: &mut Criterion) {
                 readiness_check_port: app_server.port().to_string(),
                 readiness_check_path: "/".to_string(),
                 ..Default::default()
-            });
+            })
+            .expect("Failed to create adapter");
 
             let body_content = "x".repeat(size);
 
@@ -163,7 +164,8 @@ fn bench_binary_body(c: &mut Criterion) {
                     readiness_check_port: app_server.port().to_string(),
                     readiness_check_path: "/".to_string(),
                     ..Default::default()
-                });
+                })
+                .expect("Failed to create adapter");
 
                 let body = body_base64.clone();
 
