@@ -1,6 +1,67 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+//! # Lambda Web Adapter
+//!
+//! Lambda Web Adapter allows you to run web applications on AWS Lambda without code changes.
+//! It acts as a bridge between the Lambda Runtime API and your web application, translating
+//! Lambda events into HTTP requests and forwarding them to your application.
+//!
+//! ## Overview
+//!
+//! The adapter works by:
+//! 1. Starting as a Lambda extension alongside your web application
+//! 2. Waiting for your application to become ready (via health checks)
+//! 3. Receiving Lambda events and converting them to HTTP requests
+//! 4. Forwarding requests to your application and returning responses to Lambda
+//!
+//! ## Quick Start
+//!
+//! ```rust,no_run
+//! use lambda_web_adapter::{Adapter, AdapterOptions, Error};
+//!
+//! fn main() -> Result<(), Error> {
+//!     // Apply proxy config before starting tokio runtime
+//!     Adapter::apply_runtime_proxy_config();
+//!
+//!     let runtime = tokio::runtime::Builder::new_multi_thread()
+//!         .enable_all()
+//!         .build()?;
+//!
+//!     runtime.block_on(async {
+//!         let options = AdapterOptions::default();
+//!         let mut adapter = Adapter::new(&options)?;
+//!         
+//!         adapter.register_default_extension();
+//!         adapter.check_init_health().await;
+//!         adapter.run().await
+//!     })
+//! }
+//! ```
+//!
+//! ## Configuration
+//!
+//! The adapter is configured via environment variables. All variables use the `AWS_LWA_` prefix:
+//!
+//! | Variable | Description | Default |
+//! |----------|-------------|---------|
+//! | `AWS_LWA_PORT` | Port your application listens on | `8080` |
+//! | `AWS_LWA_HOST` | Host your application binds to | `127.0.0.1` |
+//! | `AWS_LWA_READINESS_CHECK_PATH` | Health check endpoint path | `/` |
+//! | `AWS_LWA_READINESS_CHECK_PORT` | Health check port | Same as `AWS_LWA_PORT` |
+//! | `AWS_LWA_READINESS_CHECK_PROTOCOL` | Protocol for health checks (`HTTP` or `TCP`) | `HTTP` |
+//! | `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` | Status codes considered healthy (e.g., `200-399,404`) | `100-499` |
+//! | `AWS_LWA_ASYNC_INIT` | Enable async initialization | `false` |
+//! | `AWS_LWA_REMOVE_BASE_PATH` | Base path to strip from requests | None |
+//! | `AWS_LWA_INVOKE_MODE` | Lambda invoke mode (`buffered` or `response_stream`) | `buffered` |
+//! | `AWS_LWA_ENABLE_COMPRESSION` | Enable response compression | `false` |
+//!
+//! ## Response Streaming
+//!
+//! For applications that need to stream responses (e.g., Server-Sent Events, large file downloads),
+//! set `AWS_LWA_INVOKE_MODE=response_stream`. This requires configuring your Lambda function URL
+//! with `InvokeMode: RESPONSE_STREAM`.
+
 mod readiness;
 
 use http::{
@@ -33,10 +94,33 @@ use tower::{Service, ServiceBuilder};
 use tower_http::compression::CompressionLayer;
 use url::Url;
 
+/// Protocol used for readiness checks.
+///
+/// The adapter supports two protocols for checking if your web application is ready:
+///
+/// - [`Protocol::Http`] - Performs an HTTP GET request and checks the response status code
+/// - [`Protocol::Tcp`] - Attempts a TCP connection to verify the port is listening
+///
+/// # Examples
+///
+/// ```rust
+/// use lambda_web_adapter::Protocol;
+///
+/// // Parse from string (case-insensitive)
+/// let http: Protocol = "http".into();
+/// let tcp: Protocol = "TCP".into();
+///
+/// assert_eq!(http, Protocol::Http);
+/// assert_eq!(tcp, Protocol::Tcp);
+/// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Protocol {
+    /// HTTP protocol - performs GET request and validates response status.
+    /// This is the default and recommended protocol for most applications.
     #[default]
     Http,
+    /// TCP protocol - only checks if a TCP connection can be established.
+    /// Useful for applications that don't have an HTTP health endpoint.
     Tcp,
 }
 
@@ -50,10 +134,43 @@ impl From<&str> for Protocol {
     }
 }
 
+/// Lambda function invoke mode.
+///
+/// Controls how Lambda handles the response from your function:
+///
+/// - [`LambdaInvokeMode::Buffered`] - Lambda buffers the entire response before returning it
+/// - [`LambdaInvokeMode::ResponseStream`] - Lambda streams the response as it's generated
+///
+/// # Response Streaming
+///
+/// Response streaming is useful for:
+/// - Server-Sent Events (SSE)
+/// - Large file downloads
+/// - Real-time data feeds
+/// - Reducing time-to-first-byte (TTFB)
+///
+/// To use response streaming, you must also configure your Lambda function URL
+/// with `InvokeMode: RESPONSE_STREAM`.
+///
+/// # Examples
+///
+/// ```rust
+/// use lambda_web_adapter::LambdaInvokeMode;
+///
+/// let buffered: LambdaInvokeMode = "buffered".into();
+/// let streaming: LambdaInvokeMode = "response_stream".into();
+///
+/// assert_eq!(buffered, LambdaInvokeMode::Buffered);
+/// assert_eq!(streaming, LambdaInvokeMode::ResponseStream);
+/// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum LambdaInvokeMode {
+    /// Buffered mode - Lambda buffers the entire response before returning.
+    /// This is the default mode and works with all Lambda invocation methods.
     #[default]
     Buffered,
+    /// Response streaming mode - Lambda streams the response as it's generated.
+    /// Requires Lambda function URL with `InvokeMode: RESPONSE_STREAM`.
     ResponseStream,
 }
 
@@ -67,23 +184,133 @@ impl From<&str> for LambdaInvokeMode {
     }
 }
 
+/// Configuration options for the Lambda Web Adapter.
+///
+/// This struct holds all configuration parameters for the adapter. It can be constructed
+/// manually or using [`Default::default()`] which reads values from environment variables.
+///
+/// # Environment Variables
+///
+/// When using `Default::default()`, the following environment variables are read:
+///
+/// | Field | Environment Variable | Fallback | Default |
+/// |-------|---------------------|----------|---------|
+/// | `host` | `AWS_LWA_HOST` | `HOST` | `127.0.0.1` |
+/// | `port` | `AWS_LWA_PORT` | `PORT` | `8080` |
+/// | `readiness_check_port` | `AWS_LWA_READINESS_CHECK_PORT` | `READINESS_CHECK_PORT` | Same as `port` |
+/// | `readiness_check_path` | `AWS_LWA_READINESS_CHECK_PATH` | `READINESS_CHECK_PATH` | `/` |
+/// | `readiness_check_protocol` | `AWS_LWA_READINESS_CHECK_PROTOCOL` | `READINESS_CHECK_PROTOCOL` | `HTTP` |
+/// | `readiness_check_healthy_status` | `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` | - | `100-499` |
+/// | `base_path` | `AWS_LWA_REMOVE_BASE_PATH` | `REMOVE_BASE_PATH` | None |
+/// | `async_init` | `AWS_LWA_ASYNC_INIT` | `ASYNC_INIT` | `false` |
+/// | `compression` | `AWS_LWA_ENABLE_COMPRESSION` | - | `false` |
+/// | `invoke_mode` | `AWS_LWA_INVOKE_MODE` | - | `buffered` |
+///
+/// # Deprecated Environment Variables
+///
+/// The non-prefixed environment variables (e.g., `PORT`, `HOST`) are deprecated and will
+/// be removed in version 2.0. Please use the `AWS_LWA_` prefixed versions.
+///
+/// # Examples
+///
+/// ```rust
+/// use lambda_web_adapter::{AdapterOptions, Protocol, LambdaInvokeMode};
+///
+/// // Use defaults from environment variables
+/// let options = AdapterOptions::default();
+///
+/// // Or configure manually
+/// let options = AdapterOptions {
+///     host: "127.0.0.1".to_string(),
+///     port: "3000".to_string(),
+///     readiness_check_path: "/health".to_string(),
+///     readiness_check_protocol: Protocol::Http,
+///     invoke_mode: LambdaInvokeMode::ResponseStream,
+///     ..Default::default()
+/// };
+/// ```
 pub struct AdapterOptions {
+    /// Host address where the web application is listening.
+    /// Default: `127.0.0.1`
     pub host: String,
+
+    /// Port where the web application is listening.
+    /// Default: `8080`
     pub port: String,
+
+    /// Port to use for readiness checks. Defaults to the same as `port`.
+    /// Useful when your application exposes health checks on a different port.
     pub readiness_check_port: String,
+
+    /// HTTP path for readiness checks.
+    /// Default: `/`
     pub readiness_check_path: String,
+
+    /// Protocol to use for readiness checks.
+    /// Default: [`Protocol::Http`]
     pub readiness_check_protocol: Protocol,
-    /// Deprecated: Use readiness_check_healthy_status instead
+
+    /// Deprecated: Use `readiness_check_healthy_status` instead.
+    ///
+    /// Minimum HTTP status code considered unhealthy.
     #[deprecated(since = "1.0.0", note = "Use readiness_check_healthy_status instead")]
     pub readiness_check_min_unhealthy_status: u16,
-    /// List of HTTP status codes considered healthy for readiness check
+
+    /// List of HTTP status codes considered healthy for readiness checks.
+    ///
+    /// Can be configured via `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` using:
+    /// - Single codes: `200,201,204`
+    /// - Ranges: `200-399`
+    /// - Mixed: `200-299,301,302,400-499`
+    ///
+    /// Default: `100-499` (all 1xx, 2xx, 3xx, and 4xx status codes)
     pub readiness_check_healthy_status: Vec<u16>,
+
+    /// Base path to strip from incoming requests.
+    ///
+    /// Useful when your Lambda is behind an API Gateway with a stage name
+    /// or custom path that your application doesn't expect.
+    ///
+    /// Example: If set to `/prod`, a request to `/prod/api/users` becomes `/api/users`.
     pub base_path: Option<String>,
+
+    /// Path to forward pass-through events to.
+    /// Default: `/events`
     pub pass_through_path: String,
+
+    /// Enable async initialization mode.
+    ///
+    /// When `true`, the adapter will cancel readiness checks after ~9.8 seconds
+    /// to avoid Lambda's 10-second init timeout. The application can continue
+    /// booting in the background and will be checked again on the first request.
+    ///
+    /// Default: `false`
     pub async_init: bool,
+
+    /// Enable response compression.
+    ///
+    /// When `true`, responses will be compressed using gzip, deflate, or brotli
+    /// based on the `Accept-Encoding` header.
+    ///
+    /// Default: `false`
     pub compression: bool,
+
+    /// Lambda invoke mode for response handling.
+    /// Default: [`LambdaInvokeMode::Buffered`]
     pub invoke_mode: LambdaInvokeMode,
+
+    /// Header name to copy to the `Authorization` header.
+    ///
+    /// Useful when your authorization token comes in a custom header
+    /// (e.g., from API Gateway authorizers) and your application expects
+    /// it in the standard `Authorization` header.
     pub authorization_source: Option<String>,
+
+    /// HTTP status codes that should trigger a Lambda error response.
+    ///
+    /// When the web application returns one of these status codes,
+    /// the adapter will return an error to Lambda instead of the response.
+    /// This can be useful for triggering Lambda retry behavior.
     pub error_status_codes: Option<Vec<u16>>,
 }
 
@@ -189,6 +416,14 @@ impl Default for AdapterOptions {
     }
 }
 
+/// Parses a comma-separated string of status codes and ranges into a vector.
+///
+/// Supports:
+/// - Single codes: `"200,201,204"` → `[200, 201, 204]`
+/// - Ranges: `"200-299"` → `[200, 201, ..., 299]`
+/// - Mixed: `"200-299,404,500-502"` → `[200, ..., 299, 404, 500, 501, 502]`
+///
+/// Invalid entries are logged as warnings and skipped.
 fn parse_status_codes(input: &str) -> Vec<u16> {
     input
         .split(',')
@@ -218,6 +453,37 @@ fn parse_status_codes(input: &str) -> Vec<u16> {
         .collect()
 }
 
+/// The Lambda Web Adapter.
+///
+/// This is the main struct that handles forwarding Lambda events to your web application.
+/// It implements the [`tower::Service`] trait, allowing it to be used with the Lambda runtime.
+///
+/// # Type Parameters
+///
+/// - `C` - The HTTP connector type (typically [`hyper_util::client::legacy::connect::HttpConnector`])
+/// - `B` - The request body type (typically [`lambda_http::Body`])
+///
+/// # Lifecycle
+///
+/// 1. Create an adapter with [`Adapter::new()`]
+/// 2. Register as a Lambda extension with [`Adapter::register_default_extension()`]
+/// 3. Wait for the web app to be ready with [`Adapter::check_init_health()`]
+/// 4. Start processing events with [`Adapter::run()`]
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use lambda_web_adapter::{Adapter, AdapterOptions};
+///
+/// # async fn example() -> Result<(), lambda_web_adapter::Error> {
+/// let options = AdapterOptions::default();
+/// let mut adapter = Adapter::new(&options)?;
+///
+/// adapter.register_default_extension();
+/// adapter.check_init_health().await;
+/// adapter.run().await
+/// # }
+/// ```
 #[derive(Clone)]
 pub struct Adapter<C, B> {
     client: Arc<Client<C, B>>,
@@ -236,14 +502,34 @@ pub struct Adapter<C, B> {
 }
 
 impl Adapter<HttpConnector, Body> {
-    /// Create a new HTTP Adapter instance.
-    /// This function initializes a new HTTP client to talk with the web server.
+    /// Creates a new HTTP Adapter instance.
+    ///
+    /// This function initializes a new HTTP client configured to communicate with
+    /// your web application. The client uses connection pooling with a 4-second
+    /// idle timeout for optimal Lambda performance.
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Configuration options for the adapter
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Adapter)` on success, or an error if the configuration is invalid.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - The configured host, port, or readiness check path contain invalid URL characters
     /// - TCP protocol is configured but the URL is missing host or port
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use lambda_web_adapter::{Adapter, AdapterOptions};
+    ///
+    /// let options = AdapterOptions::default();
+    /// let adapter = Adapter::new(&options).expect("Failed to create adapter");
+    /// ```
     pub fn new(options: &AdapterOptions) -> Result<Adapter<HttpConnector, Body>, Error> {
         let client = Client::builder(hyper_util::rt::TokioExecutor::new())
             .pool_idle_timeout(Duration::from_secs(4))
@@ -301,9 +587,20 @@ impl Adapter<HttpConnector, Body> {
 }
 
 impl Adapter<HttpConnector, Body> {
-    /// Register a Lambda Extension to ensure
-    /// that the adapter is loaded before any Lambda function
-    /// associated with it.
+    /// Registers the adapter as a Lambda extension.
+    ///
+    /// Lambda extensions are loaded before the function handler and can perform
+    /// initialization tasks. This registration ensures the adapter is ready to
+    /// receive events before your function starts processing.
+    ///
+    /// The registration happens asynchronously in a background task. If registration
+    /// fails, the process will exit with code 1 to signal Lambda that initialization
+    /// failed.
+    ///
+    /// # Panics
+    ///
+    /// This method spawns a background task that will call `std::process::exit(1)`
+    /// if extension registration fails, terminating the Lambda execution environment.
     pub fn register_default_extension(&self) {
         // register as an external extension
         tokio::task::spawn(async move {
@@ -314,6 +611,10 @@ impl Adapter<HttpConnector, Body> {
         });
     }
 
+    /// Internal implementation of extension registration.
+    ///
+    /// Registers with the Lambda Extensions API and waits for the next event.
+    /// This keeps the extension alive for the duration of the Lambda instance.
     async fn register_extension_internal() -> Result<(), Error> {
         let aws_lambda_runtime_api: String =
             env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
@@ -352,9 +653,33 @@ impl Adapter<HttpConnector, Body> {
         Ok(())
     }
 
-    /// Check if the web server has been initialized.
-    /// If `Adapter.async_init` is true, cancel this check before
-    /// Lambda's init 10s timeout, and let the server boot in the background.
+    /// Checks if the web application is ready during Lambda initialization.
+    ///
+    /// This method performs readiness checks against your web application using
+    /// the configured protocol (HTTP or TCP) and endpoint.
+    ///
+    /// # Async Initialization
+    ///
+    /// If `async_init` is enabled in the adapter options, this method will:
+    /// - Attempt readiness checks for up to 9.8 seconds
+    /// - Return early if the timeout is reached (to avoid Lambda's 10s init timeout)
+    /// - Allow the application to continue booting in the background
+    ///
+    /// The first request will re-check readiness if the application wasn't ready
+    /// during initialization.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use lambda_web_adapter::{Adapter, AdapterOptions};
+    ///
+    /// # async fn example() -> Result<(), lambda_web_adapter::Error> {
+    /// let options = AdapterOptions::default();
+    /// let mut adapter = Adapter::new(&options)?;
+    /// adapter.check_init_health().await;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn check_init_health(&mut self) {
         let ready_at_init = if self.async_init {
             timeout(Duration::from_secs_f32(9.8), self.check_readiness())
@@ -366,12 +691,17 @@ impl Adapter<HttpConnector, Body> {
         self.ready_at_init.store(ready_at_init, Ordering::SeqCst);
     }
 
+    /// Performs a single readiness check against the configured endpoint.
     async fn check_readiness(&self) -> bool {
         let url = self.healthcheck_url.clone();
         let protocol = self.healthcheck_protocol;
         self.is_web_ready(&url, &protocol).await
     }
 
+    /// Waits for the web application to become ready, with retries.
+    ///
+    /// Uses a fixed 10ms interval between retry attempts and logs progress
+    /// at increasing intervals (100ms, 500ms, 1s, 2s, 5s, 10s).
     async fn is_web_ready(&self, url: &Url, protocol: &Protocol) -> bool {
         let mut checkpoint = Checkpoint::new();
         Retry::spawn(FixedInterval::from_millis(10), || {
@@ -385,6 +715,10 @@ impl Adapter<HttpConnector, Body> {
         .is_ok()
     }
 
+    /// Performs a single readiness check using the configured protocol.
+    ///
+    /// For HTTP: Makes a GET request and checks if the status code is in the healthy range.
+    /// For TCP: Attempts to establish a TCP connection.
     async fn check_web_readiness(&self, url: &Url, protocol: &Protocol) -> Result<(), i8> {
         match protocol {
             Protocol::Http => {
@@ -424,12 +758,32 @@ impl Adapter<HttpConnector, Body> {
         }
     }
 
-    /// Run the adapter to take events from Lambda.
+    /// Starts the adapter and begins processing Lambda events.
+    ///
+    /// This method blocks and runs the Lambda runtime loop, receiving events
+    /// and forwarding them to your web application.
     ///
     /// # Safety
     ///
-    /// If AWS_LWA_LAMBDA_RUNTIME_API_PROXY is set, it must be set BEFORE
-    /// calling this function to avoid race conditions with environment variable access.
+    /// If `AWS_LWA_LAMBDA_RUNTIME_API_PROXY` is set, [`Adapter::apply_runtime_proxy_config()`]
+    /// must be called BEFORE starting the tokio runtime to avoid race conditions.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` when the Lambda runtime shuts down gracefully, or an error
+    /// if there's a fatal issue with the runtime.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use lambda_web_adapter::{Adapter, AdapterOptions};
+    ///
+    /// # async fn example() -> Result<(), lambda_web_adapter::Error> {
+    /// let options = AdapterOptions::default();
+    /// let adapter = Adapter::new(&options)?;
+    /// adapter.run().await
+    /// # }
+    /// ```
     pub async fn run(self) -> Result<(), Error> {
         let compression = self.compression;
         let invoke_mode = self.invoke_mode;
@@ -448,16 +802,41 @@ impl Adapter<HttpConnector, Body> {
         }
     }
 
-    /// Apply runtime API proxy configuration if set.
+    /// Applies runtime API proxy configuration from environment variables.
     ///
-    /// This must be called BEFORE starting the tokio runtime to avoid
+    /// If `AWS_LWA_LAMBDA_RUNTIME_API_PROXY` is set, this method overwrites
+    /// `AWS_LAMBDA_RUNTIME_API` to redirect Lambda runtime calls through the proxy.
+    ///
+    /// # Important
+    ///
+    /// This method **must** be called before starting the tokio runtime to avoid
     /// race conditions with environment variable modification in a multi-threaded context.
     ///
     /// # Safety Note
     ///
-    /// This function uses `env::set_var` which will be marked unsafe in future Rust versions
-    /// due to potential race conditions in multi-threaded contexts. It MUST be called before
-    /// any threads are spawned (i.e., before starting the tokio runtime).
+    /// This function uses `std::env::set_var` which modifies process-wide state.
+    /// In future Rust versions, this will be marked `unsafe` due to potential race
+    /// conditions. Calling this before spawning any threads ensures safety.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use lambda_web_adapter::Adapter;
+    ///
+    /// fn main() {
+    ///     // Call before starting tokio runtime
+    ///     Adapter::apply_runtime_proxy_config();
+    ///
+    ///     let runtime = tokio::runtime::Builder::new_multi_thread()
+    ///         .enable_all()
+    ///         .build()
+    ///         .unwrap();
+    ///
+    ///     runtime.block_on(async {
+    ///         // ... adapter setup and run
+    ///     });
+    /// }
+    /// ```
     pub fn apply_runtime_proxy_config() {
         if let Ok(runtime_proxy) = env::var("AWS_LWA_LAMBDA_RUNTIME_API_PROXY") {
             // We need to overwrite the env variable because lambda_http::run()
@@ -469,6 +848,15 @@ impl Adapter<HttpConnector, Body> {
         }
     }
 
+    /// Forwards a Lambda event to the web application and returns the response.
+    ///
+    /// This method:
+    /// 1. Checks readiness if async_init is enabled and app wasn't ready at init
+    /// 2. Transforms the Lambda event into an HTTP request
+    /// 3. Adds Lambda context headers (`x-amzn-request-context`, `x-amzn-lambda-context`)
+    /// 4. Strips the base path if configured
+    /// 5. Forwards the request to the web application
+    /// 6. Returns the response (or error if status code is in error_status_codes)
     async fn fetch_response(&self, event: Request) -> Result<Response<Incoming>, Error> {
         if self.async_init && !self.ready_at_init.load(Ordering::SeqCst) {
             self.is_web_ready(&self.healthcheck_url, &self.healthcheck_protocol)
@@ -557,8 +945,10 @@ impl Adapter<HttpConnector, Body> {
     }
 }
 
-/// Implement a `Tower.Service` that sends the requests
-/// to the web server.
+/// Implementation of [`tower::Service`] for the adapter.
+///
+/// This allows the adapter to be used directly with the Lambda runtime,
+/// which expects a `Service` that can handle Lambda events.
 impl Service<Request> for Adapter<HttpConnector, Body> {
     type Response = Response<Incoming>;
     type Error = Error;
