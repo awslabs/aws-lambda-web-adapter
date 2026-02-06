@@ -103,6 +103,20 @@ fn test_readiness_check_port_fallback_to_lwa_port() {
     assert_eq!("3000", options.readiness_check_port);
 }
 
+#[test]
+fn test_port_fallback_to_port_env() {
+    env::remove_var("AWS_LWA_PORT");
+    env::remove_var("AWS_LWA_READINESS_CHECK_PORT");
+    env::set_var("PORT", "9090");
+
+    let options = AdapterOptions::default();
+    Adapter::new(&options).expect("Failed to create adapter");
+
+    assert_eq!("9090", options.port);
+
+    env::remove_var("PORT");
+}
+
 #[tokio::test]
 async fn test_http_readiness_check() {
     // Start app server

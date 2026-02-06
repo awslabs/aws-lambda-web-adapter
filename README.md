@@ -94,7 +94,7 @@ The readiness check port/path and traffic port can be configured using environme
 
 | Environment Variable                                         | Description                                                                          | Default    |
 |--------------------------------------------------------------|--------------------------------------------------------------------------------------|------------|
-| AWS_LWA_PORT                                                 | traffic port                                                                         | "8080"     |
+| AWS_LWA_PORT                                                 | traffic port (falls back to `PORT`)                                                  | "8080"     |
 | AWS_LWA_HOST                                                 | traffic host                                                                         | "127.0.0.1"|
 | AWS_LWA_READINESS_CHECK_PORT                                 | readiness check port, default to the traffic port                                    | AWS_LWA_PORT |
 | AWS_LWA_READINESS_CHECK_PATH                                 | readiness check path                                                                 | "/"        |
@@ -114,8 +114,8 @@ the web application runs as a non-root user, and not allowed to listen on ports 
 Lambda Runtime API is on port 9001. CloudWatch Lambda Insight extension uses port 3000.
 
 > **Deprecation Notice:** The following non-namespaced environment variables are deprecated and will be removed in version 2.0:
-> `PORT`, `HOST`, `READINESS_CHECK_PORT`, `READINESS_CHECK_PATH`, `READINESS_CHECK_PROTOCOL`, `REMOVE_BASE_PATH`, `ASYNC_INIT`.
-> Please migrate to the `AWS_LWA_` prefixed versions.
+> `HOST`, `READINESS_CHECK_PORT`, `READINESS_CHECK_PATH`, `READINESS_CHECK_PROTOCOL`, `REMOVE_BASE_PATH`, `ASYNC_INIT`.
+> Please migrate to the `AWS_LWA_` prefixed versions. Note: `PORT` is not deprecated and remains a supported fallback for `AWS_LWA_PORT`.
 >
 > Additionally, `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` is deprecated. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` instead.  
 

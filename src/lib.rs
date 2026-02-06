@@ -45,7 +45,7 @@
 //!
 //! | Variable | Description | Default |
 //! |----------|-------------|---------|
-//! | `AWS_LWA_PORT` | Port your application listens on | `8080` |
+//! | `AWS_LWA_PORT` | Port your application listens on (falls back to `PORT`) | `8080` |
 //! | `AWS_LWA_HOST` | Host your application binds to | `127.0.0.1` |
 //! | `AWS_LWA_READINESS_CHECK_PATH` | Health check endpoint path | `/` |
 //! | `AWS_LWA_READINESS_CHECK_PORT` | Health check port | Same as `AWS_LWA_PORT` |
@@ -238,8 +238,9 @@ impl From<&str> for LambdaInvokeMode {
 ///
 /// # Deprecated Environment Variables
 ///
-/// The non-prefixed environment variables (e.g., `PORT`, `HOST`) are deprecated and will
-/// be removed in version 2.0. Please use the `AWS_LWA_` prefixed versions.
+/// The non-prefixed environment variables (e.g., `HOST`, `READINESS_CHECK_PORT`) are deprecated
+/// and will be removed in version 2.0. Please use the `AWS_LWA_` prefixed versions.
+/// Note: `PORT` is not deprecated and remains a supported fallback for `AWS_LWA_PORT`.
 ///
 /// # Examples
 ///
@@ -265,7 +266,7 @@ pub struct AdapterOptions {
     pub host: String,
 
     /// Port where the web application is listening.
-    /// Default: `8080`
+    /// Falls back to `PORT` env var, then default `8080`.
     pub port: String,
 
     /// Port to use for readiness checks. Defaults to the same as `port`.
@@ -379,7 +380,9 @@ fn get_optional_env_with_deprecation(new_name: &str, old_name: &str) -> Option<S
 impl Default for AdapterOptions {
     #[allow(deprecated)]
     fn default() -> Self {
-        let port = get_env_with_deprecation(ENV_PORT, ENV_PORT_DEPRECATED, "8080");
+        let port = env::var(ENV_PORT)
+            .or_else(|_| env::var(ENV_PORT_DEPRECATED))
+            .unwrap_or_else(|_| "8080".to_string());
 
         // Handle readiness check healthy status codes
         // New env var takes precedence, then fall back to deprecated min_unhealthy_status
