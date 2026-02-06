@@ -8,16 +8,11 @@ use lambda_http::aws_lambda_events::alb::{AlbTargetGroupRequest, AlbTargetGroupR
 use lambda_http::aws_lambda_events::query_map::QueryMap;
 use lambda_http::request::LambdaRequest;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum LambdaEventType {
+    #[default]
     ALB,
     // TODO: Add other event types
-}
-
-impl Default for LambdaEventType {
-    fn default() -> Self {
-        LambdaEventType::ALB
-    }
 }
 
 /// Makes it easy to construct events for testing purposes.

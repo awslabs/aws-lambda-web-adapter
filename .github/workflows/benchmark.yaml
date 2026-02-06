@@ -70,9 +70,12 @@ jobs:
           critcmp main pr >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           
-          # Check for regressions > 10%
-          REGRESSION=$(critcmp main pr --threshold 10 --filter-by-regression 2>&1 || true)
-          if [ -n "$REGRESSION" ] && [ "$REGRESSION" != "group,benchmark,main,pr,factor" ]; then
+          # Check for regressions > 10% by parsing critcmp output
+          # critcmp outputs factors like 1.15x for 15% slower, we check for factors > 1.10
+          COMPARISON=$(critcmp main pr --threshold 10 2>&1 || true)
+          # Look for lines where pr is slower than main (factor > 1.10 in the comparison)
+          REGRESSION=$(echo "$COMPARISON" | awk -F',' 'NR>1 && $5 > 1.10 {print}')
+          if [ -n "$REGRESSION" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "## ⚠️ Performance Regression Detected (>10%)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY

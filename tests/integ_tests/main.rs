@@ -29,23 +29,20 @@ use tower_http::compression::{CompressionBody, CompressionLayer};
 
 #[test]
 fn test_adapter_options_from_env() {
-    env::set_var("PORT", "3000");
-    env::set_var("HOST", "localhost");
-    env::set_var("READINESS_CHECK_PORT", "8000");
-    env::set_var("READINESS_CHECK_PROTOCOL", "TCP");
-    env::set_var("READINESS_CHECK_PATH", "/healthcheck");
-    env::set_var("REMOVE_BASE_PATH", "/prod");
-    env::set_var("ASYNC_INIT", "true");
+    env::set_var("AWS_LWA_PORT", "3000");
+    env::set_var("AWS_LWA_HOST", "localhost");
+    env::set_var("AWS_LWA_READINESS_CHECK_PORT", "8000");
+    env::set_var("AWS_LWA_READINESS_CHECK_PROTOCOL", "TCP");
+    env::set_var("AWS_LWA_READINESS_CHECK_PATH", "/healthcheck");
+    env::set_var("AWS_LWA_REMOVE_BASE_PATH", "/prod");
+    env::set_var("AWS_LWA_ASYNC_INIT", "true");
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
-    env::set_var("AWS_LWA_ENABLE_TLS", "true");
-    env::set_var("AWS_LWA_TLS_SERVER_NAME", "api.example.com");
-    env::remove_var("AWS_LWA_TLS_CERT_FILE");
     env::set_var("AWS_LWA_INVOKE_MODE", "buffered");
     env::set_var("AWS_LWA_AUTHORIZATION_SOURCE", "auth-token");
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
-    Adapter::new(&options);
+    Adapter::new(&options).expect("Failed to create adapter");
 
     assert_eq!("3000", options.port);
     assert_eq!("localhost", options.host);
@@ -63,7 +60,7 @@ fn test_adapter_options_from_env() {
 fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_PORT", "3000");
     env::set_var("AWS_LWA_HOST", "localhost");
-    env::set_var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS", "400");
+    env::set_var("AWS_LWA_READINESS_CHECK_HEALTHY_STATUS", "200-399");
     env::set_var("AWS_LWA_READINESS_CHECK_PORT", "8000");
     env::set_var("AWS_LWA_READINESS_CHECK_PROTOCOL", "TCP");
     env::set_var("AWS_LWA_READINESS_CHECK_PATH", "/healthcheck");
@@ -72,13 +69,17 @@ fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
     env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
     env::set_var("AWS_LWA_AUTHORIZATION_SOURCE", "auth-token");
+    env::remove_var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS");
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
-    Adapter::new(&options);
+    Adapter::new(&options).expect("Failed to create adapter");
 
     assert_eq!("3000", options.port);
-    assert_eq!(400, options.readiness_check_min_unhealthy_status);
+    // Check that healthy status codes are 200-399
+    assert!(options.readiness_check_healthy_status.contains(&200));
+    assert!(options.readiness_check_healthy_status.contains(&399));
+    assert!(!options.readiness_check_healthy_status.contains(&400));
     assert_eq!("localhost", options.host);
     assert_eq!("8000", options.readiness_check_port);
     assert_eq!("/healthcheck", options.readiness_check_path);
@@ -93,14 +94,27 @@ fn test_adapter_options_from_namespaced_env() {
 #[test]
 fn test_readiness_check_port_fallback_to_lwa_port() {
     env::remove_var("AWS_LWA_READINESS_CHECK_PORT");
-    env::remove_var("READINESS_CHECK_PORT");
     env::set_var("AWS_LWA_PORT", "3000");
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
-    Adapter::new(&options);
+    Adapter::new(&options).expect("Failed to create adapter");
 
     assert_eq!("3000", options.readiness_check_port);
+}
+
+#[test]
+fn test_port_fallback_to_port_env() {
+    env::remove_var("AWS_LWA_PORT");
+    env::remove_var("AWS_LWA_READINESS_CHECK_PORT");
+    env::set_var("PORT", "9090");
+
+    let options = AdapterOptions::default();
+    Adapter::new(&options).expect("Failed to create adapter");
+
+    assert_eq!("9090", options.port);
+
+    env::remove_var("PORT");
 }
 
 #[tokio::test]
@@ -122,7 +136,7 @@ async fn test_http_readiness_check() {
     };
 
     // Initialize adapter and do readiness check
-    let mut adapter = Adapter::new(&options);
+    let mut adapter = Adapter::new(&options).expect("Failed to create adapter");
     adapter.check_init_health().await;
 
     // Assert app server's healthcheck endpoint got called
@@ -145,7 +159,8 @@ async fn test_http_basic_request() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new().with_path("/hello").build();
@@ -184,7 +199,8 @@ async fn test_http_headers() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new()
@@ -228,7 +244,8 @@ async fn test_http_path_encoding() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new().with_path("/Año_1234").build();
@@ -270,7 +287,8 @@ async fn test_http_query_params() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new()
@@ -321,7 +339,8 @@ async fn test_http_post_put_delete() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare requests
     let post_req = LambdaEventBuilder::new()
@@ -403,7 +422,8 @@ async fn test_http_request_body_forwarded() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Test Text body (Body::Text)
     let json_req = LambdaEventBuilder::new()
@@ -463,7 +483,8 @@ async fn test_http_compress() {
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
 
@@ -511,7 +532,8 @@ async fn test_http_compress_disallowed_type() {
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new()
@@ -562,7 +584,8 @@ async fn test_http_compress_already_compressed() {
         readiness_check_path: "/healthcheck".to_string(),
         compression: true,
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     let mut svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(adapter);
 
@@ -613,7 +636,8 @@ async fn test_http_context_headers() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new().with_path("/").build();
@@ -653,7 +677,7 @@ async fn test_http_content_encoding_suffix() {
         when.method(GET).path("/json");
         then.status(200)
             .header("content-type", "application/graphql-response+json; charset=utf-8")
-            .body(json_data.to_owned());
+            .body(&json_data);
     });
 
     // Initialize adapter and do readiness check
@@ -663,7 +687,8 @@ async fn test_http_content_encoding_suffix() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new().with_path("/json").build();
@@ -706,7 +731,8 @@ async fn test_http_error_status_codes() {
         readiness_check_path: "/healthcheck".to_string(),
         error_status_codes: Some(vec![500, 502, 503, 504]),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Call the adapter service with request that should trigger error
     let req = LambdaEventBuilder::new().with_path("/error").build();
@@ -738,7 +764,8 @@ async fn test_http_authorization_source() {
         readiness_check_path: "/healthcheck".to_string(),
         authorization_source: Some("auth-token".to_string()),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // // Call the adapter service with basic request
     let req = LambdaEventBuilder::new()
@@ -795,7 +822,8 @@ async fn test_http_context_multi_headers() {
         readiness_check_port: app_server.port().to_string(),
         readiness_check_path: "/healthcheck".to_string(),
         ..Default::default()
-    });
+    })
+    .expect("Failed to create adapter");
 
     // Prepare request
     let req = LambdaEventBuilder::new()
@@ -822,6 +850,316 @@ async fn test_http_context_multi_headers() {
     assert!(response.headers().contains_key("fizz"));
     assert_eq!("buzz", response.headers().get("fizz").unwrap());
     assert_eq!("OK", body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_base_path_stripping() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // The app expects requests at /api/data (without the base path prefix)
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/api/data");
+        then.status(200).body("Base path stripped");
+    });
+
+    // Initialize adapter with base_path set
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        base_path: Some("/prod".to_string()),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    // Send request with the base path prefix — adapter should strip it
+    let req = LambdaEventBuilder::new().with_path("/prod/api/data").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    test_endpoint.assert();
+    assert_eq!(200, response.status());
+    assert_eq!("Base path stripped", body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_base_path_no_match() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // When path doesn't start with base_path, it should pass through unchanged
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/other/path");
+        then.status(200).body("No stripping");
+    });
+
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        base_path: Some("/prod".to_string()),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    let req = LambdaEventBuilder::new().with_path("/other/path").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    test_endpoint.assert();
+    assert_eq!(200, response.status());
+    assert_eq!("No stripping", body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_base_path_root_after_strip() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // When the path equals the base path exactly, the result should be empty string
+    // which url crate normalizes to "/"
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/");
+        then.status(200).body("Root");
+    });
+
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        base_path: Some("/prod".to_string()),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    let req = LambdaEventBuilder::new().with_path("/prod").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    test_endpoint.assert();
+    assert_eq!(200, response.status());
+}
+
+#[test]
+fn test_deprecated_env_var_fallback() {
+    // Clear all LWA-prefixed vars
+    env::remove_var("AWS_LWA_PORT");
+    env::remove_var("AWS_LWA_HOST");
+    env::remove_var("AWS_LWA_READINESS_CHECK_PORT");
+    env::remove_var("AWS_LWA_READINESS_CHECK_PATH");
+    env::remove_var("AWS_LWA_READINESS_CHECK_PROTOCOL");
+    env::remove_var("AWS_LWA_REMOVE_BASE_PATH");
+    env::remove_var("AWS_LWA_ASYNC_INIT");
+    env::remove_var("AWS_LWA_ENABLE_COMPRESSION");
+    env::remove_var("AWS_LWA_INVOKE_MODE");
+    env::remove_var("AWS_LWA_AUTHORIZATION_SOURCE");
+    env::remove_var("AWS_LWA_READINESS_CHECK_HEALTHY_STATUS");
+    env::remove_var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS");
+
+    // Set only deprecated (non-prefixed) env vars
+    env::set_var("PORT", "4000");
+    env::set_var("HOST", "0.0.0.0");
+    env::set_var("READINESS_CHECK_PORT", "4001");
+    env::set_var("READINESS_CHECK_PATH", "/ready");
+    env::set_var("READINESS_CHECK_PROTOCOL", "TCP");
+    env::set_var("REMOVE_BASE_PATH", "/stage");
+    env::set_var("ASYNC_INIT", "true");
+
+    let options = AdapterOptions::default();
+
+    assert_eq!("4000", options.port);
+    assert_eq!("0.0.0.0", options.host);
+    assert_eq!("4001", options.readiness_check_port);
+    assert_eq!("/ready", options.readiness_check_path);
+    assert_eq!(Protocol::Tcp, options.readiness_check_protocol);
+    assert_eq!(Some("/stage".into()), options.base_path);
+    assert!(options.async_init);
+
+    // Clean up
+    env::remove_var("PORT");
+    env::remove_var("HOST");
+    env::remove_var("READINESS_CHECK_PORT");
+    env::remove_var("READINESS_CHECK_PATH");
+    env::remove_var("READINESS_CHECK_PROTOCOL");
+    env::remove_var("REMOVE_BASE_PATH");
+    env::remove_var("ASYNC_INIT");
+}
+
+#[test]
+fn test_namespaced_env_overrides_deprecated() {
+    // Set both deprecated and new vars — new should win
+    env::set_var("PORT", "4000");
+    env::set_var("AWS_LWA_PORT", "5000");
+    env::set_var("HOST", "0.0.0.0");
+    env::set_var("AWS_LWA_HOST", "localhost");
+
+    let options = AdapterOptions::default();
+
+    assert_eq!("5000", options.port);
+    assert_eq!("localhost", options.host);
+
+    // Clean up
+    env::remove_var("PORT");
+    env::remove_var("AWS_LWA_PORT");
+    env::remove_var("HOST");
+    env::remove_var("AWS_LWA_HOST");
+}
+
+#[tokio::test]
+async fn test_http_authorization_source_missing_header() {
+    // Start app server
+    let app_server = MockServer::start();
+
+    // The endpoint should still be called, just without Authorization header
+    let test_endpoint = app_server.mock(|when, then| {
+        when.method(GET)
+            .path("/hello")
+            .is_true(|req| !req.headers().iter().any(|(k, _)| k == "authorization"));
+        then.status(200).body("No Auth");
+    });
+
+    // Configure adapter with authorization_source pointing to a header that won't exist
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        authorization_source: Some("x-missing-auth".to_string()),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    // Send request WITHOUT the x-missing-auth header
+    let req = LambdaEventBuilder::new().with_path("/hello").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    test_endpoint.assert();
+    assert_eq!(200, response.status());
+    assert_eq!("No Auth", body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_error_status_codes_non_matching() {
+    // Start app server
+    let app_server = MockServer::start();
+    let endpoint = app_server.mock(|when, then| {
+        when.method(GET).path("/ok");
+        then.status(404).body("Not Found");
+    });
+
+    // Configure error_status_codes with 500-504 only — 404 should pass through normally
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        error_status_codes: Some(vec![500, 502, 503, 504]),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    let req = LambdaEventBuilder::new().with_path("/ok").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter
+        .call(request)
+        .await
+        .expect("Request should succeed for non-error status");
+
+    endpoint.assert();
+    assert_eq!(404, response.status());
+    assert_eq!("Not Found", body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_async_init_ready_at_init() {
+    // Start app server
+    let app_server = MockServer::start();
+    let healthcheck = app_server.mock(|when, then| {
+        when.method(GET).path("/healthcheck");
+        then.status(200).body("OK");
+    });
+    let hello = app_server.mock(|when, then| {
+        when.method(GET).path("/hello");
+        then.status(200).body("Hello");
+    });
+
+    // Initialize adapter with async_init enabled
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        async_init: true,
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    // Perform init health check — app is already running so it should succeed
+    adapter.check_init_health().await;
+
+    healthcheck.assert();
+
+    // Now send a request — should work without re-checking readiness
+    let req = LambdaEventBuilder::new().with_path("/hello").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    hello.assert();
+    assert_eq!(200, response.status());
+    assert_eq!("Hello", body_to_string(response).await);
+}
+
+#[tokio::test]
+async fn test_http_tcp_readiness_check() {
+    // Start a mock server (which listens on TCP)
+    let app_server = MockServer::start();
+
+    // Initialize adapter with TCP readiness check
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/".to_string(),
+        readiness_check_protocol: Protocol::Tcp,
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    // TCP readiness check should succeed since MockServer is listening
+    adapter.check_init_health().await;
+
+    // Now verify the adapter can still forward requests
+    let hello = app_server.mock(|when, then| {
+        when.method(GET).path("/hello");
+        then.status(200).body("TCP Ready");
+    });
+
+    let req = LambdaEventBuilder::new().with_path("/hello").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    hello.assert();
+    assert_eq!(200, response.status());
+    assert_eq!("TCP Ready", body_to_string(response).await);
 }
 
 async fn body_to_string(res: Response<Incoming>) -> String {
