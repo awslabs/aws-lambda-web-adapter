@@ -104,6 +104,7 @@ use hyper_util::client::legacy::Client;
 use lambda_http::request::RequestContext;
 use lambda_http::Body;
 pub use lambda_http::Error;
+pub use lambda_http::tracing;
 use lambda_http::{Request, RequestExt, Response};
 use readiness::Checkpoint;
 use std::fmt::Debug;

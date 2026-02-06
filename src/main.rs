@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use lambda_web_adapter::{Adapter, AdapterOptions, Error};
+use lambda_web_adapter::{tracing, Adapter, AdapterOptions, Error};
 
 fn main() -> Result<(), Error> {
     // Apply runtime proxy configuration BEFORE starting tokio runtime
@@ -20,7 +20,7 @@ async fn async_main() -> Result<(), Error> {
     // Initialize tracing with Lambda's advanced logging controls support.
     // This respects AWS_LAMBDA_LOG_LEVEL and AWS_LAMBDA_LOG_FORMAT environment variables
     // set by Lambda's advanced logging configuration.
-    lambda_http::tracing::init_default_subscriber();
+    tracing::init_default_subscriber();
 
     // get configuration options from environment variables
     let options = AdapterOptions::default();
