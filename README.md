@@ -119,7 +119,7 @@ Lambda Runtime API is on port 9001. CloudWatch Lambda Insight extension uses por
 >
 > Additionally, `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` is deprecated. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` instead.  
 
-**AWS_LWA_ASYNC_INIT** - Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization, and it is free.
+**AWS_LWA_ASYNC_INIT** - Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization.
 If a lambda function couldn't complete the initialization within 10 seconds, Lambda will restart the function, and bill for the initialization.
 To help functions to use this 10 seconds free initialization time and avoid the restart, Lambda Web Adapter supports asynchronous initialization.
 When this feature is enabled, Lambda Web Adapter performs readiness check up to 9.8 seconds. If the web app is not ready by then,

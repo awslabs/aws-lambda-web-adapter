@@ -64,6 +64,35 @@
 
 mod readiness;
 
+// Environment variable names (AWS_LWA_ prefix)
+const ENV_PORT: &str = "AWS_LWA_PORT";
+const ENV_HOST: &str = "AWS_LWA_HOST";
+const ENV_READINESS_CHECK_PORT: &str = "AWS_LWA_READINESS_CHECK_PORT";
+const ENV_READINESS_CHECK_PATH: &str = "AWS_LWA_READINESS_CHECK_PATH";
+const ENV_READINESS_CHECK_PROTOCOL: &str = "AWS_LWA_READINESS_CHECK_PROTOCOL";
+const ENV_READINESS_CHECK_HEALTHY_STATUS: &str = "AWS_LWA_READINESS_CHECK_HEALTHY_STATUS";
+const ENV_READINESS_CHECK_MIN_UNHEALTHY_STATUS: &str = "AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS";
+const ENV_REMOVE_BASE_PATH: &str = "AWS_LWA_REMOVE_BASE_PATH";
+const ENV_PASS_THROUGH_PATH: &str = "AWS_LWA_PASS_THROUGH_PATH";
+const ENV_ASYNC_INIT: &str = "AWS_LWA_ASYNC_INIT";
+const ENV_ENABLE_COMPRESSION: &str = "AWS_LWA_ENABLE_COMPRESSION";
+const ENV_INVOKE_MODE: &str = "AWS_LWA_INVOKE_MODE";
+const ENV_AUTHORIZATION_SOURCE: &str = "AWS_LWA_AUTHORIZATION_SOURCE";
+const ENV_ERROR_STATUS_CODES: &str = "AWS_LWA_ERROR_STATUS_CODES";
+const ENV_LAMBDA_RUNTIME_API_PROXY: &str = "AWS_LWA_LAMBDA_RUNTIME_API_PROXY";
+
+// Deprecated environment variable names (without prefix)
+const ENV_PORT_DEPRECATED: &str = "PORT";
+const ENV_HOST_DEPRECATED: &str = "HOST";
+const ENV_READINESS_CHECK_PORT_DEPRECATED: &str = "READINESS_CHECK_PORT";
+const ENV_READINESS_CHECK_PATH_DEPRECATED: &str = "READINESS_CHECK_PATH";
+const ENV_READINESS_CHECK_PROTOCOL_DEPRECATED: &str = "READINESS_CHECK_PROTOCOL";
+const ENV_REMOVE_BASE_PATH_DEPRECATED: &str = "REMOVE_BASE_PATH";
+const ENV_ASYNC_INIT_DEPRECATED: &str = "ASYNC_INIT";
+
+// Lambda runtime environment variable
+const ENV_LAMBDA_RUNTIME_API: &str = "AWS_LAMBDA_RUNTIME_API";
+
 use http::{
     header::{HeaderName, HeaderValue},
     Method, StatusCode,
@@ -349,16 +378,18 @@ fn get_optional_env_with_deprecation(new_name: &str, old_name: &str) -> Option<S
 impl Default for AdapterOptions {
     #[allow(deprecated)]
     fn default() -> Self {
-        let port = get_env_with_deprecation("AWS_LWA_PORT", "PORT", "8080");
+        let port = get_env_with_deprecation(ENV_PORT, ENV_PORT_DEPRECATED, "8080");
 
         // Handle readiness check healthy status codes
         // New env var takes precedence, then fall back to deprecated min_unhealthy_status
-        let readiness_check_healthy_status = if let Ok(val) = env::var("AWS_LWA_READINESS_CHECK_HEALTHY_STATUS") {
+        let readiness_check_healthy_status = if let Ok(val) = env::var(ENV_READINESS_CHECK_HEALTHY_STATUS) {
             parse_status_codes(&val)
-        } else if let Ok(val) = env::var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS") {
+        } else if let Ok(val) = env::var(ENV_READINESS_CHECK_MIN_UNHEALTHY_STATUS) {
             tracing::warn!(
-                "Environment variable 'AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS' is deprecated. \
-                Please use 'AWS_LWA_READINESS_CHECK_HEALTHY_STATUS' instead (e.g., '100-499')."
+                "Environment variable '{}' is deprecated. \
+                Please use '{}' instead (e.g., '100-499').",
+                ENV_READINESS_CHECK_MIN_UNHEALTHY_STATUS,
+                ENV_READINESS_CHECK_HEALTHY_STATUS
             );
             let min_unhealthy: u16 = val.parse().unwrap_or(500);
             (100..min_unhealthy).collect()
@@ -368,46 +399,48 @@ impl Default for AdapterOptions {
         };
 
         // For backward compatibility, also set the deprecated field
-        let readiness_check_min_unhealthy_status = env::var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS")
+        let readiness_check_min_unhealthy_status = env::var(ENV_READINESS_CHECK_MIN_UNHEALTHY_STATUS)
             .unwrap_or_else(|_| "500".to_string())
             .parse()
             .unwrap_or(500);
 
         AdapterOptions {
-            host: get_env_with_deprecation("AWS_LWA_HOST", "HOST", "127.0.0.1"),
+            host: get_env_with_deprecation(ENV_HOST, ENV_HOST_DEPRECATED, "127.0.0.1"),
             port: port.clone(),
             readiness_check_port: get_env_with_deprecation(
-                "AWS_LWA_READINESS_CHECK_PORT",
-                "READINESS_CHECK_PORT",
+                ENV_READINESS_CHECK_PORT,
+                ENV_READINESS_CHECK_PORT_DEPRECATED,
                 &port,
             ),
             readiness_check_min_unhealthy_status,
             readiness_check_healthy_status,
-            readiness_check_path: get_env_with_deprecation("AWS_LWA_READINESS_CHECK_PATH", "READINESS_CHECK_PATH", "/"),
+            readiness_check_path: get_env_with_deprecation(
+                ENV_READINESS_CHECK_PATH,
+                ENV_READINESS_CHECK_PATH_DEPRECATED,
+                "/",
+            ),
             readiness_check_protocol: get_env_with_deprecation(
-                "AWS_LWA_READINESS_CHECK_PROTOCOL",
-                "READINESS_CHECK_PROTOCOL",
+                ENV_READINESS_CHECK_PROTOCOL,
+                ENV_READINESS_CHECK_PROTOCOL_DEPRECATED,
                 "HTTP",
             )
             .as_str()
             .into(),
-            base_path: get_optional_env_with_deprecation("AWS_LWA_REMOVE_BASE_PATH", "REMOVE_BASE_PATH"),
-            pass_through_path: env::var("AWS_LWA_PASS_THROUGH_PATH").unwrap_or_else(|_| "/events".to_string()),
-            async_init: get_env_with_deprecation("AWS_LWA_ASYNC_INIT", "ASYNC_INIT", "false")
+            base_path: get_optional_env_with_deprecation(ENV_REMOVE_BASE_PATH, ENV_REMOVE_BASE_PATH_DEPRECATED),
+            pass_through_path: env::var(ENV_PASS_THROUGH_PATH).unwrap_or_else(|_| "/events".to_string()),
+            async_init: get_env_with_deprecation(ENV_ASYNC_INIT, ENV_ASYNC_INIT_DEPRECATED, "false")
                 .parse()
                 .unwrap_or(false),
-            compression: env::var("AWS_LWA_ENABLE_COMPRESSION")
+            compression: env::var(ENV_ENABLE_COMPRESSION)
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
                 .unwrap_or(false),
-            invoke_mode: env::var("AWS_LWA_INVOKE_MODE")
+            invoke_mode: env::var(ENV_INVOKE_MODE)
                 .unwrap_or_else(|_| "buffered".to_string())
                 .as_str()
                 .into(),
-            authorization_source: env::var("AWS_LWA_AUTHORIZATION_SOURCE").ok(),
-            error_status_codes: env::var("AWS_LWA_ERROR_STATUS_CODES")
-                .ok()
-                .map(|codes| parse_status_codes(&codes)),
+            authorization_source: env::var(ENV_AUTHORIZATION_SOURCE).ok(),
+            error_status_codes: env::var(ENV_ERROR_STATUS_CODES).ok().map(|codes| parse_status_codes(&codes)),
         }
     }
 }
@@ -613,7 +646,7 @@ impl Adapter<HttpConnector, Body> {
     /// This keeps the extension alive for the duration of the Lambda instance.
     async fn register_extension_internal() -> Result<(), Error> {
         let aws_lambda_runtime_api: String =
-            env::var("AWS_LAMBDA_RUNTIME_API").unwrap_or_else(|_| "127.0.0.1:9001".to_string());
+            env::var(ENV_LAMBDA_RUNTIME_API).unwrap_or_else(|_| "127.0.0.1:9001".to_string());
         let client = Client::builder(hyper_util::rt::TokioExecutor::new()).build(HttpConnector::new());
 
         let register_req = hyper::Request::builder()
@@ -834,13 +867,13 @@ impl Adapter<HttpConnector, Body> {
     /// }
     /// ```
     pub fn apply_runtime_proxy_config() {
-        if let Ok(runtime_proxy) = env::var("AWS_LWA_LAMBDA_RUNTIME_API_PROXY") {
+        if let Ok(runtime_proxy) = env::var(ENV_LAMBDA_RUNTIME_API_PROXY) {
             // We need to overwrite the env variable because lambda_http::run()
             // calls lambda_runtime::run() which doesn't allow changing the client URI.
             //
             // This is safe here because it's called before the tokio runtime starts,
             // ensuring no other threads exist yet.
-            env::set_var("AWS_LAMBDA_RUNTIME_API", runtime_proxy);
+            env::set_var(ENV_LAMBDA_RUNTIME_API, runtime_proxy);
         }
     }
 
