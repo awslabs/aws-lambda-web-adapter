@@ -440,7 +440,9 @@ impl Default for AdapterOptions {
                 .as_str()
                 .into(),
             authorization_source: env::var(ENV_AUTHORIZATION_SOURCE).ok(),
-            error_status_codes: env::var(ENV_ERROR_STATUS_CODES).ok().map(|codes| parse_status_codes(&codes)),
+            error_status_codes: env::var(ENV_ERROR_STATUS_CODES)
+                .ok()
+                .map(|codes| parse_status_codes(&codes)),
         }
     }
 }
