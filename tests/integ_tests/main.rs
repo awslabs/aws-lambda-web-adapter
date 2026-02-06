@@ -1061,7 +1061,10 @@ async fn test_http_error_status_codes_non_matching() {
     let mut request = Request::from(req);
     add_lambda_context_to_request(&mut request);
 
-    let response = adapter.call(request).await.expect("Request should succeed for non-error status");
+    let response = adapter
+        .call(request)
+        .await
+        .expect("Request should succeed for non-error status");
 
     endpoint.assert();
     assert_eq!(404, response.status());

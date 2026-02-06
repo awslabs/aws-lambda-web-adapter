@@ -102,9 +102,9 @@ use hyper::body::Incoming;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::client::legacy::Client;
 use lambda_http::request::RequestContext;
+pub use lambda_http::tracing;
 use lambda_http::Body;
 pub use lambda_http::Error;
-pub use lambda_http::tracing;
 use lambda_http::{Request, RequestExt, Response};
 use readiness::Checkpoint;
 use std::fmt::Debug;
@@ -1172,8 +1172,14 @@ mod tests {
     fn test_invoke_mode_from_str() {
         assert_eq!(LambdaInvokeMode::from("buffered"), LambdaInvokeMode::Buffered);
         assert_eq!(LambdaInvokeMode::from("BUFFERED"), LambdaInvokeMode::Buffered);
-        assert_eq!(LambdaInvokeMode::from("response_stream"), LambdaInvokeMode::ResponseStream);
-        assert_eq!(LambdaInvokeMode::from("RESPONSE_STREAM"), LambdaInvokeMode::ResponseStream);
+        assert_eq!(
+            LambdaInvokeMode::from("response_stream"),
+            LambdaInvokeMode::ResponseStream
+        );
+        assert_eq!(
+            LambdaInvokeMode::from("RESPONSE_STREAM"),
+            LambdaInvokeMode::ResponseStream
+        );
         assert_eq!(LambdaInvokeMode::from("unknown"), LambdaInvokeMode::Buffered); // defaults to Buffered
         assert_eq!(LambdaInvokeMode::from(""), LambdaInvokeMode::Buffered);
     }
