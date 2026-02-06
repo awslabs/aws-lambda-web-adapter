@@ -1112,4 +1112,138 @@ mod tests {
         // Assert app server's healthcheck endpoint got called
         healthcheck.assert();
     }
+
+    #[tokio::test]
+    async fn test_tcp_readiness_check_success() {
+        // Start a TCP listener to simulate an app
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        #[allow(deprecated)]
+        let options = AdapterOptions {
+            host: "127.0.0.1".to_string(),
+            port: port.to_string(),
+            readiness_check_port: port.to_string(),
+            readiness_check_path: "/".to_string(),
+            readiness_check_protocol: Protocol::Tcp,
+            ..Default::default()
+        };
+
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
+        let url = adapter.healthcheck_url.clone();
+        let protocol = adapter.healthcheck_protocol;
+
+        assert_eq!(protocol, Protocol::Tcp);
+        assert!(adapter.check_web_readiness(&url, &protocol).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_tcp_readiness_check_failure() {
+        // Use a port that nothing is listening on
+        #[allow(deprecated)]
+        let options = AdapterOptions {
+            host: "127.0.0.1".to_string(),
+            port: "19999".to_string(),
+            readiness_check_port: "19999".to_string(),
+            readiness_check_path: "/".to_string(),
+            readiness_check_protocol: Protocol::Tcp,
+            ..Default::default()
+        };
+
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
+        let url = adapter.healthcheck_url.clone();
+        let protocol = adapter.healthcheck_protocol;
+
+        assert!(adapter.check_web_readiness(&url, &protocol).await.is_err());
+    }
+
+    #[test]
+    fn test_protocol_from_str() {
+        assert_eq!(Protocol::from("http"), Protocol::Http);
+        assert_eq!(Protocol::from("HTTP"), Protocol::Http);
+        assert_eq!(Protocol::from("tcp"), Protocol::Tcp);
+        assert_eq!(Protocol::from("TCP"), Protocol::Tcp);
+        assert_eq!(Protocol::from("unknown"), Protocol::Http); // defaults to Http
+        assert_eq!(Protocol::from(""), Protocol::Http);
+    }
+
+    #[test]
+    fn test_invoke_mode_from_str() {
+        assert_eq!(LambdaInvokeMode::from("buffered"), LambdaInvokeMode::Buffered);
+        assert_eq!(LambdaInvokeMode::from("BUFFERED"), LambdaInvokeMode::Buffered);
+        assert_eq!(LambdaInvokeMode::from("response_stream"), LambdaInvokeMode::ResponseStream);
+        assert_eq!(LambdaInvokeMode::from("RESPONSE_STREAM"), LambdaInvokeMode::ResponseStream);
+        assert_eq!(LambdaInvokeMode::from("unknown"), LambdaInvokeMode::Buffered); // defaults to Buffered
+        assert_eq!(LambdaInvokeMode::from(""), LambdaInvokeMode::Buffered);
+    }
+
+    #[test]
+    fn test_adapter_new_invalid_host() {
+        #[allow(deprecated)]
+        let options = AdapterOptions {
+            host: "invalid host with spaces".to_string(),
+            port: "8080".to_string(),
+            readiness_check_port: "8080".to_string(),
+            readiness_check_path: "/".to_string(),
+            ..Default::default()
+        };
+
+        let result = Adapter::new(&options);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_adapter_new_valid_config() {
+        #[allow(deprecated)]
+        let options = AdapterOptions {
+            host: "127.0.0.1".to_string(),
+            port: "3000".to_string(),
+            readiness_check_port: "3000".to_string(),
+            readiness_check_path: "/health".to_string(),
+            readiness_check_protocol: Protocol::Http,
+            ..Default::default()
+        };
+
+        let adapter = Adapter::new(&options);
+        assert!(adapter.is_ok());
+    }
+
+    #[test]
+    fn test_parse_status_codes_single_range() {
+        let codes = parse_status_codes("200-204");
+        assert_eq!(codes, vec![200, 201, 202, 203, 204]);
+    }
+
+    #[test]
+    fn test_parse_status_codes_mixed_with_spaces() {
+        let codes = parse_status_codes("200, 301-303, 404");
+        assert_eq!(codes, vec![200, 301, 302, 303, 404]);
+    }
+
+    #[test]
+    fn test_parse_status_codes_invalid_range_format() {
+        // Three-part range should produce empty
+        let codes = parse_status_codes("200-300-400");
+        assert!(codes.is_empty());
+    }
+
+    #[test]
+    fn test_apply_runtime_proxy_config_sets_env() {
+        // Clean up first
+        env::remove_var(ENV_LAMBDA_RUNTIME_API_PROXY);
+        env::remove_var(ENV_LAMBDA_RUNTIME_API);
+
+        // When proxy is not set, runtime API should not be changed
+        Adapter::apply_runtime_proxy_config();
+        assert!(env::var(ENV_LAMBDA_RUNTIME_API).is_err());
+
+        // When proxy is set, runtime API should be overwritten
+        env::set_var(ENV_LAMBDA_RUNTIME_API_PROXY, "127.0.0.1:9002");
+        Adapter::apply_runtime_proxy_config();
+        assert_eq!(env::var(ENV_LAMBDA_RUNTIME_API).unwrap(), "127.0.0.1:9002");
+
+        // Clean up
+        env::remove_var(ENV_LAMBDA_RUNTIME_API_PROXY);
+        env::remove_var(ENV_LAMBDA_RUNTIME_API);
+    }
 }
