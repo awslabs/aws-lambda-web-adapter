@@ -1,17 +1,17 @@
 [
   {
-    "artifacts_bucket": "aws-sam-cli-managed-bjs-pipeline-artifactsbucket-1pmpo0vg2orma",
-    "cloudformation_execution_role": "arn:aws-cn:iam::041581134020:role/aws-sam-cli-managed-bjs-p-CloudFormationExecutionR-FIBRJ5SR32TU",
-    "image_repository": "041581134020.dkr.ecr.cn-north-1.amazonaws.com.cn/aws-sam-cli-managed-bjs-pipeline-resources-imagerepository-fyybklhlqavr",
-    "pipeline_execution_role": "arn:aws-cn:iam::041581134020:role/aws-sam-cli-managed-bjs-pipe-PipelineExecutionRole-1K7Y9PGEBE79R",
+    "artifacts_bucket": "aws-sam-cli-managed-prod-pipeline--artifactsbucket-bmaa9pubeesw",
+    "cloudformation_execution_role": "arn:aws-cn:iam::041581134020:role/aws-sam-cli-managed-prod--CloudFormationExecutionRo-ULkxeaUPQQCj",
+    "image_repository": "041581134020.dkr.ecr.cn-north-1.amazonaws.com.cn/aws-sam-cli-managed-prod-pipeline-resources-cn-north-1-imagerepository-cqinceuapnwp",
+    "pipeline_execution_role": "arn:aws-cn:iam::041581134020:role/aws-sam-cli-managed-prod-pipe-PipelineExecutionRole-VREgGzQWWqcd",
     "arm64_supported": true,
     "region": "cn-north-1"
   },
   {
-    "artifacts_bucket": "aws-sam-cli-managed-zhy-pipeline-artifactsbucket-1nxecxf5j1cmy",
-    "cloudformation_execution_role": "arn:aws-cn:iam::069767869989:role/aws-sam-cli-managed-zhy-p-CloudFormationExecutionR-17JWICM90EHQY",
-    "image_repository": "069767869989.dkr.ecr.cn-northwest-1.amazonaws.com.cn/aws-sam-cli-managed-zhy-pipeline-resources-imagerepository-eadb6wulxfhl",
-    "pipeline_execution_role": "arn:aws-cn:iam::069767869989:role/aws-sam-cli-managed-zhy-pipe-PipelineExecutionRole-JG1BG5I3CXDB",
+    "artifacts_bucket": "aws-sam-cli-managed-prod-pipeline--artifactsbucket-au26dsbrzcqj",
+    "cloudformation_execution_role": "arn:aws-cn:iam::069767869989:role/aws-sam-cli-managed-prod--CloudFormationExecutionRo-EkPioHNq5XA2",
+    "image_repository": "069767869989.dkr.ecr.cn-northwest-1.amazonaws.com.cn/aws-sam-cli-managed-prod-pipeline-resources-cn-northwest-1-imagerepository-ihvnppxnccwz",
+    "pipeline_execution_role": "arn:aws-cn:iam::069767869989:role/aws-sam-cli-managed-prod-pipe-PipelineExecutionRole-Wzh1L3NJccrx",
     "arm64_supported": true,
     "region": "cn-northwest-1"
   }
