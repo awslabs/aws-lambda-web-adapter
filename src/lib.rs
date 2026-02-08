@@ -608,9 +608,7 @@ impl Adapter<HttpConnector, Body> {
         }
 
         let compression = if options.compression && options.invoke_mode == LambdaInvokeMode::ResponseStream {
-            tracing::warn!(
-                "Compression is not supported with response streaming. Disabling compression."
-            );
+            tracing::warn!("Compression is not supported with response streaming. Disabling compression.");
             false
         } else {
             options.compression
@@ -839,9 +837,7 @@ impl Adapter<HttpConnector, Body> {
                 lambda_http::run_concurrent(svc).await
             }
             (_, LambdaInvokeMode::Buffered) => lambda_http::run_concurrent(self).await,
-            (_, LambdaInvokeMode::ResponseStream) => {
-                lambda_http::run_with_streaming_response_concurrent(self).await
-            }
+            (_, LambdaInvokeMode::ResponseStream) => lambda_http::run_with_streaming_response_concurrent(self).await,
         }
     }
 
