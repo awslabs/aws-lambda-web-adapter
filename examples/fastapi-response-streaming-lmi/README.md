@@ -24,19 +24,15 @@ This example combines three Lambda features:
 
 ```yaml
 LMICapacityProvider:
-  Type: AWS::Lambda::CapacityProvider
+  Type: AWS::Serverless::CapacityProvider
   Properties:
-    Name: !Sub "${AWS::StackName}-capacity-provider"
+    CapacityProviderName: !Sub "${AWS::StackName}-capacity-provider"
     VpcConfig:
       SubnetIds: !Ref SubnetIds
       SecurityGroupIds: !Ref SecurityGroupIds
-    InstanceRequirements:
-      Architectures:
-        - x86_64
-      AllowedTypes:
-        - m7i.large
     ScalingConfig:
-      MaxVCpuCount: 2
+      MaxVCpuCount: 20
+      AverageCPUUtilization: 70.0
 
 FastAPIFunction:
   Type: AWS::Serverless::Function
@@ -51,16 +47,16 @@ FastAPIFunction:
         AWS_LWA_INVOKE_MODE: response_stream
         PORT: 8000
     Layers:
-      - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:25
+      - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:26
     CapacityProviderConfig:
-      Arn: !Ref LMICapacityProvider
+      Arn: !GetAtt LMICapacityProvider.Arn
       PerExecutionEnvironmentMaxConcurrency: 64
     FunctionUrlConfig:
       AuthType: NONE
       InvokeMode: RESPONSE_STREAM
 ```
 
-- `AWS::Lambda::CapacityProvider` - Creates the LMI capacity provider with VPC configuration
+- `AWS::Serverless::CapacityProvider` - Creates the LMI capacity provider with VPC configuration
 - `CapacityProviderConfig.Arn` - References the capacity provider
 - `CapacityProviderConfig.PerExecutionEnvironmentMaxConcurrency: 64` - Up to 64 concurrent requests per instance
 - `AWS_LWA_INVOKE_MODE: response_stream` - Configures Lambda Web Adapter for streaming
@@ -118,4 +114,4 @@ When using LMI with streaming:
 - **Shared state**: FastAPI/Uvicorn handles concurrency natively, but avoid mutable global state
 - **Memory**: With 64 concurrent requests, ensure sufficient memory (2048MB in this example)
 - **Timeouts**: Streaming responses can run up to 15 minutes with Function URLs
-- **Scaling**: `MaxInstanceCount` controls the maximum number of EC2 instances in the capacity provider
+- **Scaling**: `MaxVCpuCount` controls the maximum vCPUs the capacity provider can provision across all instances
