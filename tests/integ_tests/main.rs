@@ -1250,15 +1250,11 @@ async fn test_concurrent_post_body_isolation() {
 
     // Endpoints that echo back a specific field to verify body isolation
     let json_a = app_server.mock(|when, then| {
-        when.method(POST)
-            .path("/submit")
-            .body(r#"{"id":"a"}"#);
+        when.method(POST).path("/submit").body(r#"{"id":"a"}"#);
         then.status(200).body("ack_a");
     });
     let json_b = app_server.mock(|when, then| {
-        when.method(POST)
-            .path("/submit")
-            .body(r#"{"id":"b"}"#);
+        when.method(POST).path("/submit").body(r#"{"id":"b"}"#);
         then.status(200).body("ack_b");
     });
 
@@ -1300,4 +1296,3 @@ async fn test_concurrent_post_body_isolation() {
     json_a.assert_calls(2);
     json_b.assert_calls(2);
 }
-
