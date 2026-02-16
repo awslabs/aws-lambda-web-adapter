@@ -1200,3 +1200,99 @@ fn add_lambda_context_to_request(request: &mut Request<Body>) {
     // add Context to the request
     request.extensions_mut().insert(context);
 }
+
+#[tokio::test]
+async fn test_concurrent_request_forwarding() {
+    let app_server = MockServer::start();
+    let endpoint_a = app_server.mock(|when, then| {
+        when.method(GET).path("/a");
+        then.status(200).body("response_a");
+    });
+    let endpoint_b = app_server.mock(|when, then| {
+        when.method(GET).path("/b");
+        then.status(200).body("response_b");
+    });
+
+    let adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/".to_string(),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    // Fire 4 concurrent requests through cloned adapters
+    let mut join_set = tokio::task::JoinSet::new();
+    for path in ["/a", "/b", "/a", "/b"] {
+        let mut a = adapter.clone();
+        let req = LambdaEventBuilder::new().with_path(path).build();
+        let mut request = Request::from(req);
+        add_lambda_context_to_request(&mut request);
+        join_set.spawn(async move { (path.to_string(), a.call(request).await) });
+    }
+
+    while let Some(result) = join_set.join_next().await {
+        let (path, response) = result.expect("Task panicked");
+        let response = response.expect("Request failed");
+        assert_eq!(200, response.status());
+        let expected_body = format!("response_{}", &path[1..]);
+        assert_eq!(expected_body, body_to_string(response).await);
+    }
+
+    endpoint_a.assert_calls(2);
+    endpoint_b.assert_calls(2);
+}
+
+#[tokio::test]
+async fn test_concurrent_post_body_isolation() {
+    let app_server = MockServer::start();
+
+    // Endpoints that echo back a specific field to verify body isolation
+    let json_a = app_server.mock(|when, then| {
+        when.method(POST).path("/submit").body(r#"{"id":"a"}"#);
+        then.status(200).body("ack_a");
+    });
+    let json_b = app_server.mock(|when, then| {
+        when.method(POST).path("/submit").body(r#"{"id":"b"}"#);
+        then.status(200).body("ack_b");
+    });
+
+    let adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/".to_string(),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    let mut join_set = tokio::task::JoinSet::new();
+    for (body, expected) in [
+        (r#"{"id":"a"}"#, "ack_a"),
+        (r#"{"id":"b"}"#, "ack_b"),
+        (r#"{"id":"a"}"#, "ack_a"),
+        (r#"{"id":"b"}"#, "ack_b"),
+    ] {
+        let mut a = adapter.clone();
+        let req = LambdaEventBuilder::new()
+            .with_method(Method::POST)
+            .with_path("/submit")
+            .with_body(body)
+            .build();
+        let mut request = Request::from(req);
+        add_lambda_context_to_request(&mut request);
+        let expected = expected.to_string();
+        join_set.spawn(async move { (expected, a.call(request).await) });
+    }
+
+    while let Some(result) = join_set.join_next().await {
+        let (expected, response) = result.expect("Task panicked");
+        let response = response.expect("Request failed");
+        assert_eq!(200, response.status());
+        assert_eq!(expected, body_to_string(response).await);
+    }
+
+    json_a.assert_calls(2);
+    json_b.assert_calls(2);
+}

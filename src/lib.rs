@@ -54,7 +54,7 @@
 //! | `AWS_LWA_ASYNC_INIT` | Enable async initialization | `false` |
 //! | `AWS_LWA_REMOVE_BASE_PATH` | Base path to strip from requests | None |
 //! | `AWS_LWA_INVOKE_MODE` | Lambda invoke mode (`buffered` or `response_stream`) | `buffered` |
-//! | `AWS_LWA_ENABLE_COMPRESSION` | Enable response compression | `false` |
+//! | `AWS_LWA_ENABLE_COMPRESSION` | Enable response compression (buffered mode only) | `false` |
 //!
 //! ## Response Streaming
 //!
@@ -322,6 +322,10 @@ pub struct AdapterOptions {
     ///
     /// When `true`, responses will be compressed using gzip, deflate, or brotli
     /// based on the `Accept-Encoding` header.
+    ///
+    /// Note: Compression is not supported with response streaming
+    /// (`LambdaInvokeMode::ResponseStream`). If both are enabled, compression
+    /// will be automatically disabled with a warning.
     ///
     /// Default: `false`
     pub compression: bool,
@@ -603,6 +607,13 @@ impl Adapter<HttpConnector, Body> {
             }
         }
 
+        let compression = if options.compression && options.invoke_mode == LambdaInvokeMode::ResponseStream {
+            tracing::warn!("Compression is not supported with response streaming. Disabling compression.");
+            false
+        } else {
+            options.compression
+        };
+
         Ok(Adapter {
             client: Arc::new(client),
             healthcheck_url,
@@ -613,7 +624,7 @@ impl Adapter<HttpConnector, Body> {
             pass_through_path: options.pass_through_path.clone(),
             async_init: options.async_init,
             ready_at_init: Arc::new(AtomicBool::new(false)),
-            compression: options.compression,
+            compression,
             invoke_mode: options.invoke_mode,
             authorization_source: options.authorization_source.clone(),
             error_status_codes: options.error_status_codes.clone(),
@@ -820,20 +831,13 @@ impl Adapter<HttpConnector, Body> {
     /// # }
     /// ```
     pub async fn run(self) -> Result<(), Error> {
-        let compression = self.compression;
-        let invoke_mode = self.invoke_mode;
-
-        if compression {
-            let svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(self);
-            match invoke_mode {
-                LambdaInvokeMode::Buffered => lambda_http::run(svc).await,
-                LambdaInvokeMode::ResponseStream => lambda_http::run_with_streaming_response(svc).await,
+        match (self.compression, self.invoke_mode) {
+            (true, LambdaInvokeMode::Buffered) => {
+                let svc = ServiceBuilder::new().layer(CompressionLayer::new()).service(self);
+                lambda_http::run_concurrent(svc).await
             }
-        } else {
-            match invoke_mode {
-                LambdaInvokeMode::Buffered => lambda_http::run(self).await,
-                LambdaInvokeMode::ResponseStream => lambda_http::run_with_streaming_response(self).await,
-            }
+            (_, LambdaInvokeMode::Buffered) => lambda_http::run_concurrent(self).await,
+            (_, LambdaInvokeMode::ResponseStream) => lambda_http::run_with_streaming_response_concurrent(self).await,
         }
     }
 
@@ -1255,5 +1259,37 @@ mod tests {
         // Clean up
         env::remove_var(ENV_LAMBDA_RUNTIME_API_PROXY);
         env::remove_var(ENV_LAMBDA_RUNTIME_API);
+    }
+
+    #[test]
+    fn test_compression_disabled_with_response_stream() {
+        #[allow(deprecated)]
+        let options = AdapterOptions {
+            compression: true,
+            invoke_mode: LambdaInvokeMode::ResponseStream,
+            ..Default::default()
+        };
+
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
+        assert!(
+            !adapter.compression,
+            "Compression should be disabled when invoke mode is ResponseStream"
+        );
+    }
+
+    #[test]
+    fn test_compression_enabled_with_buffered() {
+        #[allow(deprecated)]
+        let options = AdapterOptions {
+            compression: true,
+            invoke_mode: LambdaInvokeMode::Buffered,
+            ..Default::default()
+        };
+
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
+        assert!(
+            adapter.compression,
+            "Compression should remain enabled when invoke mode is Buffered"
+        );
     }
 }

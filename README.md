@@ -12,6 +12,7 @@ The same docker image can run on AWS Lambda, Amazon EC2, AWS Fargate, and local 
 - Run web applications on AWS Lambda
 - Supports Amazon API Gateway Rest API and Http API endpoints, Lambda Function URLs, and Application Load Balancer
 - Supports Lambda managed runtimes, custom runtimes and docker OCI images
+- Supports Lambda Managed Instances for multi-concurrent request handling
 - Supports any web frameworks and languages, no new code dependency to include
 - Automatic encode binary response
 - Enables graceful shutdown
@@ -95,14 +96,13 @@ The readiness check port/path and traffic port can be configured using environme
 | Environment Variable                                         | Description                                                                          | Default    |
 |--------------------------------------------------------------|--------------------------------------------------------------------------------------|------------|
 | AWS_LWA_PORT                                                 | traffic port (falls back to `PORT`)                                                  | "8080"     |
-| AWS_LWA_HOST                                                 | traffic host                                                                         | "127.0.0.1"|
 | AWS_LWA_READINESS_CHECK_PORT                                 | readiness check port, default to the traffic port                                    | AWS_LWA_PORT |
 | AWS_LWA_READINESS_CHECK_PATH                                 | readiness check path                                                                 | "/"        |
 | AWS_LWA_READINESS_CHECK_PROTOCOL                             | readiness check protocol: "http" or "tcp", default is "http"                         | "http"     |
 | AWS_LWA_READINESS_CHECK_HEALTHY_STATUS                       | HTTP status codes considered healthy (e.g., "200-399" or "200,201,204,301-399")      | "100-499"  |
 | AWS_LWA_ASYNC_INIT                                           | enable asynchronous initialization for long initialization functions                 | "false"    |
 | AWS_LWA_REMOVE_BASE_PATH                                     | the base path to be removed from request path                                        | None       |
-| AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip compression for response body                                            | "false"    |
+| AWS_LWA_ENABLE_COMPRESSION                                   | enable gzip/br compression for response body (buffered mode only)                    | "false"    |
 | AWS_LWA_INVOKE_MODE                                          | Lambda function invoke mode: "buffered" or "response_stream", default is "buffered"  | "buffered" |
 | AWS_LWA_PASS_THROUGH_PATH                                    | the path for receiving event payloads that are passed through from non-http triggers | "/events"  |
 | AWS_LWA_AUTHORIZATION_SOURCE                                 | a header name to be replaced to `Authorization` | None  |
@@ -131,8 +131,8 @@ For example, you could have configured your API Gateway to have a /orders/{proxy
 Each resource is handled by a separate Lambda functions. For this reason, the application inside Lambda may not be aware of the fact that the /orders path exists.
 Use AWS_LWA_REMOVE_BASE_PATH to remove the /orders prefix when routing requests to the application. Defaults to empty string. Checkout [SpringBoot](examples/springboot) example.
 
-**AWS_LWA_ENABLE_COMPRESSION** - Lambda Web Adapter supports gzip compression for response body. This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ENABLE_COMPRESSION` to `true`.
-When enabled, this will compress responses unless it's an image as determined by the content-type starting with `image` or the response is less than 32 bytes. This will also compress HTTP/1.1 chunked streaming response.
+**AWS_LWA_ENABLE_COMPRESSION** - Lambda Web Adapter supports gzip/br compression for response body. This feature is disabled by default. Enable it by setting environment variable `AWS_LWA_ENABLE_COMPRESSION` to `true`.
+When enabled, this will compress responses unless it's an image as determined by the content-type starting with `image` or the response is less than 32 bytes. Compression is not supported with response streaming (`AWS_LWA_INVOKE_MODE=response_stream`). If both are enabled, compression will be automatically disabled with a warning.
 
 **AWS_LWA_INVOKE_MODE** - Lambda function invoke mode, this should match Function Url invoke mode. The default is "buffered". When configured as "response_stream", Lambda Web Adapter will stream response to Lambda service [blog](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/).
 Please check out [FastAPI with Response Streaming](examples/fastapi-response-streaming) example.
@@ -172,6 +172,23 @@ Lambda Web Adapter forwards this information to the web application in a Http He
 
 Lambda Web Adapter forwards this information to the web application in a Http Header named "x-amzn-lambda-context". In the web application, you can retrieve the value of this http header and deserialize it into a JSON object. Check out [Express.js in Zip](examples/expressjs-zip) on how to use it.
 
+## Lambda Managed Instances
+
+Lambda Web Adapter supports [Lambda Managed Instances](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html), which allows a single Lambda execution environment to handle multiple concurrent requests. This can improve throughput and reduce costs for I/O-bound workloads.
+
+When running on Lambda Managed Instances, Lambda Web Adapter automatically handles concurrent invocations by forwarding multiple requests to your web application simultaneously. Since most web frameworks (Express.js, FastAPI, Spring Boot, etc.) are already designed to handle concurrent requests, your application should work without modification.
+
+### Considerations for Multi-Concurrency
+
+When using Lambda Managed Instances, keep these points in mind:
+
+- **Shared state**: Global variables and in-memory caches are shared across concurrent requests. Ensure your application handles shared state safely.
+- **Connection pooling**: Use connection pools for databases and external services rather than single connections.
+- **File system**: The `/tmp` directory is shared across concurrent requests. Use unique file names or implement file locking to avoid conflicts.
+- **Resource limits**: Memory and CPU are shared across concurrent requests. Monitor resource usage under concurrent load.
+
+Lambda Managed Instances works with both buffered and response streaming modes.
+
 ## Graceful Shutdown
 
 For a function with Lambda Extensions registered, Lambda enables shutdown phase for the function. When Lambda service is about to shut down a Lambda execution environment,
@@ -203,6 +220,7 @@ The `AWS_LWA_LAMBDA_RUNTIME_API_PROXY` environment varible makes the Lambda Web 
 - [FastAPI with Background Tasks](examples/fastapi-background-tasks)
 - [FastAPI with Response Streaming](examples/fastapi-response-streaming)
 - [FastAPI with Response Streaming in Zip](examples/fastapi-response-streaming-zip)
+- [FastAPI with Response Streaming on Lambda Managed Instances](examples/fastapi-response-streaming-lmi)
 - [FastAPI Response Streaming Backend with IAM Auth](examples/fastapi-backend-only-response-streaming/)
 - [Flask](examples/flask)
 - [Flask in Zip](examples/flask-zip)

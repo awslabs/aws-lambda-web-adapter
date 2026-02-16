@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FastAPI response streaming with Lambda Managed Instances
+
+Parameters:
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnet IDs for the Lambda Managed Instances capacity provider
+  SecurityGroupIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Security Group IDs for the Lambda Managed Instances capacity provider
+
+Globals:
+  Function:
+    Timeout: 120
+
+Resources:
+  LMICapacityProvider:
+    Type: AWS::Serverless::CapacityProvider
+    Properties:
+      CapacityProviderName: !Sub "${AWS::StackName}-capacity-provider"
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds: !Ref SecurityGroupIds
+      ScalingConfig:
+        MaxVCpuCount: 20
+        AverageCPUUtilization: 70.0
+
+  FastAPIFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: run.sh
+      Runtime: python3.13
+      MemorySize: 2048
+      AutoPublishAlias: live
+      Environment:
+        Variables:
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+          AWS_LWA_INVOKE_MODE: response_stream
+          PORT: 8000
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:26
+      CapacityProviderConfig:
+        Arn: !GetAtt LMICapacityProvider.Arn
+        PerExecutionEnvironmentMaxConcurrency: 64
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+Outputs:
+  FastAPIFunctionUrl:
+    Description: "Function URL for FastAPI function"
+    Value: !GetAtt FastAPIFunctionUrl.FunctionUrl
+  FastAPIFunction:
+    Description: "FastAPI Lambda Function ARN"
+    Value: !GetAtt FastAPIFunction.Arn
+  CapacityProviderArn:
+    Description: "Capacity Provider ARN"
+    Value: !GetAtt LMICapacityProvider.Arn
