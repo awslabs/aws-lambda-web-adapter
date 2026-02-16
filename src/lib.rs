@@ -1327,9 +1327,7 @@ mod tests {
     async fn test_tenant_id_header_propagated() {
         let app_server = MockServer::start();
         app_server.mock(|when, then| {
-            when.method(GET)
-                .path("/hello")
-                .header("x-amz-tenant-id", "tenant-abc");
+            when.method(GET).path("/hello").header("x-amz-tenant-id", "tenant-abc");
             then.status(200).body("OK");
         });
 

@@ -1302,10 +1302,7 @@ fn add_lambda_context_with_tenant(request: &mut Request<Body>, tenant_id: &str) 
     headers.insert("lambda-runtime-aws-request-id", "my_id".parse().unwrap());
     headers.insert("lambda-runtime-deadline-ms", "123".parse().unwrap());
     headers.insert("lambda-runtime-client-context", "{}".parse().unwrap());
-    headers.insert(
-        "lambda-runtime-aws-tenant-id",
-        tenant_id.parse().unwrap(),
-    );
+    headers.insert("lambda-runtime-aws-tenant-id", tenant_id.parse().unwrap());
 
     let conf = Config {
         function_name: "test_function".into(),
