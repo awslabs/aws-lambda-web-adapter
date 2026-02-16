@@ -18,6 +18,7 @@ The same docker image can run on AWS Lambda, Amazon EC2, AWS Fargate, and local 
 - Enables graceful shutdown
 - Supports response payload compression
 - Supports response streaming
+- Supports multi-tenancy via tenant ID propagation
 - Supports non-http event triggers
 
 ## Usage
@@ -109,15 +110,15 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_ERROR_STATUS_CODES                                  | comma-separated list of HTTP status codes that will cause Lambda invocations to fail (e.g. "500,502-504,422") | None  |
 | AWS_LWA_LAMBDA_RUNTIME_API_PROXY                              | overwrites `AWS_LAMBDA_RUNTIME_API` to allow proxying request (not affecting registration)                    | None       |
 
-**AWS_LWA_PORT** - Lambda Web Adapter will send traffic to this port. This is the port your web application listening on. Inside Lambda execution environment,
-the web application runs as a non-root user, and not allowed to listen on ports lower than 1024. Please also avoid port 9001 and 3000.
-Lambda Runtime API is on port 9001. CloudWatch Lambda Insight extension uses port 3000.
-
 > **Deprecation Notice:** The following non-namespaced environment variables are deprecated and will be removed in version 2.0:
 > `HOST`, `READINESS_CHECK_PORT`, `READINESS_CHECK_PATH`, `READINESS_CHECK_PROTOCOL`, `REMOVE_BASE_PATH`, `ASYNC_INIT`.
 > Please migrate to the `AWS_LWA_` prefixed versions. Note: `PORT` is not deprecated and remains a supported fallback for `AWS_LWA_PORT`.
 >
 > Additionally, `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` is deprecated. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` instead.  
+
+**AWS_LWA_PORT** - Lambda Web Adapter will send traffic to this port. This is the port your web application listening on. Inside Lambda execution environment,
+the web application runs as a non-root user, and not allowed to listen on ports lower than 1024. Please also avoid port 9001 and 3000.
+Lambda Runtime API is on port 9001. CloudWatch Lambda Insight extension uses port 3000.
 
 **AWS_LWA_ASYNC_INIT** - Lambda managed runtimes offer up to 10 seconds for function initialization. During this period of time, Lambda functions have burst of CPU to accelerate initialization.
 If a lambda function couldn't complete the initialization within 10 seconds, Lambda will restart the function, and bill for the initialization.
@@ -171,6 +172,30 @@ Lambda Web Adapter forwards this information to the web application in a Http He
 **Lambda Context** is an object that Lambda passes to the function handler. This object provides information about the invocation, function, and execution environment. You can find a full list of properties accessible through the Lambda Context [here](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-context.html)
 
 Lambda Web Adapter forwards this information to the web application in a Http Header named "x-amzn-lambda-context". In the web application, you can retrieve the value of this http header and deserialize it into a JSON object. Check out [Express.js in Zip](examples/expressjs-zip) on how to use it.
+
+## Multi-Tenancy Support
+
+Lambda Web Adapter supports multi-tenancy by automatically propagating the tenant ID from the Lambda runtime context to your web application.
+
+When the Lambda runtime includes a `tenant_id` in the invocation context, the adapter forwards it as an `X-Amz-Tenant-Id` HTTP header to your web application. This allows your application to identify the tenant for each request without any additional configuration.
+
+In your web application, you can read the tenant ID from the request header:
+
+```python
+# FastAPI example
+@app.get("/")
+def handler(request: Request):
+    tenant_id = request.headers.get("x-amz-tenant-id")
+```
+
+```javascript
+// Express.js example
+app.get('/', (req, res) => {
+    const tenantId = req.headers['x-amz-tenant-id'];
+});
+```
+
+If no tenant ID is present in the Lambda context, the header is simply omitted.
 
 ## Lambda Managed Instances
 
