@@ -1296,3 +1296,83 @@ async fn test_concurrent_post_body_isolation() {
     json_a.assert_calls(2);
     json_b.assert_calls(2);
 }
+
+fn add_lambda_context_with_tenant(request: &mut Request<Body>, tenant_id: &str) {
+    let mut headers = HeaderMap::new();
+    headers.insert("lambda-runtime-aws-request-id", "my_id".parse().unwrap());
+    headers.insert("lambda-runtime-deadline-ms", "123".parse().unwrap());
+    headers.insert("lambda-runtime-client-context", "{}".parse().unwrap());
+    headers.insert(
+        "lambda-runtime-aws-tenant-id",
+        tenant_id.parse().unwrap(),
+    );
+
+    let conf = Config {
+        function_name: "test_function".into(),
+        memory: 128,
+        version: "latest".into(),
+        log_stream: "/aws/lambda/test_function".into(),
+        log_group: "2023/09/15/[$LATEST]ab831cef03e94457a94b6efcbe22406a".into(),
+    };
+
+    let context = Context::new("my_id", Arc::new(conf), &headers).expect("Couldn't convert HeaderMap to Context");
+    request.extensions_mut().insert(context);
+}
+
+#[tokio::test]
+async fn test_tenant_id_propagated_from_client_context() {
+    let app_server = MockServer::start();
+    let endpoint = app_server.mock(|when, then| {
+        when.method(GET)
+            .path("/hello")
+            .header("x-amz-tenant-id", "tenant-abc-123");
+        then.status(200).body("OK");
+    });
+
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    let req = LambdaEventBuilder::new().with_path("/hello").build();
+    let mut request = Request::from(req);
+    add_lambda_context_with_tenant(&mut request, "tenant-abc-123");
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    endpoint.assert();
+    assert_eq!(200, response.status());
+}
+
+#[tokio::test]
+async fn test_no_tenant_id_header_when_absent() {
+    let app_server = MockServer::start();
+    let endpoint = app_server.mock(|when, then| {
+        when.method(GET)
+            .path("/hello")
+            .is_true(|req| !req.headers().iter().any(|(k, _)| k == "x-amz-tenant-id"));
+        then.status(200).body("OK");
+    });
+
+    let mut adapter = Adapter::new(&AdapterOptions {
+        host: app_server.host(),
+        port: app_server.port().to_string(),
+        readiness_check_port: app_server.port().to_string(),
+        readiness_check_path: "/healthcheck".to_string(),
+        ..Default::default()
+    })
+    .expect("Failed to create adapter");
+
+    let req = LambdaEventBuilder::new().with_path("/hello").build();
+    let mut request = Request::from(req);
+    add_lambda_context_to_request(&mut request);
+
+    let response = adapter.call(request).await.expect("Request failed");
+
+    endpoint.assert();
+    assert_eq!(200, response.status());
+}

@@ -932,6 +932,16 @@ impl Adapter<HttpConnector, Body> {
             HeaderValue::from_bytes(serde_json::to_string(&lambda_context)?.as_bytes())?,
         );
 
+        // Multi-tenancy support: propagate tenant_id from Lambda context
+        if let Some(ref tenant_id) = lambda_context.tenant_id {
+            if let Ok(value) = HeaderValue::from_str(tenant_id) {
+                req_headers.insert(HeaderName::from_static("x-amz-tenant-id"), value);
+                tracing::debug!(tenant_id = %tenant_id, "propagating tenant_id header");
+            } else {
+                tracing::warn!(tenant_id = %tenant_id, "tenant_id contains invalid header characters, skipping");
+            }
+        }
+
         if let Some(authorization_source) = self.authorization_source.as_deref() {
             if let Some(original) = req_headers.remove(authorization_source) {
                 req_headers.insert("authorization", original);
@@ -1291,5 +1301,92 @@ mod tests {
             adapter.compression,
             "Compression should remain enabled when invoke mode is Buffered"
         );
+    }
+
+    /// Helper to create a Lambda Context with an optional tenant_id.
+    fn make_lambda_context(tenant_id: Option<&str>) -> lambda_http::Context {
+        use lambda_http::lambda_runtime::Config;
+        let mut headers = http::HeaderMap::new();
+        headers.insert("lambda-runtime-aws-request-id", "test-id".parse().unwrap());
+        headers.insert("lambda-runtime-deadline-ms", "123".parse().unwrap());
+        headers.insert("lambda-runtime-client-context", "{}".parse().unwrap());
+        if let Some(tid) = tenant_id {
+            headers.insert("lambda-runtime-aws-tenant-id", tid.parse().unwrap());
+        }
+        let conf = Config {
+            function_name: "test_function".into(),
+            memory: 128,
+            version: "latest".into(),
+            log_stream: "/aws/lambda/test_function".into(),
+            log_group: "2023/09/15/[$LATEST]ab831cef03e94457a94b6efcbe22406a".into(),
+        };
+        lambda_http::Context::new("test-id", Arc::new(conf), &headers).unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_tenant_id_header_propagated() {
+        let app_server = MockServer::start();
+        app_server.mock(|when, then| {
+            when.method(GET)
+                .path("/hello")
+                .header("x-amz-tenant-id", "tenant-abc");
+            then.status(200).body("OK");
+        });
+
+        let options = AdapterOptions {
+            host: app_server.host(),
+            port: app_server.port().to_string(),
+            readiness_check_port: app_server.port().to_string(),
+            readiness_check_path: "/".to_string(),
+            ..Default::default()
+        };
+
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
+
+        // Build a minimal ALB request
+        let alb_req = lambda_http::request::LambdaRequest::Alb({
+            let mut req = lambda_http::aws_lambda_events::alb::AlbTargetGroupRequest::default();
+            req.http_method = Method::GET;
+            req.path = Some("/hello".into());
+            req
+        });
+        let mut request = Request::from(alb_req);
+        request.extensions_mut().insert(make_lambda_context(Some("tenant-abc")));
+
+        let response = adapter.fetch_response(request).await.expect("Request failed");
+        assert_eq!(200, response.status().as_u16());
+    }
+
+    #[tokio::test]
+    async fn test_tenant_id_header_absent_when_no_tenant() {
+        let app_server = MockServer::start();
+        app_server.mock(|when, then| {
+            when.method(GET)
+                .path("/hello")
+                .is_true(|req| !req.headers().iter().any(|(k, _)| k == "x-amz-tenant-id"));
+            then.status(200).body("OK");
+        });
+
+        let options = AdapterOptions {
+            host: app_server.host(),
+            port: app_server.port().to_string(),
+            readiness_check_port: app_server.port().to_string(),
+            readiness_check_path: "/".to_string(),
+            ..Default::default()
+        };
+
+        let adapter = Adapter::new(&options).expect("Failed to create adapter");
+
+        let alb_req = lambda_http::request::LambdaRequest::Alb({
+            let mut req = lambda_http::aws_lambda_events::alb::AlbTargetGroupRequest::default();
+            req.http_method = Method::GET;
+            req.path = Some("/hello".into());
+            req
+        });
+        let mut request = Request::from(alb_req);
+        request.extensions_mut().insert(make_lambda_context(None));
+
+        let response = adapter.fetch_response(request).await.expect("Request failed");
+        assert_eq!(200, response.status().as_u16());
     }
 }
