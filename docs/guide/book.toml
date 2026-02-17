@@ -1,0 +1,16 @@
+[book]
+authors = ["AWS Lambda Web Adapter Contributors"]
+language = "en"
+multilingual = false
+src = "src"
+title = "AWS Lambda Web Adapter User Guide"
+
+[build]
+build-dir = "../../docs-site"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/awslabs/aws-lambda-web-adapter"
+git-repository-icon = "fa-github"
+site-url = "/aws-lambda-web-adapter/"
