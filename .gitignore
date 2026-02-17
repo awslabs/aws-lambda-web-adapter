@@ -11,3 +11,6 @@ samconfig.toml
 **/.idea/*
 
 .aider.*
+
+# mdBook build output
+/docs-site
