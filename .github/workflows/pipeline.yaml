@@ -1152,12 +1152,12 @@ jobs:
 
       - name: Create and push the x86_64 docker image to prod ecr public repo
         run: |
-          printf 'FROM scratch\nADD build-x86_64/LambdaAdapterLayerX86/extensions/. /\n' | docker build --platform=linux/amd64 -t public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-x86_64 -f- .          
+          printf 'FROM scratch\nADD build-x86_64/LambdaAdapterLayerX86/extensions/. /\n' | docker build --provenance=false --platform=linux/amd64 -t public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-x86_64 -f- .          
           docker push public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-x86_64
 
       - name: Create and push the arm64 docker image to prod ecr public repo
         run: |
-          printf 'FROM scratch\nADD build-arm64/LambdaAdapterLayerArm64/extensions/. /\n' | docker build --platform=linux/arm64 -t public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-aarch64 -f- .          
+          printf 'FROM scratch\nADD build-arm64/LambdaAdapterLayerArm64/extensions/. /\n' | docker build --provenance=false --platform=linux/arm64 -t public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-aarch64 -f- .          
           docker push public.ecr.aws/awsguru/aws-lambda-adapter:${CARGO_PKG_VERSION}-aarch64
 
       - name: create and push the multi-arch manifest to prod ecr public repo
