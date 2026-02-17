@@ -138,7 +138,7 @@ When enabled, this will compress responses unless it's an image as determined by
 **AWS_LWA_INVOKE_MODE** - Lambda function invoke mode, this should match Function Url invoke mode. The default is "buffered". When configured as "response_stream", Lambda Web Adapter will stream response to Lambda service [blog](https://aws.amazon.com/blogs/compute/introducing-aws-lambda-response-streaming/).
 Please check out [FastAPI with Response Streaming](examples/fastapi-response-streaming) example.
 
-**AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS** - allows you to customize which HTTP status codes are considered healthy and which ones are not
+**AWS_LWA_READINESS_CHECK_HEALTHY_STATUS** - allows you to customize which HTTP status codes are considered healthy during the readiness check. By default, status codes from 100 to 499 are considered healthy. You can set this to a specific status code or a range of status codes (e.g. "200" or "200-299") to narrow down the healthy status codes.
 
 **AWS_LWA_PASS_THROUGH_PATH** - Path to receive events payloads passed through from non-http event triggers. The default is "/events".
 
@@ -213,6 +213,8 @@ When using Lambda Managed Instances, keep these points in mind:
 - **Resource limits**: Memory and CPU are shared across concurrent requests. Monitor resource usage under concurrent load.
 
 Lambda Managed Instances works with both buffered and response streaming modes.
+
+Please check out [FastAPI with Response Streaming on Lambda Managed Instances](examples/fastapi-response-streaming-lmi) example.
 
 ## Graceful Shutdown
 
