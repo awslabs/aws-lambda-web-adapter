@@ -17,7 +17,7 @@ COPY *.py ./
 CMD exec uvicorn --port=$PORT main:app
 ```
 
-Line 2 copies lambda adapter binary into /opt/extenions. This is the only change to run the FastAPI application on Lambda.
+Line 2 copies lambda adapter binary into /opt/extensions. This is the only change to run the FastAPI application on Lambda.
 
 ```dockerfile
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.0.0-rc1 /lambda-adapter /opt/extensions/lambda-adapter
