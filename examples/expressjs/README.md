@@ -20,7 +20,7 @@ ADD src/ /var/task
 CMD ["node", "index.js"]
 ```
 
-Line 2 copies lambda adapter binary into /opt/extenions. This is the only change to run the express.js application on Lambda.
+Line 2 copies lambda adapter binary into /opt/extensions. This is the only change to run the express.js application on Lambda.
 
 ```dockerfile
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter

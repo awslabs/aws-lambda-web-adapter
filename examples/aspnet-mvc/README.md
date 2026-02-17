@@ -29,7 +29,7 @@ COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "AspNetLambdaWebAdapter.dll"]
 ```
 
-Line 12 copies lambda adapter binary into /opt/extenions. This is required to run ASP.NET application on Lambda. The `ASPNETCORE_URLS` environment variable is also set to 8080. This is required for the Lambda Web Adapter to work.
+Line 12 copies lambda adapter binary into /opt/extensions. This is required to run ASP.NET application on Lambda. The `ASPNETCORE_URLS` environment variable is also set to 8080. This is required for the Lambda Web Adapter to work.
 
 ```dockerfile
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
