@@ -12,7 +12,7 @@ npx create-remix@latest --template remix-run/remix/templates/express
 
 We add Lambda Adapter layer to the function and configure wrapper script. 
 
-1. attach Lambda Adapter layer to your function. This layer containers Lambda Adapter binary and a wrapper script. 
+1. attach Lambda Adapter layer to your function. This layer contains the Lambda Adapter binary and a wrapper script. 
     1. x86_64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:26`
     2. arm64: `arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:26`
 2. configure Lambda environment variable `AWS_LAMBDA_EXEC_WRAPPER` to `/opt/bootstrap`. This is a wrapper script included in the layer.
