@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - "examples/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "examples/**"
   workflow_dispatch:
 
 permissions:
