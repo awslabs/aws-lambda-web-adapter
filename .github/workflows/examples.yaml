@@ -11,6 +11,7 @@ on:
       - main
     paths:
       - "examples/**"
+      - "src/**"
   workflow_dispatch:
 
 permissions:
