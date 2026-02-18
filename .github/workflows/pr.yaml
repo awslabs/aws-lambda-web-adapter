@@ -1,0 +1,75 @@
+name: PR
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "examples/**"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  SAM_TEMPLATE_X86_64: template-x86_64.yaml
+  SAM_TEMPLATE_ARM64: template-arm64.yaml
+  RUST_BACKTRACE: full
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Configure Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-nextest
+        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+
+      - name: linting
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy -- -Dwarnings
+
+      - name: run unit and integration tests
+        run: cargo nextest run --profile ci
+
+  build:
+    needs: [test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install stable toolchain
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          rustup target add aarch64-unknown-linux-musl
+
+      - name: Install cargo lambda
+        run: pip3 install cargo-lambda
+
+      - name: Configure Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Add cargo pkg version to env vars
+        run: |
+          echo "CARGO_PKG_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')" >> $GITHUB_ENV
+
+      - name: Build x86_64 Layer
+        run: sam build --template ${SAM_TEMPLATE_X86_64} --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} -b build-x86_64
+
+      - name: Build arm64 Layer
+        run: sam build --template ${SAM_TEMPLATE_ARM64} --parameter-overrides CargoPkgVersion=${CARGO_PKG_VERSION} -b build-arm64
