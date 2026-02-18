@@ -40,7 +40,7 @@ jobs:
           for template in $(find examples -maxdepth 2 -name "template.yaml" | sort); do
             dir=$(dirname "$template")
             echo "Validating $dir..."
-            if ! sam validate --template "$template" 2>&1; then
+            if ! sam validate --template "$template" --lint 2>&1; then
               echo "FAIL: $dir"
               failed=1
             fi
@@ -193,35 +193,36 @@ jobs:
           name: layer-x86_64
           path: /tmp/layer-x86_64
 
-      - name: Prepare local layer
+      - name: Prepare local layer cache
         run: |
-          chmod +x /tmp/layer-x86_64/lambda-adapter /tmp/layer-x86_64/bootstrap
-
-      - name: Patch template and remove remote layer
-        working-directory: examples/${{ matrix.example }}
-        run: |
-          # Remove the remote layer ARN line - layer files will be injected after build
-          sed -i '/arn:aws:lambda.*LambdaAdapterLayerX86/d' template.yaml
+          # SAM caches layers in ~/.aws-sam/layers-pkg with directory name:
+          # LayerName-Version-<first 10 chars of sha256 of ARN>
+          # We pre-populate the cache for all regions the examples might resolve to
+          LAYER_ARNS=(
+            "arn:aws:lambda:us-east-1:753240598075:layer:LambdaAdapterLayerX86:26"
+          )
+          for arn in "${LAYER_ARNS[@]}"; do
+            hash=$(echo -n "$arn" | sha256sum | cut -c1-10)
+            layer_name=$(echo "$arn" | awk -F: '{print $(NF-1)}')
+            version=$(echo "$arn" | awk -F: '{print $NF}')
+            cache_dir="$HOME/.aws-sam/layers-pkg/${layer_name}-${version}-${hash}"
+            mkdir -p "$cache_dir/extensions"
+            cp /tmp/layer-x86_64/bootstrap "$cache_dir/"
+            cp /tmp/layer-x86_64/lambda-adapter "$cache_dir/extensions/"
+            chmod +x "$cache_dir/extensions/lambda-adapter" "$cache_dir/bootstrap"
+          done
 
       - name: Build
         working-directory: examples/${{ matrix.example }}
         run: sam build
 
-      - name: Inject local layer into build
-        working-directory: examples/${{ matrix.example }}
-        run: |
-          for func_dir in .aws-sam/build/*/; do
-            cp /tmp/layer-x86_64/bootstrap "$func_dir/"
-            mkdir -p "$func_dir/extensions"
-            cp /tmp/layer-x86_64/lambda-adapter "$func_dir/extensions/"
-          done
-
       - name: Start local API and verify
         working-directory: examples/${{ matrix.example }}
         run: |
           # Set PORT=8000 to avoid conflict with SAM's RIE on port 8080
+          # Use --region us-east-1 so !Sub ${AWS::Region} resolves to match the cached layer ARN
           echo '{"Parameters":{"PORT":"8000"}}' > /tmp/env.json
-          sam local start-api --port 3000 --warm-containers EAGER --container-env-vars /tmp/env.json &
+          sam local start-api --port 3000 --warm-containers EAGER --region us-east-1 --container-env-vars /tmp/env.json &
           SAM_PID=$!
           echo "SAM_PID=$SAM_PID" >> $GITHUB_ENV
 

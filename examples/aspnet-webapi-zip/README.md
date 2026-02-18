@@ -2,7 +2,7 @@
 
 This example shows how to deploy an ASP.NET application using the Lambda Web Adapter packaged as a ZIP file.
 
-The `dotnet6` runtime is used.
+The `dotnet8` runtime is used.
 
 ```yaml
 Resources:

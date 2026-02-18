@@ -4,7 +4,7 @@ Transform: AWS::Serverless-2016-10-31
 Globals:
   Function:
     MemorySize: 1024
-    Runtime: dotnet6
+    Runtime: dotnet8
     Architectures:
       - x86_64
     Timeout: 29
