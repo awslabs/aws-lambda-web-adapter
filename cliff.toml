@@ -1,0 +1,71 @@
+[changelog]
+header = """
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+This changelog is automatically generated based on [Conventional Commits](https://www.conventionalcommits.org/).\n
+"""
+body = """
+{%- macro remote_url() -%}
+  https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}
+{%- endmacro -%}
+
+{% if version -%}
+## [{{ version | trim_start_matches(pat="v") }}]\
+  {% if commit_id %}({{ self::remote_url() }}/tree/{{ version }}){% endif %}\
+  {% if timestamp %} - {{ timestamp | date(format="%Y-%m-%d") }}{% endif %}
+{% else -%}
+## [Unreleased]
+{% endif -%}
+
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits
+| filter(attribute="scope")
+| sort(attribute="scope") %}
+  - *({{ commit.scope }})* {{ commit.message | upper_first }}\
+    {% if commit.github.username %} by @{{ commit.github.username }}{%- endif -%}
+    {% if commit.github.pr_number %} in \
+      [#{{ commit.github.pr_number }}]({{ self::remote_url() }}/pull/{{ commit.github.pr_number }})\
+    {%- endif %}
+{%- endfor -%}
+{% for commit in commits %}
+{%- if not commit.scope %}
+  - {{ commit.message | upper_first }}\
+    {% if commit.github.username %} by @{{ commit.github.username }}{%- endif -%}
+    {% if commit.github.pr_number %} in \
+      [#{{ commit.github.pr_number }}]({{ self::remote_url() }}/pull/{{ commit.github.pr_number }})\
+    {%- endif %}
+{%- endif -%}
+{%- endfor -%}
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = false
+split_commits = false
+commit_parsers = [
+  { message = "^feat", group = "<!-- 0 -->🚀 Features" },
+  { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+  { message = "^perf", group = "<!-- 2 -->⚡ Performance" },
+  { message = "^doc", group = "<!-- 3 -->📚 Documentation" },
+  { message = "^example", group = "<!-- 4 -->📦 Examples" },
+  { message = "^refactor", group = "<!-- 5 -->🔧 Refactoring" },
+  { message = "^chore\\(deps\\)", group = "<!-- 6 -->📦 Dependencies" },
+  { message = "^chore|^ci", group = "<!-- 7 -->🏗️ Maintenance" },
+  { message = "^test", group = "<!-- 8 -->🧪 Testing" },
+  { message = "^Bump ", group = "<!-- 6 -->📦 Dependencies" },
+  { message = "^.*", group = "<!-- 9 -->🔀 Other" },
+]
+protect_breaking_commits = true
+filter_commits = false
+tag_pattern = "v[0-9].*"
+sort_commits = "newest"
+
+[remote.github]
+owner = "awslabs"
+repo = "aws-lambda-web-adapter"
