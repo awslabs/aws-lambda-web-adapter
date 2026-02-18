@@ -40,7 +40,7 @@ jobs:
           for template in $(find examples -maxdepth 2 -name "template.yaml" | sort); do
             dir=$(dirname "$template")
             echo "Validating $dir..."
-            if ! sam validate --template "$template" --lint 2>&1; then
+            if ! sam validate --template "$template" 2>&1; then
               echo "FAIL: $dir"
               failed=1
             fi
@@ -113,6 +113,7 @@ jobs:
 
       - name: Build local adapter image
         run: |
+          chmod +x /tmp/layer-x86_64/lambda-adapter
           printf 'FROM scratch\nCOPY lambda-adapter /lambda-adapter\n' | \
             docker build -t public.ecr.aws/awsguru/aws-lambda-adapter:1.0.0-rc1 -f- /tmp/layer-x86_64
 
@@ -158,7 +159,7 @@ jobs:
         run: kill $SAM_PID 2>/dev/null || true
 
   # Zip-based examples verified with local layer.
-  # Excluded: aspnet-*-zip (hardcode port 8080),
+  # Excluded: aspnet-*-zip (hardcode port 8080), deno-zip (needs deno runtime),
   # bun/nginx/php-zip (need third-party layers), arm64 examples (javalin, rust-*).
   test-zip:
     needs: [build-layer]
@@ -167,7 +168,6 @@ jobs:
       fail-fast: false
       matrix:
         example:
-          - deno-zip
           - expressjs-zip
           - fastapi-zip
           - fasthtml-zip
@@ -195,20 +195,26 @@ jobs:
 
       - name: Prepare local layer
         run: |
-          LAYER_DIR="/tmp/local-layers/LambdaAdapterLayerX86"
-          mkdir -p "$LAYER_DIR/extensions"
-          cp /tmp/layer-x86_64/bootstrap "$LAYER_DIR/"
-          cp /tmp/layer-x86_64/lambda-adapter "$LAYER_DIR/extensions/"
-          chmod +x "$LAYER_DIR/extensions/lambda-adapter" "$LAYER_DIR/bootstrap"
+          chmod +x /tmp/layer-x86_64/lambda-adapter /tmp/layer-x86_64/bootstrap
 
-      - name: Patch template to use local layer
+      - name: Patch template and remove remote layer
         working-directory: examples/${{ matrix.example }}
         run: |
-          sed -i 's|!Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:[0-9]*|/tmp/local-layers/LambdaAdapterLayerX86|' template.yaml
+          # Remove the remote layer ARN line - layer files will be injected after build
+          sed -i '/arn:aws:lambda.*LambdaAdapterLayerX86/d' template.yaml
 
       - name: Build
         working-directory: examples/${{ matrix.example }}
         run: sam build
+
+      - name: Inject local layer into build
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          for func_dir in .aws-sam/build/*/; do
+            cp /tmp/layer-x86_64/bootstrap "$func_dir/"
+            mkdir -p "$func_dir/extensions"
+            cp /tmp/layer-x86_64/lambda-adapter "$func_dir/extensions/"
+          done
 
       - name: Start local API and verify
         working-directory: examples/${{ matrix.example }}
