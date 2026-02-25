@@ -19,7 +19,7 @@ Resources:
     Properties:
       PackageType: Image
       Architectures:
-      - arm64
+      - x86_64
       MemorySize: 512
       Tracing: Active
       Events:
