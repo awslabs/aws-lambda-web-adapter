@@ -22,7 +22,7 @@ Resources:
       Runtime: python3.14
       Architectures:
       - arm64
-      MemorySize: 8000
+      MemorySize: 512
       Tracing: Active
       EventInvokeConfig:
         MaximumRetryAttempts: 0
