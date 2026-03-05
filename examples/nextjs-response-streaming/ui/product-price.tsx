@@ -1,5 +1,5 @@
 import { Product } from "@/app/api/products/product";
-import { Dinero, multiply, toUnit } from "dinero.js";
+import { Dinero, multiply, toDecimal } from "dinero.js";
 import { ProductCurrencySymbol } from "./product-currency-symbol";
 import { ProductDeal } from "./product-deal";
 import { ProductLighteningDeal } from "./product-lightening-deal";
@@ -45,7 +45,7 @@ export const ProductPrice = ({
                 <ProductCurrencySymbol dinero={price} />
             </div>
             <div className="text-lg font-bold leading-snug text-white">
-                {toUnit(price)}
+                {Number(toDecimal(price))}
             </div>
         </div>
     );
