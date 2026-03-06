@@ -213,29 +213,22 @@ jobs:
           cp /tmp/layer-x86_64/lambda-adapter "$LAYER_DIR/extensions/"
           chmod +x "$LAYER_DIR/bootstrap" "$LAYER_DIR/extensions/lambda-adapter"
           # Add local layer resource and replace remote layer ARN refs
-          python3 -c "
-import yaml
-with open('.aws-sam/build/template.yaml') as f:
-    t = yaml.safe_load(f)
-t['Resources']['LocalAdapterLayer'] = {
-    'Type': 'AWS::Lambda::LayerVersion',
-    'Properties': {
-        'Content': 'LocalAdapterLayer',
-        'LayerName': 'local-adapter'
-    }
-}
-for r in t.get('Resources', {}).values():
-    layers = r.get('Properties', {}).get('Layers', [])
-    for i, l in enumerate(layers):
-        if isinstance(l, dict):
-            v = l.get('Fn::Sub', '')
-        else:
-            v = l
-        if 'LambdaAdapterLayerX86' in str(v):
-            layers[i] = {'Ref': 'LocalAdapterLayer'}
-with open('.aws-sam/build/template.yaml', 'w') as f:
-    yaml.dump(t, f)
-"
+          python3 << 'PYEOF'
+          import yaml
+          with open(".aws-sam/build/template.yaml") as f:
+              t = yaml.safe_load(f)
+          t["Resources"]["LocalAdapterLayer"] = {
+              "Type": "AWS::Lambda::LayerVersion",
+              "Properties": {"Content": "LocalAdapterLayer", "LayerName": "local-adapter"},
+          }
+          for r in t.get("Resources", {}).values():
+              layers = r.get("Properties", {}).get("Layers", [])
+              for i, l in enumerate(layers):
+                  if "LambdaAdapterLayerX86" in str(l):
+                      layers[i] = {"Ref": "LocalAdapterLayer"}
+          with open(".aws-sam/build/template.yaml", "w") as f:
+              yaml.dump(t, f)
+          PYEOF
 
       - name: Start local API and verify
         working-directory: examples/${{ matrix.example }}
