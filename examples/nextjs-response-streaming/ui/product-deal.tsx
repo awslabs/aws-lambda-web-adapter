@@ -1,5 +1,5 @@
 import { ProductCurrencySymbol } from '@/ui/product-currency-symbol';
-import { toUnit, type Dinero } from 'dinero.js';
+import { toDecimal, type Dinero } from 'dinero.js';
 
 export const ProductDeal = ({
     price: priceRaw,
@@ -10,8 +10,8 @@ export const ProductDeal = ({
         amount: Dinero<number>;
     };
 }) => {
-    const discount = toUnit(discountRaw.amount);
-    const price = toUnit(priceRaw);
+    const discount = Number(toDecimal(discountRaw.amount));
+    const price = Number(toDecimal(priceRaw));
     const percent = Math.round(100 - (discount / price) * 100);
 
     return (
