@@ -1,0 +1,2 @@
+fastmcp>=3.0,<4
+uvicorn
