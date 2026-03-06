@@ -213,6 +213,7 @@ jobs:
           cp /tmp/layer-x86_64/lambda-adapter "$LAYER_DIR/extensions/"
           chmod +x "$LAYER_DIR/bootstrap" "$LAYER_DIR/extensions/lambda-adapter"
           # Add local layer resource and replace remote layer ARN refs
+          pip install pyyaml -q
           python3 << 'PYEOF'
           import yaml
           with open(".aws-sam/build/template.yaml") as f:
