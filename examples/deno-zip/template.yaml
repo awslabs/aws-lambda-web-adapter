@@ -17,7 +17,7 @@ Resources:
     Properties:
       CodeUri: src
       Handler: app
-      Runtime: java11
+      Runtime: java21
       AutoPublishAlias: live
       SnapStart:
         ApplyOn: PublishedVersions
