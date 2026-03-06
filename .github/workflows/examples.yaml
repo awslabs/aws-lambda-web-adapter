@@ -113,7 +113,8 @@ jobs:
 
       - name: Build local adapter image
         run: |
-          printf 'FROM scratch\nCOPY lambda-adapter /lambda-adapter\n' | \
+          chmod +x /tmp/layer-x86_64/lambda-adapter
+          printf 'FROM scratch\nCOPY --chmod=755 lambda-adapter /lambda-adapter\n' | \
             docker build -t public.ecr.aws/awsguru/aws-lambda-adapter:1.0.0-rc1 -f- /tmp/layer-x86_64
 
       - name: Build
@@ -159,7 +160,8 @@ jobs:
 
   # Zip-based examples verified with local layer.
   # Excluded: aspnet-*-zip (hardcode port 8080),
-  # bun/nginx/php-zip (need third-party layers), arm64 examples (javalin, rust-*).
+  # bun/nginx/php-zip (need third-party layers), arm64 examples (javalin, rust-*),
+  # nextjs-zip (Makefile produces a zip artifact incompatible with sam local).
   test-zip:
     needs: [build-layer]
     runs-on: ubuntu-24.04
@@ -173,7 +175,6 @@ jobs:
           - fasthtml-zip
           - flask-zip
           - gin-zip
-          - nextjs-zip
           - remix-zip
           - springboot-zip
     steps:
@@ -188,27 +189,47 @@ jobs:
           use-installer: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: denoland/setup-deno@v2
+        if: matrix.example == 'deno-zip'
+        with:
+          deno-version: v2.x
+
       - uses: actions/download-artifact@v4
         with:
           name: layer-x86_64
           path: /tmp/layer-x86_64
 
-      - name: Prepare local layer
-        run: |
-          LAYER_DIR="/tmp/local-layers/LambdaAdapterLayerX86"
-          mkdir -p "$LAYER_DIR/extensions"
-          cp /tmp/layer-x86_64/bootstrap "$LAYER_DIR/"
-          cp /tmp/layer-x86_64/lambda-adapter "$LAYER_DIR/extensions/"
-          chmod +x "$LAYER_DIR/extensions/lambda-adapter" "$LAYER_DIR/bootstrap"
-
-      - name: Patch template to use local layer
-        working-directory: examples/${{ matrix.example }}
-        run: |
-          sed -i 's|!Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:[0-9]*|/tmp/local-layers/LambdaAdapterLayerX86|' template.yaml
-
       - name: Build
         working-directory: examples/${{ matrix.example }}
         run: sam build
+
+      - name: Inject local layer into build output
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          # Prepare local layer directory with correct structure
+          LAYER_DIR=".aws-sam/build/LocalAdapterLayer"
+          mkdir -p "$LAYER_DIR/extensions"
+          cp /tmp/layer-x86_64/bootstrap "$LAYER_DIR/"
+          cp /tmp/layer-x86_64/lambda-adapter "$LAYER_DIR/extensions/"
+          chmod +x "$LAYER_DIR/bootstrap" "$LAYER_DIR/extensions/lambda-adapter"
+          # Add local layer resource and replace remote layer ARN refs
+          pip install pyyaml -q
+          python3 << 'PYEOF'
+          import yaml
+          with open(".aws-sam/build/template.yaml") as f:
+              t = yaml.safe_load(f)
+          t["Resources"]["LocalAdapterLayer"] = {
+              "Type": "AWS::Lambda::LayerVersion",
+              "Properties": {"Content": "LocalAdapterLayer", "LayerName": "local-adapter"},
+          }
+          for r in t.get("Resources", {}).values():
+              layers = r.get("Properties", {}).get("Layers", [])
+              for i, l in enumerate(layers):
+                  if "LambdaAdapterLayerX86" in str(l):
+                      layers[i] = {"Ref": "LocalAdapterLayer"}
+          with open(".aws-sam/build/template.yaml", "w") as f:
+              yaml.dump(t, f)
+          PYEOF
 
       - name: Start local API and verify
         working-directory: examples/${{ matrix.example }}

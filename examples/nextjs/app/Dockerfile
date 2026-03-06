@@ -5,7 +5,7 @@ RUN npm ci && npm run build
 
 FROM public.ecr.aws/docker/library/node:20.9.0-slim as runner
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.0.0-rc1 /lambda-adapter /opt/extensions/lambda-adapter
-ENV PORT=3000 NODE_ENV=production
+ENV PORT=3000 NODE_ENV=production HOSTNAME=0.0.0.0
 ENV AWS_LWA_ENABLE_COMPRESSION=true
 WORKDIR /app
 COPY --from=builder /app/public ./public

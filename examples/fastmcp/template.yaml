@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  lambda-fastmcp
+
+  Sample SAM Template for lambda-fastmcp
+
+
+Globals:
+  Function:
+    Timeout: 29
+    LoggingConfig:
+      LogFormat: JSON
+      SystemLogLevel: WARN
+
+Resources:
+  MCPServerFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      PackageType: Image
+      Architectures:
+      - x86_64
+      MemorySize: 512
+      Tracing: Active
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref McpHttpApi
+            Path: /{proxy+}
+            Method: ANY
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./my_mcp_server
+      DockerTag: python3.14-v1
+
+  McpHttpApi:
+    Type: AWS::Serverless::HttpApi
+
+Outputs:
+  MCPServerFunction:
+    Description: MCP Server Lambda Function ARN
+    Value: !GetAtt MCPServerFunction.Arn
+  McpApiUrl:
+    Description: MCP API endpoint URL
+    Value: !Sub https://${McpHttpApi}.execute-api.${AWS::Region}.amazonaws.com/mcp
