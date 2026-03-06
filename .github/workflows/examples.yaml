@@ -160,7 +160,8 @@ jobs:
 
   # Zip-based examples verified with local layer.
   # Excluded: aspnet-*-zip (hardcode port 8080),
-  # bun/nginx/php-zip (need third-party layers), arm64 examples (javalin, rust-*).
+  # bun/nginx/php-zip (need third-party layers), arm64 examples (javalin, rust-*),
+  # nextjs-zip (Makefile produces a zip artifact incompatible with sam local).
   test-zip:
     needs: [build-layer]
     runs-on: ubuntu-24.04
@@ -174,7 +175,6 @@ jobs:
           - fasthtml-zip
           - flask-zip
           - gin-zip
-          - nextjs-zip
           - remix-zip
           - springboot-zip
     steps:
