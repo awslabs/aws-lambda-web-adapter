@@ -2,7 +2,7 @@
 
 This example shows how to deploy an ASP.NET application using the Lambda Web Adapter packaged as a ZIP file.
 
-The `dotnet6` runtime is used.
+The `dotnet8` runtime is used.
 
 ```yaml
 Resources:
@@ -28,7 +28,7 @@ Resources:
 
 ## Build & Deploy
 
-Make sure .NET 6 is already installed. Run the following commands on a x86_64 machine. 
+Make sure .NET 8 is already installed. Run the following commands on a x86_64 machine. 
 
 ```shell
 sam build --use-container
