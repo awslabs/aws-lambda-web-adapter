@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -42,7 +41,7 @@ jobs:
       - name: Run benchmarks on PR branch
         run: |
           cargo bench --bench e2e_body_forwarding -- --noplot --save-baseline pr
-          
+
       - name: Checkout main branch
         uses: actions/checkout@v4
         with:
@@ -69,7 +68,7 @@ jobs:
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           critcmp main pr >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          
+
           # Check for regressions > 10% by parsing critcmp output
           # critcmp outputs factors like 1.15x for 15% slower, we check for factors > 1.10
           COMPARISON=$(critcmp main pr --threshold 10 2>&1 || true)
@@ -90,56 +89,18 @@ jobs:
             echo "regression=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Comment on PR
-        uses: actions/github-script@v7
+      - name: Save benchmark results
+        run: |
+          mkdir -p benchmark-results
+          cp $GITHUB_STEP_SUMMARY benchmark-results/summary.md
+          echo "${{ github.event.pull_request.number }}" > benchmark-results/pr_number.txt
+          echo "${{ steps.compare.outputs.regression }}" > benchmark-results/regression.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            const fs = require('fs');
-            const summary = process.env.GITHUB_STEP_SUMMARY;
-            
-            // Read the step summary
-            const summaryContent = fs.readFileSync(summary, 'utf8');
-            
-            const body = `### 📊 Benchmark Comparison
-            
-            ${summaryContent}
-            
-            <details>
-            <summary>Benchmark Details</summary>
-            
-            - Baseline: \`main\` branch
-            - Comparison: This PR
-            - Threshold: 10% regression triggers warning
-            
-            </details>`;
-            
-            // Find existing comment
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && 
-              comment.body.includes('📊 Benchmark Comparison')
-            );
-            
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: body
-              });
-            }
+          name: benchmark-results
+          path: benchmark-results/
 
       - name: Fail if regression detected
         if: steps.compare.outputs.regression == 'true'
