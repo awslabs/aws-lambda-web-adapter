@@ -27,4 +27,53 @@ jobs:
         run: npm install --save-dev @commitlint/{cli,config-conventional}
 
       - name: Lint commits
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+        id: lint
+        run: |
+          npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose 2>&1 | tee commitlint-output.txt
+        continue-on-error: true
+
+      - name: Show help on failure
+        if: steps.lint.outcome == 'failure'
+        run: |
+          echo ""
+          echo "============================================"
+          echo " ❌  Commit message lint failed"
+          echo "============================================"
+          echo ""
+          echo "One or more commit messages in this PR don't follow the"
+          echo "Conventional Commits format required by this project."
+          echo ""
+          echo "Required format:"
+          echo ""
+          echo "  <type>: <description>     (max 120 chars for the full header)"
+          echo ""
+          echo "Allowed types:"
+          echo "  feat, fix, docs, example, examples, chore,"
+          echo "  refactor, perf, test, ci, revert"
+          echo ""
+          echo "Examples:"
+          echo "  feat: add support for streaming responses"
+          echo "  fix: resolve timeout on large payloads"
+          echo "  docs: update configuration guide"
+          echo "  chore: bump dependency versions"
+          echo "  refactor: simplify request routing logic"
+          echo ""
+          echo "Optional body/footer (no line-length limit):"
+          echo ""
+          echo "  feat: add retry logic for failed requests"
+          echo "  "
+          echo "  Adds exponential backoff with jitter when upstream"
+          echo "  returns 5xx. Configurable via RETRY_COUNT env var."
+          echo "  "
+          echo "  Closes #142"
+          echo ""
+          echo "Tip: To fix the most recent commit message, run:"
+          echo "  git commit --amend"
+          echo ""
+          echo "To reword older commits in this PR, use interactive rebase:"
+          echo "  git rebase -i origin/main"
+          echo ""
+          echo "For the full spec, see: https://www.conventionalcommits.org"
+          echo "============================================"
+          echo ""
+          exit 1
