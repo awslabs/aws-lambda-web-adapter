@@ -952,7 +952,7 @@ impl Adapter<HttpConnector, Body> {
 
         let mut app_url = self.domain.clone();
         app_url.set_path(path);
-        app_url.set_query(parts.uri.query());
+        app_url.set_query(parts.uri.query().filter(|q| !q.is_empty()));
 
         tracing::debug!(app_url = %app_url, req_headers = ?req_headers, "sending request to app server");
 
