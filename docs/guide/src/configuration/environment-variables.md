@@ -32,6 +32,5 @@ The following non-namespaced variables are deprecated and will be removed in v2.
 | `READINESS_CHECK_PROTOCOL` | `AWS_LWA_READINESS_CHECK_PROTOCOL` |
 | `REMOVE_BASE_PATH` | `AWS_LWA_REMOVE_BASE_PATH` |
 | `ASYNC_INIT` | `AWS_LWA_ASYNC_INIT` |
-| `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` | `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` |
 
 > `PORT` is **not** deprecated and remains a supported fallback for `AWS_LWA_PORT`.

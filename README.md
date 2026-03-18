@@ -71,7 +71,6 @@ The readiness check port/path and traffic port can be configured using environme
 > `HOST`, `READINESS_CHECK_PORT`, `READINESS_CHECK_PATH`, `READINESS_CHECK_PROTOCOL`, `REMOVE_BASE_PATH`, `ASYNC_INIT`.
 > Please migrate to the `AWS_LWA_` prefixed versions. Note: `PORT` is not deprecated and remains a supported fallback for `AWS_LWA_PORT`.
 >
-> Additionally, `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` is deprecated. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` instead.
 
 👉 [Detailed configuration docs](https://awslabs.github.io/aws-lambda-web-adapter/configuration/environment-variables.html)
 
