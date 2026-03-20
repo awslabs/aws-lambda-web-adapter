@@ -14,3 +14,11 @@ preferred-dark-theme = "navy"
 git-repository-url = "https://github.com/awslabs/aws-lambda-web-adapter"
 git-repository-icon = "fa-github"
 site-url = "/aws-lambda-web-adapter/"
+additional-css = ["theme/custom.css"]
+additional-js = []
+no-section-label = false
+cname = ""
+
+[output.html.fold]
+enable = true
+level = 1

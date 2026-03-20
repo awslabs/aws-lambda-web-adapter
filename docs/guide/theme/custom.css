@@ -1,0 +1,229 @@
+/* AWS Lambda Web Adapter — mdBook custom theme */
+
+/* ── Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --aws-orange: #ff9900;
+    --aws-orange-dark: #ec7211;
+    --aws-squid-ink: #232f3e;
+    --aws-smile: #ff9900;
+}
+
+/* ── Light theme ── */
+.light {
+    --bg: #ffffff;
+    --fg: #1a1a2e;
+    --sidebar-bg: #f8f9fb;
+    --sidebar-fg: #333;
+    --sidebar-active: var(--aws-orange-dark);
+    --links: #0073bb;
+    --inline-code-color: #c7254e;
+    --theme-popup-bg: #fafafa;
+    --search-mark-bg: #fff3cd;
+}
+
+/* ── Navy (dark) theme ── */
+.navy {
+    --bg: #161923;
+    --fg: #d4d4d8;
+    --sidebar-bg: #1a1f2e;
+    --sidebar-fg: #b0b8c8;
+    --sidebar-active: var(--aws-orange);
+    --links: #59b0f0;
+    --inline-code-color: #f0a8c0;
+    --theme-popup-bg: #1e2433;
+    --search-mark-bg: #4a3f00;
+}
+
+/* ── Global typography ── */
+body, .sidebar, .content, .menu-title {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+code, pre, .hljs {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.875em;
+}
+
+.content main {
+    max-width: 52rem;
+    line-height: 1.75;
+}
+
+.content main h1 { font-size: 2em; font-weight: 700; margin-top: 0; }
+.content main h2 { font-size: 1.5em; font-weight: 600; margin-top: 2.5rem; padding-bottom: 0.3rem; border-bottom: 2px solid var(--aws-orange); }
+.content main h3 { font-size: 1.2em; font-weight: 600; margin-top: 1.8rem; }
+
+/* ── Sidebar ── */
+.sidebar {
+    font-size: 0.9rem;
+    padding-top: 1rem;
+}
+
+.sidebar .sidebar-scrollbox {
+    padding: 0 1.2rem;
+}
+
+.sidebar ol.chapter li a {
+    padding: 6px 0;
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+
+.sidebar ol.chapter li a:hover {
+    color: var(--sidebar-active);
+}
+
+.sidebar ol.chapter li.chapter-item.expanded a,
+.sidebar ol.chapter li a.active {
+    color: var(--sidebar-active);
+    font-weight: 600;
+}
+
+/* Sidebar section headers */
+.sidebar .chapter li.part-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--aws-orange-dark);
+    margin-top: 1.2rem;
+    padding-bottom: 0.2rem;
+}
+
+.navy .sidebar .chapter li.part-title {
+    color: var(--aws-orange);
+}
+
+/* ── Code blocks ── */
+pre {
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    border: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.light pre {
+    background: #f6f8fa;
+}
+
+.navy pre {
+    background: #0d1117;
+}
+
+code:not(pre > code) {
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+}
+
+.light code:not(pre > code) {
+    background: #f0f2f5;
+}
+
+.navy code:not(pre > code) {
+    background: #252b38;
+}
+
+/* ── Tables ── */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.2rem 0;
+    font-size: 0.92em;
+}
+
+table thead th {
+    background: var(--aws-squid-ink);
+    color: #fff;
+    font-weight: 600;
+    padding: 0.65rem 0.9rem;
+    text-align: left;
+}
+
+.navy table thead th {
+    background: #252d3d;
+}
+
+table tbody td {
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+table tbody tr:hover {
+    background: rgba(255, 153, 0, 0.04);
+}
+
+/* ── Blockquotes (used for admonitions) ── */
+blockquote {
+    border-left: 4px solid var(--aws-orange);
+    background: rgba(255, 153, 0, 0.06);
+    border-radius: 0 6px 6px 0;
+    padding: 0.8rem 1.2rem;
+    margin: 1.2rem 0;
+}
+
+blockquote p:first-child strong {
+    color: var(--aws-orange-dark);
+}
+
+.navy blockquote p:first-child strong {
+    color: var(--aws-orange);
+}
+
+/* ── Links ── */
+.content a {
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s;
+}
+
+.content a:hover {
+    border-bottom-color: var(--links);
+}
+
+/* ── Navigation buttons ── */
+.nav-chapters {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+
+.nav-chapters:hover {
+    opacity: 1;
+    color: var(--aws-orange);
+}
+
+/* ── Menu bar ── */
+.menu-bar {
+    border-bottom: 1px solid rgba(128, 128, 128, 0.12);
+}
+
+.menu-bar .menu-title {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+/* ── Scrollbar (webkit) ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.5); }
+
+/* ── Images ── */
+.content main img {
+    border-radius: 8px;
+    margin: 1rem 0;
+    max-width: 100%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.navy .content main img {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Print tweaks ── */
+@media print {
+    .content main h2 { border-bottom-color: #ccc; }
+    table thead th { background: #eee; color: #000; }
+}
