@@ -20,6 +20,7 @@ exclude = ["examples"]
 bytes = "1.9.0"
 http = "1.2.0"
 http-body = "1.0.1"
+http-body-util = "0.1.0"
 hyper = { version = "1.5.2", features = ["client"] }
 hyper-util = "0.1.10"
 lambda_http = { version = "1.1.1", default-features = false, features = [
@@ -51,7 +52,6 @@ url = "2.5.4"
 [dev-dependencies]
 flate2 = "1.0.25"
 httpmock = "0.8.2"
-http-body-util = "0.1.0"
 http-body = "1.0"
 hyper-rustls = "0.27"
 aws-sigv4 = "1.2.3"

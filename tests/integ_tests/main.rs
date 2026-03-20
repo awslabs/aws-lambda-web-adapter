@@ -740,7 +740,9 @@ async fn test_http_error_status_codes() {
 
     let result = adapter.call(request).await;
     assert!(result.is_err(), "Expected error response for status code 502");
-    assert!(result.unwrap_err().to_string().contains("502"));
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("502"), "Error should contain status code");
+    assert!(err_msg.contains("Bad Gateway"), "Error should preserve response body");
 
     // Assert endpoint was called
     error_endpoint.assert();

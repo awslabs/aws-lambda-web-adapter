@@ -97,6 +97,7 @@ use http::{
     Method, StatusCode,
 };
 use http_body::Body as HttpBody;
+use http_body_util::BodyExt;
 use hyper::body::Incoming;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::client::legacy::Client;
@@ -952,9 +953,17 @@ impl Adapter<HttpConnector, Body> {
         if let Some(error_codes) = &self.error_status_codes {
             let status = app_response.status().as_u16();
             if error_codes.contains(&status) {
+                let body_bytes = app_response
+                    .into_body()
+                    .collect()
+                    .await
+                    .map(|c| c.to_bytes())
+                    .unwrap_or_default();
+                let body_str = String::from_utf8_lossy(&body_bytes);
                 return Err(Error::from(format!(
-                    "Request failed with configured error status code: {}",
-                    status
+                    "{{\"statusCode\":{},\"body\":{}}}",
+                    status,
+                    serde_json::to_string(&*body_str).unwrap_or_else(|_| format!("\"{}\"", body_str))
                 )));
             }
         }
