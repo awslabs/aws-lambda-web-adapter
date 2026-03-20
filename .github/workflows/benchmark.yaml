@@ -90,6 +90,7 @@ jobs:
           fi
 
       - name: Save benchmark results
+        if: always()
         run: |
           mkdir -p benchmark-results
           cp $GITHUB_STEP_SUMMARY benchmark-results/summary.md
@@ -97,6 +98,7 @@ jobs:
           echo "${{ steps.compare.outputs.regression }}" > benchmark-results/regression.txt
 
       - name: Upload benchmark results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
