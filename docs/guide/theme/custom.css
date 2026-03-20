@@ -69,6 +69,7 @@ code, pre, .hljs {
     padding: 6px 0;
     border-radius: 4px;
     transition: color 0.15s;
+    font-size: 1rem;
 }
 
 .sidebar ol.chapter li a:hover {
