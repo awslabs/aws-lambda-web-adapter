@@ -69,7 +69,6 @@ fn test_adapter_options_from_namespaced_env() {
     env::set_var("AWS_LWA_ENABLE_COMPRESSION", "true");
     env::set_var("AWS_LWA_INVOKE_MODE", "response_stream");
     env::set_var("AWS_LWA_AUTHORIZATION_SOURCE", "auth-token");
-    env::remove_var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS");
 
     // Initialize adapter with env options
     let options = AdapterOptions::default();
@@ -964,7 +963,6 @@ fn test_deprecated_env_var_fallback() {
     env::remove_var("AWS_LWA_INVOKE_MODE");
     env::remove_var("AWS_LWA_AUTHORIZATION_SOURCE");
     env::remove_var("AWS_LWA_READINESS_CHECK_HEALTHY_STATUS");
-    env::remove_var("AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS");
 
     // Set only deprecated (non-prefixed) env vars
     env::set_var("PORT", "4000");

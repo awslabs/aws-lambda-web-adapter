@@ -71,7 +71,6 @@ const ENV_READINESS_CHECK_PORT: &str = "AWS_LWA_READINESS_CHECK_PORT";
 const ENV_READINESS_CHECK_PATH: &str = "AWS_LWA_READINESS_CHECK_PATH";
 const ENV_READINESS_CHECK_PROTOCOL: &str = "AWS_LWA_READINESS_CHECK_PROTOCOL";
 const ENV_READINESS_CHECK_HEALTHY_STATUS: &str = "AWS_LWA_READINESS_CHECK_HEALTHY_STATUS";
-const ENV_READINESS_CHECK_MIN_UNHEALTHY_STATUS: &str = "AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS";
 const ENV_REMOVE_BASE_PATH: &str = "AWS_LWA_REMOVE_BASE_PATH";
 const ENV_PASS_THROUGH_PATH: &str = "AWS_LWA_PASS_THROUGH_PATH";
 const ENV_ASYNC_INIT: &str = "AWS_LWA_ASYNC_INIT";
@@ -281,12 +280,6 @@ pub struct AdapterOptions {
     /// Default: [`Protocol::Http`]
     pub readiness_check_protocol: Protocol,
 
-    /// Deprecated: Use `readiness_check_healthy_status` instead.
-    ///
-    /// Minimum HTTP status code considered unhealthy.
-    #[deprecated(since = "1.0.0", note = "Use readiness_check_healthy_status instead")]
-    pub readiness_check_min_unhealthy_status: u16,
-
     /// List of HTTP status codes considered healthy for readiness checks.
     ///
     /// Can be configured via `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` using:
@@ -382,35 +375,18 @@ fn get_optional_env_with_deprecation(new_name: &str, old_name: &str) -> Option<S
 }
 
 impl Default for AdapterOptions {
-    #[allow(deprecated)]
     fn default() -> Self {
         let port = env::var(ENV_PORT)
             .or_else(|_| env::var(ENV_PORT_DEPRECATED))
             .unwrap_or_else(|_| "8080".to_string());
 
         // Handle readiness check healthy status codes
-        // New env var takes precedence, then fall back to deprecated min_unhealthy_status
         let readiness_check_healthy_status = if let Ok(val) = env::var(ENV_READINESS_CHECK_HEALTHY_STATUS) {
             parse_status_codes(&val)
-        } else if let Ok(val) = env::var(ENV_READINESS_CHECK_MIN_UNHEALTHY_STATUS) {
-            tracing::warn!(
-                "Environment variable '{}' is deprecated. \
-                Please use '{}' instead (e.g., '100-499').",
-                ENV_READINESS_CHECK_MIN_UNHEALTHY_STATUS,
-                ENV_READINESS_CHECK_HEALTHY_STATUS
-            );
-            let min_unhealthy: u16 = val.parse().unwrap_or(500);
-            (100..min_unhealthy).collect()
         } else {
-            // Default: 100-499 (same as previous default of min_unhealthy=500)
+            // Default: 100-499
             (100..500).collect()
         };
-
-        // For backward compatibility, also set the deprecated field
-        let readiness_check_min_unhealthy_status = env::var(ENV_READINESS_CHECK_MIN_UNHEALTHY_STATUS)
-            .unwrap_or_else(|_| "500".to_string())
-            .parse()
-            .unwrap_or(500);
 
         AdapterOptions {
             host: get_env_with_deprecation(ENV_HOST, ENV_HOST_DEPRECATED, "127.0.0.1"),
@@ -420,7 +396,6 @@ impl Default for AdapterOptions {
                 ENV_READINESS_CHECK_PORT_DEPRECATED,
                 &port,
             ),
-            readiness_check_min_unhealthy_status,
             readiness_check_healthy_status,
             readiness_check_path: get_env_with_deprecation(
                 ENV_READINESS_CHECK_PATH,
@@ -1106,13 +1081,11 @@ mod tests {
         });
 
         // Prepare adapter configuration - only 200-399 are healthy
-        #[allow(deprecated)]
         let options = AdapterOptions {
             host: app_server.host(),
             port: app_server.port().to_string(),
             readiness_check_port: app_server.port().to_string(),
             readiness_check_path: "/healthcheck".to_string(),
-            readiness_check_min_unhealthy_status: 400,
             readiness_check_healthy_status: (200..400).collect(),
             ..Default::default()
         };
@@ -1137,7 +1110,6 @@ mod tests {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
 
-        #[allow(deprecated)]
         let options = AdapterOptions {
             host: "127.0.0.1".to_string(),
             port: port.to_string(),
@@ -1158,7 +1130,6 @@ mod tests {
     #[tokio::test]
     async fn test_tcp_readiness_check_failure() {
         // Use a port that nothing is listening on
-        #[allow(deprecated)]
         let options = AdapterOptions {
             host: "127.0.0.1".to_string(),
             port: "19999".to_string(),
@@ -1203,7 +1174,6 @@ mod tests {
 
     #[test]
     fn test_adapter_new_invalid_host() {
-        #[allow(deprecated)]
         let options = AdapterOptions {
             host: "invalid host with spaces".to_string(),
             port: "8080".to_string(),
@@ -1218,7 +1188,6 @@ mod tests {
 
     #[test]
     fn test_adapter_new_valid_config() {
-        #[allow(deprecated)]
         let options = AdapterOptions {
             host: "127.0.0.1".to_string(),
             port: "3000".to_string(),
@@ -1273,7 +1242,6 @@ mod tests {
 
     #[test]
     fn test_compression_disabled_with_response_stream() {
-        #[allow(deprecated)]
         let options = AdapterOptions {
             compression: true,
             invoke_mode: LambdaInvokeMode::ResponseStream,
@@ -1289,7 +1257,6 @@ mod tests {
 
     #[test]
     fn test_compression_enabled_with_buffered() {
-        #[allow(deprecated)]
         let options = AdapterOptions {
             compression: true,
             invoke_mode: LambdaInvokeMode::Buffered,

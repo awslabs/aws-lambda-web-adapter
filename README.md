@@ -71,7 +71,7 @@ The readiness check port/path and traffic port can be configured using environme
 > `HOST`, `READINESS_CHECK_PORT`, `READINESS_CHECK_PATH`, `READINESS_CHECK_PROTOCOL`, `REMOVE_BASE_PATH`, `ASYNC_INIT`.
 > Please migrate to the `AWS_LWA_` prefixed versions. Note: `PORT` is not deprecated and remains a supported fallback for `AWS_LWA_PORT`.
 >
-> Additionally, `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` is deprecated. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` instead.
+> Additionally, `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` has been removed in 1.0. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` instead.
 
 👉 [Detailed configuration docs](https://awslabs.github.io/aws-lambda-web-adapter/configuration/environment-variables.html)
 
@@ -128,6 +128,34 @@ This project was inspired by several community projects.
 - [re:Web](https://github.com/apparentorder/reweb)
 - [Serverlessish](https://github.com/glassechidna/serverlessish)
 
+## Migrating from 0.x to 1.0
+
+### Environment Variables
+
+All environment variables now use the `AWS_LWA_` prefix. The old non-prefixed names still work but are deprecated and will be removed in version 2.0.
+
+| Old (Deprecated)             | New                                        |
+|------------------------------|--------------------------------------------|
+| `READINESS_CHECK_PORT`       | `AWS_LWA_READINESS_CHECK_PORT`             |
+| `READINESS_CHECK_PATH`       | `AWS_LWA_READINESS_CHECK_PATH`             |
+| `READINESS_CHECK_PROTOCOL`   | `AWS_LWA_READINESS_CHECK_PROTOCOL`         |
+| `REMOVE_BASE_PATH`           | `AWS_LWA_REMOVE_BASE_PATH`                 |
+| `ASYNC_INIT`                 | `AWS_LWA_ASYNC_INIT`                       |
+
+> **Note:** `PORT` is **not** deprecated and remains a supported fallback for `AWS_LWA_PORT`.
+
+### Readiness Check Health Status
+
+`AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` has been removed. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` instead, which accepts comma-separated codes and ranges:
+
+```bash
+# Old
+AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS=400
+
+# New (equivalent)
+AWS_LWA_READINESS_CHECK_HEALTHY_STATUS=100-399
+```
+
 ## Similar Projects
 
 Several projects also provide similar capabilities as language specific packages/frameworks.
@@ -140,7 +168,7 @@ Several projects also provide similar capabilities as language specific packages
 
 ## Security
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+See [SECURITY](SECURITY.md) for vulnerability reporting and [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 ## License
 

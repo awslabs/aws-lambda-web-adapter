@@ -8,8 +8,8 @@ AWS Lambda executes functions in x86_64 Amazon Linux Environment. We need to com
 First, clone this repo to your local computer.
 
 ```shell
-$ git clone https://github.com/aws-samples/aws-lambda-adapter.git
-$ cd aws-lambda-adapter
+$ git clone https://github.com/awslabs/aws-lambda-web-adapter.git
+$ cd aws-lambda-web-adapter
 ```
 
 ### Compiling with Docker
