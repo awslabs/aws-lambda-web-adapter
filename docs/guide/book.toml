@@ -3,7 +3,7 @@ authors = ["AWS Lambda Web Adapter Contributors"]
 language = "en"
 multilingual = false
 src = "src"
-title = "AWS Lambda Web Adapter User Guide"
+title = "AWS Lambda Web Adapter"
 
 [build]
 build-dir = "../../docs-site"
