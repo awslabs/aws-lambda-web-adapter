@@ -69,7 +69,7 @@ code, pre, .hljs {
     padding: 6px 0;
     border-radius: 4px;
     transition: color 0.15s;
-    font-size: 1rem;
+    font-size: 1.3rem;
 }
 
 .sidebar ol.chapter li a:hover {
@@ -84,7 +84,7 @@ code, pre, .hljs {
 
 /* Sidebar section headers */
 .sidebar .chapter li.part-title {
-    font-size: 0.75rem;
+    font-size: 1.4rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
