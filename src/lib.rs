@@ -520,8 +520,12 @@ impl Adapter<HttpConnector, Body> {
     /// Creates a new HTTP Adapter instance.
     ///
     /// This function initializes a new HTTP client configured to communicate with
-    /// your web application. The client uses connection pooling with a 4-second
-    /// idle timeout for optimal Lambda performance.
+    /// your web application. When Lambda SnapStart is detected
+    /// (`AWS_LAMBDA_INITIALIZATION_TYPE=snap-start`), connection pooling is
+    /// disabled to prevent stale connections after restore, where
+    /// `CLOCK_MONOTONIC` inconsistencies can cause hyper's pool to reuse dead
+    /// connections. Otherwise, a 4-second idle timeout is used for connection
+    /// pooling.
     ///
     /// # Arguments
     ///
@@ -546,9 +550,19 @@ impl Adapter<HttpConnector, Body> {
     /// let adapter = Adapter::new(&options).expect("Failed to create adapter");
     /// ```
     pub fn new(options: &AdapterOptions) -> Result<Adapter<HttpConnector, Body>, Error> {
-        let client = Client::builder(hyper_util::rt::TokioExecutor::new())
-            .pool_idle_timeout(Duration::from_secs(4))
-            .build(HttpConnector::new());
+        let mut builder = Client::builder(hyper_util::rt::TokioExecutor::new());
+
+        // When running under SnapStart, CLOCK_MONOTONIC can be inconsistent after
+        // restore, causing hyper's pool to reuse dead connections (hyper#3810,
+        // rust-lang/rust#79462). Disable pooling in that case. For localhost
+        // communication the overhead of new TCP connections is negligible.
+        if env::var("AWS_LAMBDA_INITIALIZATION_TYPE").as_deref() == Ok("snap-start") {
+            builder.pool_max_idle_per_host(0);
+        } else {
+            builder.pool_idle_timeout(Duration::from_secs(4));
+        }
+
+        let client = builder.build(HttpConnector::new());
 
         let schema = "http";
 
