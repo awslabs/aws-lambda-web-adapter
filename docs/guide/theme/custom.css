@@ -47,7 +47,7 @@ code, pre, .hljs {
 }
 
 .content main {
-    max-width: 52rem;
+    max-width: 90%;
     line-height: 1.75;
 }
 
@@ -57,7 +57,7 @@ code, pre, .hljs {
 
 /* ── Sidebar ── */
 .sidebar {
-    font-size: 0.9rem;
+    font-size: 1rem;
     padding-top: 1rem;
 }
 
