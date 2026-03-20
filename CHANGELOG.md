@@ -1,3 +1,143 @@
+## v1.0.0 - 2026-03-20
+
+### Major Updates
+
+This is the first GA release of AWS Lambda Web Adapter. It includes multi-tenancy support, Lambda Managed Instances, improved error handling, zero-copy body conversion, comprehensive documentation, and a migration path from 0.x.
+
+### Breaking Changes
+
+- Removed `AWS_LWA_READINESS_CHECK_MIN_UNHEALTHY_STATUS` and the `readiness_check_min_unhealthy_status` field. Use `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` / `readiness_check_healthy_status` instead.
+- Non-prefixed environment variables (`HOST`, `READINESS_CHECK_PORT`, etc.) are deprecated and will be removed in 2.0. Use `AWS_LWA_` prefixed versions.
+
+### Features
+
+- **Multi-tenancy support**: Propagate `tenant_id` from Lambda context as `x-amz-tenant-id` header (#631)
+- **Lambda Managed Instances**: Support concurrent request handling in a single execution environment (#625)
+- **Error status codes**: New `AWS_LWA_ERROR_STATUS_CODES` env var to treat specific HTTP status codes as Lambda failures (#558)
+- **Runtime API proxy**: New `AWS_LWA_LAMBDA_RUNTIME_API_PROXY` env var to proxy Lambda runtime API calls (#588)
+- **Healthy status ranges**: New `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` supporting comma-separated codes and ranges (e.g., `200-399,404`) (#638)
+
+### Performance
+
+- Zero-copy body conversion — avoid unnecessary allocations when forwarding request bodies (#627)
+- Add `panic=abort` and `opt-level=s` to release profile for smaller binary size (#646)
+
+### Bug Fixes
+
+- Don't append trailing `?` when query string is empty (#657)
+- Fix `path_through_path` renamed to `pass_through_path` (#619)
+- Override user-set `x-amzn-{lambda,request}-context` headers to prevent spoofing (#286)
+- Remove `transfer-encoding` header from responses for SAM local compatibility (#442)
+- Warn when configured `authorization_source` header is not found in request (#479)
+
+### Documentation
+
+- Comprehensive rustdoc documentation for all public types and methods
+- Added migration guide for 0.x to 1.0 upgrade
+- Added SECURITY.md
+- Added user guide with GitHub Pages deployment (#639)
+
+### CI/CD
+
+- Split pipeline into separate PR, Merge, and Release workflows (#642)
+- Add conventional commits changelog generation and commit linting (#641)
+- Add workflow to verify examples without deployment (#643)
+- Daily security audit via `rustsec/audit-check` (#391)
+- Benchmark tracking with PR comments
+
+---
+
+## v0.9.1 - 2025-04-23
+
+### Features
+
+- Add `AWS_LWA_LAMBDA_RUNTIME_API_PROXY` to overwrite Lambda Runtime API endpoint (#588)
+
+### Examples
+
+- Bun server with GraphQL examples (#584)
+
+---
+
+## v0.9.0 - 2025-01-10
+
+### Features
+
+- Force Lambda failure on configurable HTTP error status codes (#558)
+- Streaming API backend-only example (#543)
+
+### Examples
+
+- SvelteKit SSR zip example (#561)
+- Remix examples (#524)
+- FastHTML examples (#496)
+
+### Improvements
+
+- Simplify debug logging for app readiness checks (#520)
+- Read AWS region from env var (#518)
+
+---
+
+## v0.8.4 - 2024-07-27
+
+### Features
+
+- Add `authorization_source` feature to copy custom header to `Authorization` (#478)
+- Warn when configured authorization source header not found (#479)
+
+---
+
+## v0.8.3 - 2024-04-21
+
+### Bug Fixes
+
+- Remove `transfer-encoding` header from responses (#442)
+
+### Examples
+
+- Javalin 6 example using Arm64 image (#425)
+- NestJS example (#394)
+- FastAPI Background Tasks example (#408)
+- FastAPI response streaming with Claude3 refactor (#416)
+
+---
+
+## v0.8.2 - 2024-04-10
+
+### Improvements
+
+- Add daily security audit (#391)
+- Upgrade lambda-http crate to 0.9.3 (#390)
+
+### Examples
+
+- Go HTTP example (#383)
+- Sinatra example (#365)
+
+---
+
+## v0.8.1 - 2024-01-24
+
+### Bug Fixes
+
+- Minor fixes and dependency updates
+
+---
+
+## v0.8.0 - 2024-01-22
+
+### Features
+
+- Pass-through events support for non-HTTP triggers (#342)
+- Adopt `cargo-lambda` for builds (#337)
+
+### Examples
+
+- SQS + Express.js example (#347, #348)
+
+---
+
 ## v0.7.1 - 2023-08-18
 # Major Updates
 
