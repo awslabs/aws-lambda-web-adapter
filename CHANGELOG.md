@@ -5,10 +5,11 @@
 - Add SnapStart support. The adapter notifies your web application at the SnapStart
   boundary via two opt-in HTTP hooks — `AWS_LWA_SNAPSTART_BEFORE_CHECKPOINT_PATH`
   (before checkpoint) and `AWS_LWA_SNAPSTART_AFTER_RESTORE_PATH` (after restore) —
-  so it can drain and re-establish connections. Each hook call is bounded by a
-  60-second timeout. After restore the adapter refreshes its own HTTP client and
-  re-runs the readiness check before admitting traffic, and it rejects external
-  traffic to the hook paths with 403.
+  so it can drain and re-establish connections. A non-2xx response or a connection
+  failure fails the corresponding SnapStart phase; the adapter sets no deadline of its
+  own, and the after-restore hook must complete within your function timeout. After
+  restore the adapter refreshes its own HTTP client and re-runs the readiness check
+  before admitting traffic, and it rejects external traffic to the hook paths with 403.
   - The crate now stops publishing to crates.io (`publish = false`): Lambda Web
     Adapter ships as the `lambda-adapter` binary (a Lambda layer / copied
     extension), not as a library, so the `lib` target has no external
