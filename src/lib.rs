@@ -583,38 +583,23 @@ fn percent_decode_once(input: &str) -> Option<String> {
 /// Canonicalize a path into a list of lowercased segments for the strict SnapStart
 /// hook guard.
 ///
-/// "Strict" means the blocked equivalence class is deliberately wide, NOT that every
-/// input is blocked on doubt. The two halves differ and the difference is
-/// load-bearing: the **configured** side fails closed (an unguardable hook path is
-/// rejected at startup by [`hook_target`]), while the **request** side fails open (an
-/// undecidable request path is forwarded, not 403'd). See the `None` discussion below
-/// for why forwarding is safe — do not "tighten" it into a 403 without reading it.
+/// "Strict" means the blocked equivalence class is deliberately wide, not that doubtful
+/// input is blocked. The two halves differ deliberately: the **configured** side fails
+/// closed ([`hook_target`] rejects an unguardable path at startup), the **request** side
+/// fails open (an undecidable path is forwarded, not 403'd). Don't "tighten" the request
+/// side without reading the `None` note below.
 ///
-/// The guard must block *every* spelling that the downstream app router would
-/// resolve to the configured hook route, so this over-approximates: it
-/// percent-decodes (a single pass, matching the router), splits on `/`,
-/// drops empty segments (collapsing `//`, leading/trailing slashes), resolves
-/// `.`/`..`, and lowercases each segment.
+/// To block every spelling the app router would resolve to the hook, this
+/// over-approximates: single-pass percent-decode (matching the router), split on `/`,
+/// drop empty segments, resolve `.`/`..`, lowercase. `%2f` decodes before splitting, so
+/// `/snapstart/%2fafter` collapses onto the hook route.
 ///
-/// An encoded slash (`%2f`) is decoded to a literal `/` *before* splitting, so a
-/// spelling like `/snapstart/%2fafter` collapses onto the same segment list as
-/// the hook route and is caught — while a genuinely distinct route that merely
-/// contains `%2f` produces a different segment list and is left alone. This keeps
-/// the strictness targeted: it only bites paths that canonicalize onto the hook.
+/// Returns `None` only for a malformed `%` escape or non-UTF-8 after decoding. A
+/// control byte is not undecidable — it is stripped, which *widens* the blocked class
+/// (`/snapstart/after%0A` is blocked, since a router may resolve it to the hook).
 ///
-/// Returns `None` only for two genuinely undecidable inputs: a malformed `%` escape,
-/// or a byte sequence that is not UTF-8 once decoded. A control/null byte is *not*
-/// undecidable — it is stripped before canonicalization, which *widens* the blocked
-/// equivalence class (`/snapstart/af%00ter` and `/snapstart/after%0A` canonicalize
-/// onto the hook route and are blocked), because a router can still resolve such a
-/// path to the hook: Python's `$` matches before a trailing newline.
-///
-/// [`matches_hook_path`] treats a `None` **request** path as *not the hook* and
-/// passes it through (see `matches_hook_path` and
-/// `test_matches_hook_path_undecidable_passes_through`); that is safe because
-/// [`hook_target`] guarantees no hook route contains a literal `%`. A `None` on the
-/// **configured** side is rejected outright by [`hook_target`], failing
-/// initialization rather than leaving the route partially guarded.
+/// Forwarding a `None` request path is safe because [`hook_target`] guarantees no hook
+/// route contains a literal `%`, so an undecidable path can never equal one.
 fn canonicalize_hook_path(path: &str) -> Option<Vec<String>> {
     // Percent-decode a SINGLE pass, mirroring what the downstream app router
     // does. A router decodes exactly once, so `/snapstart/%61fter` reaches the
@@ -678,29 +663,22 @@ fn non_empty(value: &Option<String>) -> Option<String> {
 /// * `Ok(None)` — no hook configured (unset, or set to the empty string).
 /// * `Ok(Some(segments))` — the normal case: the post-`set_path` route
 ///   canonicalized (percent-decode, collapse `//`/`.`/`..`, case-fold).
-/// * `Err(_)` — the route cannot be guarded exactly. Three cases, all always a
-///   misconfiguration of a control-plane path, and all rejected rather than
-///   downgraded to a weaker guard or to no guard at all (the app still *serves*
-///   such a route, so anything less leaves a state-mutating route reachable):
-///   1. It could not be canonicalized at all (a malformed `%` escape, or non-UTF-8
-///      after decoding).
-///   2. Its canonical form contains a literal `%`. This is what makes
-///      [`matches_hook_path`]'s pass-through of an undecidable *request* path safe
-///      on every framework, without modelling per-framework decoding: an
-///      undecidable request path is either rejected by the router outright (Node
-///      throws `URIError`, so Express answers 400; Go and Spring likewise 400) or
-///      decoded leniently into a path containing a literal `%` or U+FFFD (Python's
-///      `unquote`) — and neither can equal a `%`-free hook route.
-///   3. It collapses to the app root (`/`, `//`, `/..`, `/.`, `/foo/..`, `/%2f`, …).
-///      Guarding the root would 403 all normal traffic, so the guard cannot cover
-///      it — and `SnapStartHooks::post_hook` would still POST to `/` on every
-///      lifecycle event, which is a 405 on an app that does not handle `POST /`
-///      and fails the phase. A hook path must be one "your normal application
-///      traffic does not use", which the root never is.
+/// * `Err(_)` — the route cannot be guarded exactly. All three cases are
+///   misconfigurations of a control-plane path, and all are rejected rather than
+///   downgraded: the app still serves the route, so a weaker guard leaves a
+///   state-mutating route reachable.
+///   1. Not canonicalizable (malformed `%` escape, or non-UTF-8 after decoding).
+///   2. Canonical form contains a literal `%`. This is what makes the request side's
+///      pass-through safe on any framework without modelling per-framework decoding:
+///      an undecidable request path is either rejected by the router (Node throws
+///      `URIError`, so Express 400s; Go and Spring likewise) or decoded leniently to
+///      something containing `%` or U+FFFD — neither can equal a `%`-free route.
+///   3. Collapses to the app root (`/`, `//`, `/..`, `/%2f`, …). Guarding the root
+///      would 403 all normal traffic, and the hook would still POST to `/` on every
+///      lifecycle event — a 405 on any app that doesn't handle `POST /`.
 ///
 /// `Adapter::new` propagates the error, failing initialization with an actionable
-/// message rather than starting up with the hook route reachable or with a hook
-/// that fails every restore.
+/// message.
 fn hook_target(domain: &Url, configured: &Option<String>) -> Result<Option<Vec<String>>, Error> {
     let Some(configured) = configured.as_deref() else {
         return Ok(None);
@@ -714,14 +692,10 @@ fn hook_target(domain: &Url, configured: &Option<String>) -> Result<Option<Vec<S
     u.set_path(configured);
     let outbound = u.path().to_string();
     match canonicalize_hook_path(&outbound) {
-        // A configured path that canonicalizes to the root (e.g. "/", "//", "/..",
-        // "/.", "/foo/..", "/%2f") cannot be guarded: matching it would 403 every
-        // request to `/`. Reject it rather than silently disabling the guard, because
-        // `after_restore` POSTs the RAW configured path regardless of the guard
-        // target, so "no hook" here still leaves the hook firing at `/`. This check
-        // must live AFTER canonicalization: a raw pre-check on the configured string
-        // misses the spellings that only collapse to root once `..`/`.`/encoded-slash
-        // resolve.
+        // Reject rather than silently disabling the guard: the hooks POST the RAW
+        // configured path regardless of the guard target, so "no hook" here would still
+        // fire at `/`. Must run AFTER canonicalization — a raw pre-check misses the
+        // spellings that only collapse to root once `..`/`.`/`%2f` resolve.
         Some(segments) if segments.is_empty() => Err(Error::from(format!(
             "SnapStart hook path {configured:?} collapses to the application root \
              (normalized to {outbound:?}). It cannot be guarded — matching it would return 403 \
@@ -729,8 +703,8 @@ fn hook_target(domain: &Url, configured: &Option<String>) -> Result<Option<Vec<S
              lifecycle event, failing the phase on any app that does not handle `POST /`. Choose \
              a dedicated path your normal traffic does not use, such as `/snapstart/after`."
         ))),
-        // A literal `%` anywhere in the canonical route breaks the invariant that
-        // lets the request side pass undecidable paths through (see case 2 above).
+        // A literal `%` breaks the invariant that lets the request side pass
+        // undecidable paths through (case 2 above).
         Some(segments) if segments.iter().any(|s| s.contains('%')) => Err(Error::from(format!(
             "SnapStart hook path {configured:?} resolves to a route containing a literal `%` \
              ({outbound:?} decodes to /{}). The 403 guard cannot cover every spelling a web \
@@ -751,24 +725,15 @@ fn hook_target(domain: &Url, configured: &Option<String>) -> Result<Option<Vec<S
 
 /// True if the outbound request path resolves to the precomputed hook route.
 ///
-/// Both sides derive from `Url::set_path`: `want` is computed by [`hook_target`]
-/// from `domain.set_path(configured)`, and `outbound_request_path` is the request's
-/// `app_url.path()` (also post-`set_path`; see `fetch_response`). Because the two
-/// sides share the identical normalization, a configured value that `set_path`
-/// rewrites (e.g. `/snapstart\after` → `/snapstart/after`) is guarded on its
-/// rewritten form, closing the divergence where the app served a route the guard
-/// did not protect.
+/// Both sides are post-`Url::set_path` — `want` from `domain.set_path(configured)`,
+/// the argument from `app_url.path()` — so they share identical normalization and a
+/// value `set_path` rewrites (`/snapstart\after`) is guarded on its rewritten form.
 ///
-/// The request path is canonicalized and compared as segment lists. An undecidable
-/// request path (a malformed escape, or non-UTF-8 once decoded) passes through.
-/// That is safe — not merely a heuristic — because [`hook_target`] guarantees
-/// `want` contains no literal `%`: a router either rejects an undecidable path
-/// outright (400) or decodes it leniently to something containing a literal `%` or
-/// U+FFFD, and neither can equal a `%`-free route. Passing through is what keeps a
-/// request like `/reports/100%` from taking a false 403 under an unrelated hook.
+/// An undecidable request path passes through rather than 403-ing, which keeps
+/// `/reports/100%` from a false 403 under an unrelated hook. Safe because
+/// [`hook_target`] guarantees `want` holds no literal `%`.
 ///
-/// Single-target convenience form, used by the tests; production goes through
-/// [`matches_any_hook_path`] so the request path is canonicalized only once.
+/// Single-target form for tests; production uses [`matches_any_hook_path`].
 #[cfg(test)]
 fn matches_hook_path(want: &Option<Vec<String>>, outbound_request_path: &str) -> bool {
     matches_any_hook_path(&[want], outbound_request_path)
@@ -777,11 +742,9 @@ fn matches_hook_path(want: &Option<Vec<String>>, outbound_request_path: &str) ->
 /// [`matches_hook_path`] against several targets, canonicalizing the request path
 /// **once**.
 ///
-/// This runs on every invocation, and both examples plus the guide configure both
-/// hooks — so calling the single-target form twice would repeat the percent-decode,
-/// control-byte filter, split and per-segment `to_ascii_lowercase` (and their
-/// allocations) for an identical result. Costs nothing when no hook is configured:
-/// the all-`None` check short-circuits before canonicalizing.
+/// This runs on every invocation and both hooks are usually configured, so the
+/// single-target form would redo the decode/split/lowercase for an identical result.
+/// Free when no hook is set — the all-`None` check short-circuits.
 fn matches_any_hook_path(wants: &[&Option<Vec<String>>], outbound_request_path: &str) -> bool {
     if wants.iter().all(|w| w.is_none()) {
         return false;
@@ -858,22 +821,14 @@ pub struct Adapter<C, B> {
 /// idle-connection keep-alive, resolved from [`AdapterOptions::pool_idle_timeout`]
 /// (env `AWS_LWA_POOL_IDLE_TIMEOUT_SECONDS`, default 4 seconds).
 ///
-/// When `pooling` is [`Pooling::Disabled`] the client sets
-/// `pool_max_idle_per_host(0)`, which turns hyper's pool off outright
-/// (`Config::is_enabled()` is `max_idle_per_host > 0`): a finished connection is
-/// dropped rather than parked, so reuse is impossible *by construction*.
+/// [`Pooling::Disabled`] sets `pool_max_idle_per_host(0)`, turning hyper's pool off
+/// outright so reuse is impossible by construction. A zero `idle_timeout` is NOT a
+/// substitute: expiry is decided by `saturating_duration_since(idle_at) > timeout`,
+/// which reads as not-expired when the clock has not advanced (`ZERO > ZERO` is
+/// false) — the very condition hyper#3810 / rust-lang/rust#79462 describe.
 ///
-/// That distinction is load-bearing, and a zero `idle_timeout` is NOT a substitute.
-/// With the pool enabled, reuse is decided at checkout by
-/// `now.saturating_duration_since(idle_at) > timeout`; that saturates to `ZERO` when
-/// the recorded instant is ahead of `now`, and `ZERO > ZERO` is false, so the entry
-/// is treated as fresh and handed out. A monotonic clock that has not advanced
-/// across a restore is exactly the condition hyper#3810 / rust-lang/rust#79462
-/// describe — so an expiry-based scheme would depend on the very clock the
-/// workaround exists to distrust.
-///
-/// This function reads no environment: the caller decides, so the post-restore
-/// rebuild cannot silently inherit the pre-snapshot restriction.
+/// Reads no environment: the caller decides, so the post-restore rebuild cannot
+/// inherit the pre-snapshot restriction.
 fn build_client(idle_timeout: Duration, pooling: Pooling) -> Client<HttpConnector, Body> {
     let mut builder = Client::builder(hyper_util::rt::TokioExecutor::new());
     builder.pool_idle_timeout(idle_timeout);
@@ -886,16 +841,11 @@ fn build_client(idle_timeout: Duration, pooling: Pooling) -> Client<HttpConnecto
 /// Builds the client used to talk to the Lambda Runtime API (RAPID) for extension
 /// registration.
 ///
-/// Idle pooling is disabled. Under SnapStart, a connection parked here is captured in
-/// the snapshot and dead after restore — the same hazard `lambda_runtime` handles by
-/// calling `reset_pool()` on its own RAPID client in the restore lifecycle. Nothing
-/// resets or re-establishes this one, and [`Adapter::register_default_extension`]
-/// terminates the process with `exit(1)` if its request fails, so handing out a dead
-/// connection would kill a restored environment before it serves anything.
-///
-/// Pooling costs nothing to give up here: this client issues exactly two requests —
-/// `register`, then the long poll for the first extension event — and the long poll's
-/// own in-flight connection is unaffected by the idle-pool setting.
+/// Idle pooling is disabled: a connection parked here is captured in the snapshot and
+/// dead after restore, nothing resets it, and
+/// [`Adapter::register_default_extension`] calls `exit(1)` if its request fails. It
+/// costs nothing to give up — this client makes two requests, and the long poll's
+/// in-flight connection is unaffected by the idle-pool setting.
 fn runtime_api_client() -> Client<HttpConnector, Body> {
     let mut builder = Client::builder(hyper_util::rt::TokioExecutor::new());
     builder.pool_max_idle_per_host(0);
@@ -915,40 +865,22 @@ enum Pooling {
 /// before a SnapStart snapshot is taken.
 ///
 /// Disabled under SnapStart, so no connection can be captured in the snapshot and
-/// handed out — dead — after a restore (hyper#3810, rust-lang/rust#79462).
+/// handed out dead after a restore (hyper#3810, rust-lang/rust#79462).
 ///
-/// Why the pool must be *off* rather than expiry-bounded, measured on a deployed
-/// SnapStart container function: `CLOCK_MONOTONIC` does not advance across the
-/// snapshot gap. One restore showed the monotonic clock moving **0.54s** while wall
-/// time moved **161s**. hyper decides reuse with
-/// `now.saturating_duration_since(idle_at) > idle_timeout`, so a connection pooled
-/// before the snapshot reads as half a second idle after restore no matter how long
-/// the snapshot actually sat — fresh under any sane timeout, and dead. No idle
-/// timeout, including `Duration::ZERO`, can fix that (`ZERO > ZERO` is false).
+/// `CLOCK_MONOTONIC` does not advance across the snapshot gap — measured on a deployed
+/// function, 0.54s of monotonic time for 161s of wall time — so an entry pooled before
+/// the snapshot reads as fresh afterwards however long the snapshot sat. No idle
+/// timeout can fix that, hence the pool is off rather than expiry-bounded.
 ///
-/// `run()` additionally rebuilds a fresh client in the after-restore hook, but
-/// keeping this one safe by construction also protects a consumer driving the
-/// `Service` impl directly, who never triggers that hook — and that consumer has no
-/// other protection, so it must not depend on the clock.
+/// `after_restore` deliberately re-enables pooling: the anomaly is confined to the
+/// boundary (monotonic tracks wall normally after restore), a client built there holds
+/// no pre-boundary entries, and that is the only way
+/// `AWS_LWA_POOL_IDLE_TIMEOUT_SECONDS` affects the invocations serving traffic. The
+/// configured value is kept on [`Adapter::pool_idle_timeout`] for that rebuild.
 ///
-/// The cost is that a pre-snapshot readiness poll reconnects on every 10ms attempt
-/// (measured: 27 connections per 300ms of polling, versus 1 with keep-alive). That is
-/// confined to init, which under SnapStart runs once per published version rather
-/// than per restore.
-///
-/// The configured idle timeout is NOT lost: it is kept on
-/// [`Adapter::pool_idle_timeout`] and applied to the after-restore rebuild, whose
-/// pool starts empty and therefore cannot hold a snapshotted connection. That is what
-/// makes `AWS_LWA_POOL_IDLE_TIMEOUT_SECONDS` effective for the invocations that
-/// actually serve traffic, instead of a no-op for the life of the environment.
-///
-/// The two sites deliberately disagree — pooling off here, on in `after_restore` —
-/// and that is sound because the clock anomaly is confined to the snapshot boundary.
-/// Measured after restore on the same deployment, `CLOCK_MONOTONIC` tracks wall time
-/// exactly (+6.079s / +6.059s monotonic against +6.1s / +6.0s wall), and requests
-/// separated by idle gaps longer than the configured 4s keep-alive all succeeded. A
-/// client built after restore holds only post-restore entries, so its expiry
-/// accounting is reliable; this one may hold pre-boundary entries, so its is not.
+/// Keeping this one off also protects a consumer driving the `Service` impl directly,
+/// who never triggers the after-restore hook. The cost is that the init readiness poll
+/// reconnects on every attempt, which is confined to init.
 fn base_client_pooling() -> Pooling {
     if env::var("AWS_LAMBDA_INITIALIZATION_TYPE").as_deref() == Ok("snap-start") {
         Pooling::Disabled
@@ -1249,22 +1181,16 @@ impl Adapter<HttpConnector, Body> {
     /// Registers with the Lambda Extensions API and waits for the next event.
     /// This keeps the extension alive for the duration of the Lambda instance.
     ///
-    /// The registration subscribes to **no events** (`{"events": []}`), deliberately.
-    /// Being registered at all is the entire point: Lambda only sends `SIGTERM` at
-    /// environment shutdown when an extension is registered, which is what the
-    /// graceful-shutdown feature relies on. Because nothing is subscribed, RAPID has
-    /// no event to deliver, so the `GET /event/next` call below never resolves — the
-    /// spawned task parks on it for the life of the process by design, and that is
-    /// what "keeps the extension alive".
+    /// Subscribes to **no events** (`{"events": []}`), deliberately: being registered
+    /// is the whole point, because Lambda only sends `SIGTERM` at shutdown when an
+    /// extension is registered. With nothing subscribed RAPID has no event to deliver,
+    /// so `GET /event/next` never resolves — parking on it for the life of the process
+    /// IS what keeps the extension alive.
     ///
-    /// Under SnapStart that parked request is captured mid-flight in the snapshot and
-    /// is never re-established after a restore. That is harmless for the same reason:
-    /// it was never going to resolve, and RAPID's *registration* state is part of the
-    /// snapshotted microVM, so the effect survives even though the connection does
-    /// not. Verified on a deployed SnapStart container function — the restored
-    /// environment received `SIGTERM` 457s after restore, and the failure path below
-    /// (which would `exit(1)`) never fired across ~8 minutes and five restores.
-    /// Re-registering after restore would be robustness, not a fix.
+    /// That parked request is snapshotted mid-flight and never re-established after a
+    /// SnapStart restore, which is harmless for the same reason, and RAPID's
+    /// registration state is in the snapshot so `SIGTERM` still arrives (verified on a
+    /// deployed function).
     async fn register_extension_internal() -> Result<(), Error> {
         // Prefer the original (pre-proxy) value if apply_runtime_proxy_config() captured one.
         // Otherwise fall back to the current env var.
@@ -1853,24 +1779,9 @@ mod tests {
         accepted.load(Ordering::SeqCst)
     }
 
-    /// `AWS_LWA_POOL_IDLE_TIMEOUT_SECONDS` must actually take effect on the client
-    /// that serves invocations after a SnapStart restore.
-    ///
-    /// Regression for the bot finding: `build_client` used to apply
-    /// `pool_max_idle_per_host(0)` whenever `AWS_LAMBDA_INITIALIZATION_TYPE=snap-start`,
-    /// and that variable stays set for the whole lifetime of a restored environment.
-    /// Both call sites went through it, so the post-restore client — the one
-    /// `Adapter::client()` returns for every invocation after a restore — never
-    /// retained a connection, making the configured timeout a no-op on exactly the
-    /// functions this feature targets and reconnecting on every single invocation
-    /// (each one a fresh file descriptor, which Lambda limits).
-    ///
-    /// The snapshot hazard only applies to the client built BEFORE the snapshot; a
-    /// client built inside `after_restore` starts with an empty pool and cannot hold
-    /// a snapshotted connection, so it is safe for it to pool normally.
-    /// Touches no environment: `build_client` takes the policy explicitly, so this is
-    /// the exact call `SnapStartHooks::after_restore` makes and nothing about it
-    /// depends on process-global state.
+    /// `AWS_LWA_POOL_IDLE_TIMEOUT_SECONDS` must take effect on the client that serves
+    /// invocations after a restore — otherwise every invocation reconnects, burning a
+    /// file descriptor each time. This is the exact call `after_restore` makes.
     #[tokio::test]
     async fn test_pool_idle_timeout_applies_under_snapstart() {
         let restored = build_client(Duration::from_secs(4), Pooling::Enabled);
@@ -1882,16 +1793,9 @@ mod tests {
         );
     }
 
-    /// The Lambda Runtime API client must not retain an idle connection either.
-    ///
-    /// `register_extension_internal` built a default-pooled client. Under SnapStart any
-    /// connection it parks is captured in the snapshot and dead after restore — the
-    /// same hazard `lambda_runtime`'s own restore path handles by calling
-    /// `reset_pool()` on its RAPID client. Nothing re-establishes or resets this one,
-    /// and its failure path is `std::process::exit(1)`, so a reused dead connection
-    /// would terminate the restored environment. It also has nothing to gain from
-    /// pooling: it makes exactly two requests, `register` and then the long poll for
-    /// the first extension event.
+    /// The Runtime API client must not retain an idle connection either: one parked
+    /// here is snapshotted and dead after restore, nothing resets it, and the failure
+    /// path is `exit(1)`. It gains nothing from pooling — two requests total.
     #[tokio::test]
     async fn test_runtime_api_client_does_not_retain_connections() {
         let retained = connection_retained_after_request(&runtime_api_client()).await;
@@ -1961,22 +1865,11 @@ mod tests {
         !closed.load(Ordering::SeqCst)
     }
 
-    /// The pre-snapshot client must make reuse impossible *by construction*, not by
-    /// relying on the monotonic clock.
-    ///
-    /// Regression for the bot `[BUG]` finding: `pool_idle_timeout(Duration::ZERO)`
-    /// leaves hyper's pool enabled and parks the connection, deciding reuse at
-    /// checkout via `now.saturating_duration_since(idle_at) > timeout`. That
-    /// saturates to `ZERO` when the recorded instant is ahead of `now`, and
-    /// `ZERO > ZERO` is false — so the entry counts as fresh and is handed out. A
-    /// monotonic clock that did not advance across a restore is exactly the
-    /// condition hyper#3810 / rust-lang/rust#79462 describe, and exactly what the
-    /// original `pool_max_idle_per_host(0)` was written to distrust. Under `run()`
-    /// it is masked by the after-restore rebuild, but the direct-`Service` consumer
-    /// this restriction exists for is the one path where it can fail.
-    ///
-    /// `pool_max_idle_per_host(0)` disables the pool, so no clock is consulted.
-    /// Touches no environment — `Pooling::Disabled` is passed explicitly.
+    /// The pre-snapshot client must make reuse impossible *by construction*, not via
+    /// expiry: a zero idle timeout still parks the connection and decides reuse from
+    /// the clock, which is exactly what hyper#3810 says not to trust across a restore.
+    /// Observes connection lifetime (dropped vs parked), so no clock reading satisfies
+    /// it.
     #[tokio::test]
     async fn test_pre_snapshot_client_pool_is_disabled_not_merely_expiring() {
         let pre_snapshot = build_client(Duration::from_secs(4), Pooling::Disabled);
@@ -2994,20 +2887,10 @@ mod tests {
         assert!(!guard_blocks("/reports/snapshot", "/reports/100%"));
     }
 
-    /// An empty configured hook path must mean "no hook" on BOTH sides: the guard
-    /// target and the path the hook actually POSTs to.
-    ///
-    /// Regression: `hook_target` short-circuits on `configured.is_empty()` and
-    /// returns `Ok(None)` ("no hook"), but `Adapter::new` used to store the raw
-    /// `Some("")`, which `run()` hands to `SnapStartHooks`. `before_snapshot` /
-    /// `after_restore` then take their `if let Some(path)` branch and call
-    /// `post_hook(.., "")` — and `Url::set_path("")` yields `/`, so the adapter
-    /// POSTed to the unguarded application root on every lifecycle event (a 405 on
-    /// both FastAPI examples, which `post_hook` treats as fatal). That is the same
-    /// guard-versus-POST divergence the root-collapse rejection closed; `""` slipped
-    /// past it by returning before canonicalization. Normalizing to `None` here
-    /// keeps the documented "empty means unset" semantics while making the two
-    /// sides agree by construction.
+    /// An empty hook path must mean "no hook" on BOTH sides: the guard target and the
+    /// path the hooks POST to. `hook_target` already treated `Some("")` as no hook, but
+    /// the raw value reached `SnapStartHooks`, and `set_path("")` yields `/` — so the
+    /// adapter POSTed the unguarded app root on every lifecycle event.
     #[test]
     fn test_empty_hook_path_is_normalized_on_both_sides() {
         let options = AdapterOptions {
@@ -3030,16 +2913,9 @@ mod tests {
         assert_eq!(adapter.hook_target_after_restore, None);
     }
 
-    /// A configured hook path that cannot be canonicalized must be REJECTED, not
-    /// degraded to a raw string compare.
-    ///
-    /// Regression for the bot SECURITY finding: the old `HookTarget::Raw` fallback
-    /// compared raw strings on both sides, so a configured `/snapstart/after%`
-    /// (bare `%`, undecidable) left every encoded spelling of that same route
-    /// unguarded — verified against uvicorn/Starlette, which serves the route as
-    /// `/snapstart/after%` and resolves a request for `/snapstart/after%25` onto it.
-    /// A non-canonicalizable hook path is always a misconfiguration, so fail init
-    /// rather than ship a guard that reads as protective but is not.
+    /// A non-canonicalizable hook path must be REJECTED, not degraded to a raw string
+    /// compare: a raw compare left every encoded spelling of the same route unguarded
+    /// (Starlette resolves `/snapstart/after%25` onto `/snapstart/after%`).
     #[test]
     fn test_non_canonicalizable_configured_hook_path_is_rejected() {
         let domain: Url = "http://127.0.0.1:8080".parse().unwrap();
@@ -3056,21 +2932,10 @@ mod tests {
         );
     }
 
-    /// A configured hook path whose canonical form contains a literal `%` must also
-    /// be rejected — this is what makes the request-side pass-through provably safe.
-    ///
-    /// Rejecting only *non-canonicalizable* configs is not enough: configuring the
-    /// same route the "correct" way (`/snapstart/after%25`, canonical `after%`) left
-    /// the bare-`%` spelling reachable, because an undecidable request path passes
-    /// through the guard while uvicorn/Starlette still resolves it onto the route
-    /// (verified end-to-end: `POST /snapstart/after%` -> 200, handler ran).
-    ///
-    /// With no `%` in any hook route, the pass-through cannot be exploited on ANY
-    /// framework, without the adapter modelling per-framework decoding: an
-    /// undecidable request path either is rejected by the router outright (Node
-    /// throws `URIError` -> Express 400; Go and Spring likewise 400), or is decoded
-    /// leniently into a path containing a literal `%` or U+FFFD (Python's
-    /// `unquote`) — and neither can equal a `%`-free hook route.
+    /// A hook path whose canonical form contains a literal `%` must also be rejected:
+    /// that is what makes the request-side pass-through provably safe. Rejecting only
+    /// non-canonicalizable configs left `/snapstart/after%25` (canonical `after%`)
+    /// reachable via the bare-`%` spelling, which Starlette resolves onto the route.
     #[test]
     fn test_configured_hook_path_with_literal_percent_is_rejected() {
         let domain: Url = "http://127.0.0.1:8080".parse().unwrap();
@@ -3116,21 +2981,10 @@ mod tests {
         assert!(!matches_hook_path(&None, "/"));
     }
 
-    /// A configured hook path that collapses to the app root must be REJECTED.
-    ///
-    /// Regression for the bot `[BUG]` finding: `hook_target` returned `Ok(None)`
-    /// for these, silently disabling the guard, while `SnapStartHooks::after_restore`
-    /// still POSTs to the raw configured path (it reads `after_restore_path`, not the
-    /// guard target). The two therefore diverged with no diagnostic: with
-    /// `AWS_LWA_SNAPSTART_AFTER_RESTORE_PATH=/..` the adapter POSTs to `/` on every
-    /// restore, which is a 405 on both FastAPI examples (they declare only
-    /// `@app.get("/")`), and `post_hook` treats any non-2xx as fatal — so every
-    /// restore failed with nothing explaining why.
-    ///
-    /// Rejecting is the consistent resolution: the guard cannot protect the app root
-    /// without 403-ing all normal traffic, and the docs require a hook path "your
-    /// normal application traffic does not use" — which the root never is. Same rule
-    /// as the `%` cases: if the adapter cannot guard it, it refuses to run with it.
+    /// A hook path collapsing to the app root must be REJECTED. Returning "no hook"
+    /// would silently disable the guard while the hooks still POST the raw configured
+    /// path — i.e. `/` on every lifecycle event, a 405 on both examples. The guard
+    /// cannot cover the root without 403-ing all normal traffic.
     #[test]
     fn test_root_collapsing_configured_hook_path_is_rejected() {
         let domain: Url = "http://127.0.0.1:8080".parse().unwrap();
@@ -3162,16 +3016,10 @@ mod tests {
         assert!(msg.contains("/.."), "error must name the offending path, got: {msg}");
     }
 
-    /// A hook path that collides with `AWS_LWA_PASS_THROUGH_PATH` must be rejected at
-    /// init, because the pass-through rewrite happens BEFORE the guard.
-    ///
-    /// Regression for the bot finding: `fetch_response` rewrites `path` to
-    /// `pass_through_path` for a `RequestContext::PassThrough` POST, and only then
-    /// runs the guard on the rewritten path. So configuring the hook at `/events`
-    /// (the default pass-through path) makes EVERY non-HTTP trigger event canonicalize
-    /// onto the guarded route and get a 403 instead of reaching the app — silently,
-    /// with only a per-invocation `warn!`. Init-time validation already exists for the
-    /// other unguardable hook paths, so this belongs there too.
+    /// A hook path colliding with `AWS_LWA_PASS_THROUGH_PATH` must be rejected at init:
+    /// `fetch_response` rewrites the path to `pass_through_path` BEFORE the guard runs,
+    /// so a hook at `/events` (the default) would 403 every non-HTTP trigger event
+    /// instead of delivering it.
     #[test]
     fn test_adapter_new_fails_when_hook_path_collides_with_pass_through_path() {
         // The default pass-through path is `/events`.
@@ -3211,19 +3059,10 @@ mod tests {
         );
     }
 
-    /// The pass-through collision check must not fail init on an unguardable
-    /// `AWS_LWA_PASS_THROUGH_PATH`, which is unrelated configuration.
-    ///
-    /// Regression for the bot `[BUG]` finding on de0ea31: the check ran
-    /// `hook_target(&domain, &Some(pass_through_path))?`, so a pass-through path that
-    /// `hook_target` rejects — `/` collapses to the root, and `AWS_LWA_PASS_THROUGH_PATH`
-    /// is read straight from the environment with no prior validation — aborted
-    /// `Adapter::new` with a SnapStart-flavored error, even with no hook configured and
-    /// therefore no guard and nothing to collide with.
-    ///
-    /// Such a path cannot collide: hook targets are canonicalizable and non-empty by
-    /// construction, so a request rewritten onto a root-collapsing, `%`-bearing, or
-    /// non-canonicalizable pass-through path can never canonicalize onto one.
+    /// The collision check must not fail init on an unguardable
+    /// `AWS_LWA_PASS_THROUGH_PATH` — unrelated configuration, read straight from the
+    /// environment. Such a path also cannot collide: hook targets are canonicalizable
+    /// and non-empty by construction, so nothing rewritten onto it can match one.
     #[test]
     fn test_unguardable_pass_through_path_does_not_fail_init() {
         for pass_through in ["/", "//", "/..", "/reports/100%25", "/bad/%2"] {

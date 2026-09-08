@@ -68,15 +68,11 @@ impl SnapStartHooks {
         }
     }
 
-    /// Publishes `fresh` as the post-restore client, or adopts the one already
-    /// published, returning whichever client invocations will actually use.
+    /// Publishes `fresh`, or adopts the already-published client, returning whichever
+    /// one invocations will actually use.
     ///
-    /// `OnceLock::set` fails if the cell is already populated. Discarding that failure
-    /// and carrying on with `fresh` would leave `after_restore` validating a client no
-    /// request can reach: the hook POST and readiness check would report the restore
-    /// healthy while every invocation kept using the earlier client. Returning the
-    /// published client instead removes that divergence rather than reporting it, and
-    /// the `warn!` records the unexpected second lifecycle run.
+    /// Returning `fresh` when the cell was already set would leave `after_restore`
+    /// validating a client no request can reach.
     fn publish_or_adopt(
         cell: &OnceLock<Arc<Client<HttpConnector, Body>>>,
         fresh: Arc<Client<HttpConnector, Body>>,
@@ -94,22 +90,14 @@ impl SnapStartHooks {
         }
     }
 
-    /// POSTs an empty body to `domain + path` using `client`. A non-2xx response or a
-    /// transport error is an error, which fails the SnapStart phase.
+    /// POSTs an empty body to `domain + path`. A non-2xx response or a transport error
+    /// fails the SnapStart phase.
     ///
-    /// Deliberately unbounded. Lambda already bounds both phases — the init budget for
-    /// the before-checkpoint hook, the function timeout for the after-restore hook — so
-    /// there is no unbounded-hang scenario left for the adapter to guard, and an
-    /// adapter-side cap can only be wrong in one of two directions. This previously
-    /// capped the wait at 60s, which was unreachable for the after-restore hook (the
-    /// function timeout is 10s in both shipped examples, 3s by default, so Lambda always
-    /// won the race) while for the before-checkpoint hook it risked killing a legitimate
-    /// slow drain that Lambda's much larger init budget would have allowed.
-    ///
-    /// A cap derived from the function timeout would be the defensible version, but
-    /// Lambda does not expose the timeout as an environment variable and there is no
-    /// invocation context during these phases to read a deadline from — so don't go
-    /// looking for one.
+    /// Deliberately unbounded: Lambda bounds both phases already (the init budget, and
+    /// the function timeout for the after-restore hook). A fixed adapter-side cap was
+    /// unreachable for one phase and killed legitimate slow drains in the other. A cap
+    /// derived from the function timeout isn't possible — Lambda exposes no timeout
+    /// env var and there is no invocation context here.
     async fn post_hook(client: &Client<HttpConnector, Body>, domain: &Url, path: &str) -> Result<(), Error> {
         let mut url = domain.clone();
         url.set_path(path);
@@ -150,19 +138,11 @@ impl SnapStartResource for SnapStartHooks {
             //    pre-snapshot ones. If one is somehow already published, adopt it, so
             //    steps 2 and 3 always validate the client invocations will use.
             //
-            //    Pooling is ENABLED here even though `Adapter::new` disables it under
-            //    SnapStart (see `base_client_pooling`), and the disagreement is
-            //    deliberate. That restriction exists because `CLOCK_MONOTONIC` does not
-            //    advance across the snapshot gap — measured on a deployed SnapStart
-            //    container function, 0.54s of monotonic time for 161s of wall time — so
-            //    hyper's `elapsed > idle_timeout` test cannot be trusted for an entry
-            //    pooled before the boundary. This client is built AFTER the restore, so
-            //    every entry it holds is post-boundary, and monotonic time tracks wall
-            //    time normally from here on (measured: +6.079s/+6.059s monotonic
-            //    against +6.1s/+6.0s wall, with idle gaps beyond the keep-alive
-            //    expiring cleanly). Keeping the pool on is therefore both safe and the
-            //    only way `AWS_LWA_POOL_IDLE_TIMEOUT_SECONDS` has any effect on the
-            //    invocations that actually serve traffic.
+            //    Pooling is ENABLED here while `Adapter::new` disables it under
+            //    SnapStart, deliberately: CLOCK_MONOTONIC does not advance across the
+            //    snapshot gap, so hyper's idle accounting can't be trusted for entries
+            //    pooled BEFORE it. This client is built after the restore, so it holds
+            //    none. See `base_client_pooling`.
             let fresh = Arc::new(build_client(self.pool_idle_timeout, Pooling::Enabled));
             let fresh = Self::publish_or_adopt(&self.restored_client, fresh);
 
@@ -183,23 +163,13 @@ impl SnapStartResource for SnapStartHooks {
 }
 
 impl SnapStartHooks {
-    /// Waits for the app to report ready, bounded by `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS`
-    /// when it is set. `phase` names the SnapStart phase in the timeout error so the
-    /// operator can tell an initialization failure from a restore failure.
+    /// Waits for the app to report ready, bounded by
+    /// `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` when set. `phase` names the SnapStart
+    /// phase in the timeout error so an init failure is distinguishable from a restore
+    /// failure.
     ///
-    /// Both hooks go through this. `before_snapshot` needs it because
-    /// `AWS_LWA_ASYNC_INIT=true` lets initialization proceed before the app is
-    /// listening: without the gate the hook POST would hit `ECONNREFUSED` and fail
-    /// the init phase, which is precisely the slow-booting app that setting exists
-    /// for. `after_restore` needs it to avoid admitting traffic to an app that has
-    /// not finished recovering.
-    ///
-    /// With the timeout unset the wait is unbounded and cannot fail, only block:
-    /// [`readiness::wait_until_ready`] retries forever, so an app that never comes up
-    /// holds the phase open until Lambda's own timeout, with the escalating
-    /// `app is not ready after {}ms` log as the only adapter-side signal. Setting
-    /// `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` converts that into a reported
-    /// `/init/error` or `/restore/error`.
+    /// Unset means unbounded, which cannot fail — only block until Lambda's own phase
+    /// timeout, with the escalating `app is not ready after {}ms` log as the signal.
     async fn ensure_ready(&self, client: &Client<HttpConnector, Body>, phase: &str) -> Result<(), Error> {
         match self.readiness_timeout {
             Some(t) => self.ensure_ready_with_timeout(client, t, phase).await,
@@ -290,22 +260,12 @@ mod tests {
         m.assert();
     }
 
-    /// `before_snapshot` must gate the hook POST on readiness, like every other path
-    /// into the application.
+    /// `before_snapshot` must gate the hook POST on readiness: with
+    /// `AWS_LWA_ASYNC_INIT` the app may not have bound its port yet, and the POST would
+    /// fail the init phase with `ECONNREFUSED`.
     ///
-    /// Regression for the final-review finding: with `AWS_LWA_ASYNC_INIT=true`,
-    /// `check_init_health` gives up at 9.8s and returns `Ok(())` with
-    /// `ready_at_init == false` so the app can keep booting. `run()` then drives
-    /// `snapstart_lifecycle` straight into `before_snapshot`, which POSTed
-    /// immediately. For an app that has not bound its port yet that POST gets
-    /// `ECONNREFUSED` at once — no timeout helps, a refusal returns immediately — and
-    /// the error goes to `/init/error`, so publishing the SnapStart version fails
-    /// with what looks like an application bug. That combination is exactly the
-    /// slow-booting app `async_init` exists for.
-    ///
-    /// Here the hook route is mocked and would answer 200, but readiness never
-    /// passes; the hook must NOT be called, and the error must name the readiness
-    /// check rather than the POST.
+    /// The hook route here would answer 200, but readiness never passes — so the hook
+    /// must not be called at all.
     #[tokio::test]
     async fn before_snapshot_waits_for_readiness_before_posting() {
         let server = MockServer::start();
@@ -377,15 +337,10 @@ mod tests {
         m.assert();
     }
 
-    /// When the post-restore client is already published, `after_restore` must run its
+    /// When a post-restore client is already published, `after_restore` must run its
     /// hook POST and readiness check over THAT client — the one invocations use — not
-    /// over a freshly built one nobody can see.
-    ///
-    /// Regression for the bot `[ERROR_HANDLING]` finding: `let _ = ...set(fresh)`
-    /// discarded the "already set" case and then used `fresh` for steps 2 and 3, so a
-    /// second `after_restore` would report the restore healthy on the basis of a client
-    /// the request path never touches, with no signal anywhere. Latent today (the
-    /// runtime drives the lifecycle once) — this pins it so it cannot become real.
+    /// over a freshly built one nobody can see. Latent today (the runtime drives the
+    /// lifecycle once); pinned so it cannot become real.
     #[test]
     fn publish_or_adopt_keeps_the_client_invocations_use() {
         let cell: OnceLock<Arc<Client<HttpConnector, Body>>> = OnceLock::new();
