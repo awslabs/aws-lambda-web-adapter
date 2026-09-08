@@ -12,11 +12,6 @@ use url::Url;
 
 use crate::{build_client, readiness, Pooling, Protocol};
 
-/// Maximum time the adapter waits for an inner-app hook to respond before
-/// failing the SnapStart phase. Bounds a hung or unresponsive hook so the
-/// snapshot/restore lifecycle cannot stall indefinitely.
-const HOOK_TIMEOUT: Duration = Duration::from_secs(60);
-
 /// A [`SnapStartResource`] that bridges the Lambda SnapStart lifecycle to the
 /// inner web application running behind the adapter.
 pub(crate) struct SnapStartHooks {
@@ -99,29 +94,30 @@ impl SnapStartHooks {
         }
     }
 
-    /// POSTs an empty body to `domain + path` using `client`. A non-2xx
-    /// response, a transport error, or exceeding [`HOOK_TIMEOUT`] is an error.
+    /// POSTs an empty body to `domain + path` using `client`. A non-2xx response or a
+    /// transport error is an error, which fails the SnapStart phase.
+    ///
+    /// Deliberately unbounded. Lambda already bounds both phases — the init budget for
+    /// the before-checkpoint hook, the function timeout for the after-restore hook — so
+    /// there is no unbounded-hang scenario left for the adapter to guard, and an
+    /// adapter-side cap can only be wrong in one of two directions. This previously
+    /// capped the wait at 60s, which was unreachable for the after-restore hook (the
+    /// function timeout is 10s in both shipped examples, 3s by default, so Lambda always
+    /// won the race) while for the before-checkpoint hook it risked killing a legitimate
+    /// slow drain that Lambda's much larger init budget would have allowed.
+    ///
+    /// A cap derived from the function timeout would be the defensible version, but
+    /// Lambda does not expose the timeout as an environment variable and there is no
+    /// invocation context during these phases to read a deadline from — so don't go
+    /// looking for one.
     async fn post_hook(client: &Client<HttpConnector, Body>, domain: &Url, path: &str) -> Result<(), Error> {
-        Self::post_hook_with_timeout(client, domain, path, HOOK_TIMEOUT).await
-    }
-
-    /// Implementation of [`post_hook`](Self::post_hook) with an explicit timeout,
-    /// so tests can exercise the timeout path without waiting [`HOOK_TIMEOUT`].
-    async fn post_hook_with_timeout(
-        client: &Client<HttpConnector, Body>,
-        domain: &Url,
-        path: &str,
-        hook_timeout: Duration,
-    ) -> Result<(), Error> {
         let mut url = domain.clone();
         url.set_path(path);
         let req = hyper::Request::builder()
             .method(hyper::Method::POST)
             .uri(url.to_string())
             .body(Body::Empty)?;
-        let resp = timeout(hook_timeout, client.request(req))
-            .await
-            .map_err(|_| Error::from(format!("SnapStart hook POST {path} timed out after {hook_timeout:?}")))??;
+        let resp = client.request(req).await?;
         if !resp.status().is_success() {
             return Err(Error::from(format!(
                 "SnapStart hook POST {path} returned non-success status: {}",
@@ -137,9 +133,9 @@ impl SnapStartResource for SnapStartHooks {
         Box::pin(async move {
             if let Some(path) = self.before_checkpoint_path.as_deref() {
                 // Gate on readiness first. With AWS_LWA_ASYNC_INIT the adapter can
-                // reach here before the app has bound its port, and the POST would
-                // fail instantly with ECONNREFUSED (HOOK_TIMEOUT does not apply to a
-                // refusal), failing initialization with what looks like an app bug.
+                // reach here before the app has bound its port, and the POST would then
+                // fail instantly with ECONNREFUSED, failing initialization with what
+                // looks like an app bug.
                 self.ensure_ready(&self.client, "before-checkpoint").await?;
                 Self::post_hook(&self.client, &self.domain, path).await?;
             }
@@ -302,8 +298,8 @@ mod tests {
     /// `ready_at_init == false` so the app can keep booting. `run()` then drives
     /// `snapstart_lifecycle` straight into `before_snapshot`, which POSTed
     /// immediately. For an app that has not bound its port yet that POST gets
-    /// `ECONNREFUSED` at once — the 60s `HOOK_TIMEOUT` never applies to a refusal —
-    /// and the error goes to `/init/error`, so publishing the SnapStart version fails
+    /// `ECONNREFUSED` at once — no timeout helps, a refusal returns immediately — and
+    /// the error goes to `/init/error`, so publishing the SnapStart version fails
     /// with what looks like an application bug. That combination is exactly the
     /// slow-booting app `async_init` exists for.
     ///
@@ -428,24 +424,6 @@ mod tests {
             h.restored_client.get().is_some(),
             "client published despite hook failure"
         );
-    }
-
-    #[tokio::test]
-    async fn post_hook_times_out_when_app_is_slow() {
-        let server = MockServer::start();
-        // The app takes far longer to respond than the timeout we pass below.
-        server.mock(|when, then| {
-            when.method(httpmock::Method::POST).path("/slow");
-            then.status(200).delay(Duration::from_secs(2));
-        });
-        let domain: Url = format!("http://{}:{}", server.host(), server.port()).parse().unwrap();
-        let client = build_client(Duration::from_secs(4), Pooling::Enabled);
-
-        let result =
-            SnapStartHooks::post_hook_with_timeout(&client, &domain, "/slow", Duration::from_millis(100)).await;
-
-        let err = result.expect_err("slow hook should time out");
-        assert!(err.to_string().contains("timed out"), "unexpected error: {err}");
     }
 
     #[tokio::test]

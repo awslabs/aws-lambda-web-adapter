@@ -51,8 +51,9 @@ snapshot boundary:
      this example, it reconnects the pool and generates a fresh `connection_id`).
   3. It re-runs the readiness check against your app before admitting traffic.
 
-Both hook routes must return a `2xx` status code. A non-2xx response, a connection
-failure, or taking longer than 60 seconds to respond fails the SnapStart phase.
+Both hook routes must return a `2xx` status code. A non-2xx response or a connection
+failure fails the SnapStart phase. The adapter sets no deadline of its own — the
+after-restore hook must finish within the function timeout (`10` seconds here).
 The readiness check runs on every restore; by default it waits indefinitely for the
 app to recover, but you can bound it with `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS`
 (fractional seconds allowed), in which case a restore whose app does not report
