@@ -24,11 +24,11 @@
   app. Default: 4 seconds. A value that is set but unusable falls back to the
   default and logs a warning.
 - Add `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` to bound the readiness check
-  (fractional seconds allowed, e.g. `0.5`), applied to both the initial cold-start
-  readiness wait and the
-  post-SnapStart-restore readiness check. When set and the app does not become
-  ready within it, the adapter **refuses to serve**: cold-start init fails (the
-  runtime never starts) and a restore fails, rather than admitting traffic to an
+  (fractional seconds allowed, e.g. `0.5`), applied to the initial cold-start
+  readiness wait, the pre-snapshot wait, and the post-SnapStart-restore readiness
+  check. When set and the app does not become ready within it, the adapter
+  **refuses to serve**: cold-start init fails (the runtime never starts), and taking
+  a snapshot or completing a restore fails, rather than admitting traffic to an
   app that never reported ready. When unset (the default) the wait is
   **unbounded**, matching the previous behavior, so existing slow-cold-start apps
   are unaffected unless they opt in. The `async_init` initial-readiness path keeps
@@ -45,12 +45,14 @@
   is normalized so it behaves like `/api`. **Upgrade note:** this changes the path
   forwarded to your app for those inputs — deployments that relied on the old
   repeated/partial stripping should verify their routes.
-- Fix the before-checkpoint hook firing before the application is ready. With
-  `AWS_LWA_ASYNC_INIT=true` the adapter finishes initialization after 9.8 seconds
-  even if the app has not bound its port yet; the hook `POST` then failed
-  immediately with a connection error and failed the SnapStart initialization phase.
-  Both hooks now wait for the readiness check first, bounded by
-  `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` when it is set.
+- Fix the hooks firing before the application is ready. With `AWS_LWA_ASYNC_INIT=true`
+  the adapter finishes initialization after 9.8 seconds even if the app has not bound
+  its port yet, so the snapshot could capture a still-booting app and each hook `POST`
+  then failed immediately with a connection error. The adapter now waits for the
+  readiness check before the snapshot is taken — bounded by
+  `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` when it is set — which covers both hooks,
+  since the after-restore hook deliberately runs before its own readiness check so the
+  application can reconnect before its health is judged.
 
 ### Dependencies
 
