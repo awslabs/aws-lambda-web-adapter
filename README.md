@@ -59,7 +59,7 @@ The readiness check port/path and traffic port can be configured using environme
 | AWS_LWA_READINESS_CHECK_PATH            | readiness check path                                                            | "/"          |
 | AWS_LWA_READINESS_CHECK_PROTOCOL        | readiness check protocol: "http" or "tcp"                                       | "http"       |
 | AWS_LWA_READINESS_CHECK_HEALTHY_STATUS  | HTTP status codes considered healthy (e.g., "200-399")                          | "100-499"    |
-| AWS_LWA_ASYNC_INIT                      | enable asynchronous initialization for long initialization functions             | "false"      |
+| AWS_LWA_ASYNC_INIT                      | enable asynchronous initialization for long initialization functions; ignored under SnapStart and Provisioned Concurrency | "false"      |
 | AWS_LWA_REMOVE_BASE_PATH               | base path to remove from the request path; strips exactly one leading occurrence on a segment boundary (with `/api`: `/api/api/order`->`/api/order`, `/apiorder` unchanged; trailing slash normalized) | None         |
 | AWS_LWA_ENABLE_COMPRESSION             | enable gzip/br compression for response body (buffered mode only)               | "false"      |
 | AWS_LWA_INVOKE_MODE                    | Lambda function invoke mode: "buffered" or "response_stream"                    | "buffered"   |

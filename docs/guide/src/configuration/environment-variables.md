@@ -11,7 +11,7 @@ All configuration is done through environment variables, set either in your Dock
 | `AWS_LWA_READINESS_CHECK_PATH` | Readiness check path | `/` |
 | `AWS_LWA_READINESS_CHECK_PROTOCOL` | Readiness check protocol: `http` or `tcp` | `http` |
 | `AWS_LWA_READINESS_CHECK_HEALTHY_STATUS` | HTTP status codes considered healthy (e.g. `200-399` or `200,201,204,301-399`) | `100-499` |
-| `AWS_LWA_ASYNC_INIT` | Enable asynchronous initialization | `false` |
+| `AWS_LWA_ASYNC_INIT` | Enable asynchronous initialization for slow-starting apps. Ignored under SnapStart and Provisioned Concurrency (logged) | `false` |
 | `AWS_LWA_REMOVE_BASE_PATH` | Base path to remove from the request path. Strips **exactly one** leading occurrence and only on a path-segment boundary: with `/api`, `/api/api/order` → `/api/order` and `/apiorder` is passed through unchanged; a configured trailing slash (`/api/`) is normalized. | None |
 | `AWS_LWA_ENABLE_COMPRESSION` | Enable gzip/br compression (buffered mode only) | `false` |
 | `AWS_LWA_INVOKE_MODE` | Invoke mode: `buffered` or `response_stream` | `buffered` |

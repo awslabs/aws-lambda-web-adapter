@@ -119,14 +119,15 @@ impl SnapStartHooks {
 impl SnapStartResource for SnapStartHooks {
     fn before_snapshot(&self) -> BoxFuture<'_, Result<(), Error>> {
         Box::pin(async move {
-            // Wait for the app unconditionally, before any hook. With
-            // AWS_LWA_ASYNC_INIT the adapter reaches here at a fixed ~9.8s bound
-            // whether or not the app has bound its port, so without this the snapshot
-            // can capture a still-booting app. That breaks both hooks: this one's POST
-            // would fail instantly with ECONNREFUSED, and `after_restore` POSTs before
-            // its own readiness check (step 2 before step 3, deliberately) so it would
-            // fail on every restore too. Gating here is what guarantees the snapshot is
-            // only ever taken against a listening app.
+            // Wait for the app unconditionally, before any hook, so a snapshot is
+            // never taken of a still-booting app. `check_init_health` already blocks
+            // until ready under SnapStart (AWS_LWA_ASYNC_INIT is ignored there, see
+            // `effective_async_init`), so this is defense in depth — it also covers a
+            // consumer that drives the `Service` impl without calling
+            // `check_init_health`. It has to be unconditional: `after_restore` POSTs
+            // before its own readiness check (step 2 before step 3, deliberately), so
+            // a half-booted snapshot would fail every restore even with no
+            // before-checkpoint hook configured.
             self.ensure_ready(&self.client, "before-checkpoint").await?;
             if let Some(path) = self.before_checkpoint_path.as_deref() {
                 Self::post_hook(&self.client, &self.domain, path).await?;
@@ -264,9 +265,8 @@ mod tests {
         m.assert();
     }
 
-    /// `before_snapshot` must gate the hook POST on readiness: with
-    /// `AWS_LWA_ASYNC_INIT` the app may not have bound its port yet, and the POST would
-    /// fail the init phase with `ECONNREFUSED`.
+    /// `before_snapshot` must gate the hook POST on readiness: an app that has not
+    /// bound its port yet would fail the init phase with `ECONNREFUSED`.
     ///
     /// The hook route here would answer 200, but readiness never passes — so the hook
     /// must not be called at all.
@@ -301,12 +301,11 @@ mod tests {
     ///
     /// The hooks are independent, so a function may set only
     /// `AWS_LWA_SNAPSTART_AFTER_RESTORE_PATH`. With the gate inside
-    /// `if let Some(before_checkpoint_path)`, that configuration takes the snapshot
-    /// while `AWS_LWA_ASYNC_INIT` is still letting the app boot — and `after_restore`
-    /// POSTs its hook before its own readiness check (step 2 before step 3,
-    /// deliberately, so the reconnect happens before health is judged), so the POST
-    /// hits a process that is not listening and every restore fails. Waiting here
-    /// guarantees the snapshot is only ever taken against a listening app.
+    /// `if let Some(before_checkpoint_path)`, that configuration snapshots whatever
+    /// state the app is in — and `after_restore` POSTs its hook before its own
+    /// readiness check (step 2 before step 3, deliberately, so the reconnect happens
+    /// before health is judged), so the POST would hit a process that is not listening
+    /// and every restore would fail.
     #[tokio::test]
     async fn before_snapshot_waits_for_readiness_with_no_hook_configured() {
         let server = MockServer::start();

@@ -331,6 +331,10 @@ pub struct AdapterOptions {
     /// to avoid Lambda's 10-second init timeout. The application can continue
     /// booting in the background and will be checked again on the first request.
     ///
+    /// Ignored under SnapStart and Provisioned Concurrency, which have no such limit
+    /// and where reporting init complete early would snapshot or serve a
+    /// half-initialized app. `Adapter::new` logs a warning when it overrides this.
+    ///
     /// Default: `false`
     pub async_init: bool,
 
@@ -861,6 +865,26 @@ enum Pooling {
     Disabled,
 }
 
+/// Whether `AWS_LWA_ASYNC_INIT` should actually apply, given the initialization type.
+///
+/// `async_init` exists to dodge the ~10s on-demand init limit: it gives up waiting for
+/// the app at a fixed bound, reports init complete, and lets the first invocation
+/// finish the readiness check. Neither SnapStart nor Provisioned Concurrency has that
+/// limit, and returning early there is harmful rather than merely pointless:
+///
+/// * SnapStart — the snapshot can be taken while the app is still booting, so the
+///   before-checkpoint hook POSTs to a process that is not listening and every
+///   restored environment starts from a half-initialized snapshot.
+/// * Provisioned Concurrency — Lambda marks the environment ready while the app is
+///   still booting, so the first real requests pay the boot latency the customer
+///   provisioned concurrency to avoid.
+///
+/// So it is ignored in both, with a `warn!` at [`Adapter::new`] so the override is
+/// visible rather than silent.
+fn effective_async_init(configured: bool, init_type: Option<&str>) -> bool {
+    configured && !matches!(init_type, Some("snap-start") | Some("provisioned-concurrency"))
+}
+
 /// Connection-pool policy for the client [`Adapter::new`] builds — the one used
 /// before a SnapStart snapshot is taken.
 ///
@@ -1030,6 +1054,18 @@ impl Adapter<HttpConnector, Body> {
     pub fn new(options: &AdapterOptions) -> Result<Adapter<HttpConnector, Body>, Error> {
         let client = build_client(options.pool_idle_timeout, base_client_pooling());
 
+        // AWS_LWA_ASYNC_INIT does not apply under SnapStart or Provisioned Concurrency.
+        let init_type = env::var("AWS_LAMBDA_INITIALIZATION_TYPE").ok();
+        let async_init = effective_async_init(options.async_init, init_type.as_deref());
+        if options.async_init && !async_init {
+            tracing::warn!(
+                initialization_type = %init_type.as_deref().unwrap_or_default(),
+                "ignoring AWS_LWA_ASYNC_INIT: this initialization type has no short init \
+                 limit to work around, and reporting init complete before the application \
+                 is ready would snapshot or serve a half-initialized app"
+            );
+        }
+
         let schema = "http";
 
         let healthcheck_url: Url = format!(
@@ -1129,7 +1165,7 @@ impl Adapter<HttpConnector, Body> {
             domain,
             base_path: options.base_path.clone(),
             pass_through_path: options.pass_through_path.clone(),
-            async_init: options.async_init,
+            async_init,
             ready_at_init: Arc::new(AtomicBool::new(false)),
             compression,
             invoke_mode: options.invoke_mode,
@@ -1893,6 +1929,36 @@ mod tests {
             retained,
             "the post-restore client must keep its connection alive for reuse"
         );
+    }
+
+    /// `AWS_LWA_ASYNC_INIT` must be ignored under SnapStart and Provisioned
+    /// Concurrency, where its premise does not hold.
+    ///
+    /// It exists to dodge the ~10s on-demand init limit by returning early and letting
+    /// the first invocation finish readiness. Neither of those environments has that
+    /// limit, and returning early actively hurts: under SnapStart the snapshot can
+    /// capture a still-booting app, and under Provisioned Concurrency Lambda marks the
+    /// environment ready while the app is still booting, which is the opposite of what
+    /// the customer is paying for.
+    ///
+    /// Pure function, so no process-global state is touched.
+    #[test]
+    fn test_async_init_ignored_for_snapstart_and_provisioned_concurrency() {
+        for init_type in [Some("snap-start"), Some("provisioned-concurrency")] {
+            assert!(
+                !effective_async_init(true, init_type),
+                "async_init must be ignored for {init_type:?}"
+            );
+        }
+        // On-demand and unset keep it, and it is never turned ON when not requested.
+        for init_type in [Some("on-demand"), None] {
+            assert!(
+                effective_async_init(true, init_type),
+                "async_init must apply for {init_type:?}"
+            );
+            assert!(!effective_async_init(false, init_type));
+        }
+        assert!(!effective_async_init(false, Some("snap-start")));
     }
 
     /// The env-var side of the pooling decision, and the only test here that touches
