@@ -119,16 +119,11 @@ impl SnapStartHooks {
 impl SnapStartResource for SnapStartHooks {
     fn before_snapshot(&self) -> BoxFuture<'_, Result<(), Error>> {
         Box::pin(async move {
-            // Wait for the app unconditionally, before any hook, so a snapshot is
-            // never taken of a still-booting app. `check_init_health` already blocks
-            // until ready under SnapStart (AWS_LWA_ASYNC_INIT is ignored there, see
-            // `effective_async_init`), so this is defense in depth — it also covers a
-            // consumer that drives the `Service` impl without calling
-            // `check_init_health`. It has to be unconditional: `after_restore` POSTs
-            // before its own readiness check (step 2 before step 3, deliberately), so
-            // a half-booted snapshot would fail every restore even with no
-            // before-checkpoint hook configured.
-            self.ensure_ready(&self.client, "before-checkpoint").await?;
+            // No readiness wait here: the app is already ready. `AWS_LWA_ASYNC_INIT` is
+            // ignored under SnapStart (see `effective_async_init`), so
+            // `check_init_health` takes its blocking path and `main` awaits it before
+            // `run()`. Re-checking would only duplicate that invariant in a second
+            // place.
             if let Some(path) = self.before_checkpoint_path.as_deref() {
                 Self::post_hook(&self.client, &self.domain, path).await?;
             }
@@ -160,7 +155,7 @@ impl SnapStartResource for SnapStartHooks {
             // 3. Confirm the app is serving again before traffic is admitted.
             //    A configured timeout bounds the wait and fails the restore on
             //    expiry; when unset the wait is unbounded (historical behavior).
-            self.ensure_ready(&fresh, "after-restore").await?;
+            self.ensure_ready(&fresh).await?;
 
             Ok(())
         })
@@ -168,16 +163,14 @@ impl SnapStartResource for SnapStartHooks {
 }
 
 impl SnapStartHooks {
-    /// Waits for the app to report ready, bounded by
-    /// `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` when set. `phase` names the SnapStart
-    /// phase in the timeout error so an init failure is distinguishable from a restore
-    /// failure.
+    /// Waits for the app to report ready after a restore, bounded by
+    /// `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` when set.
     ///
-    /// Unset means unbounded, which cannot fail — only block until Lambda's own phase
+    /// Unset means unbounded, which cannot fail — only block until Lambda's own restore
     /// timeout, with the escalating `app is not ready after {}ms` log as the signal.
-    async fn ensure_ready(&self, client: &Client<HttpConnector, Body>, phase: &str) -> Result<(), Error> {
+    async fn ensure_ready(&self, client: &Client<HttpConnector, Body>) -> Result<(), Error> {
         match self.readiness_timeout {
-            Some(t) => self.ensure_ready_with_timeout(client, t, phase).await,
+            Some(t) => self.ensure_ready_with_timeout(client, t).await,
             None => {
                 self.wait_ready(client).await;
                 Ok(())
@@ -191,11 +184,10 @@ impl SnapStartHooks {
         &self,
         client: &Client<HttpConnector, Body>,
         readiness_timeout: Duration,
-        phase: &str,
     ) -> Result<(), Error> {
         timeout(readiness_timeout, self.wait_ready(client)).await.map_err(|_| {
             Error::from(format!(
-                "SnapStart {phase} readiness check timed out after {readiness_timeout:?}"
+                "SnapStart after-restore readiness check timed out after {readiness_timeout:?}"
             ))
         })
     }
@@ -265,85 +257,8 @@ mod tests {
         m.assert();
     }
 
-    /// `before_snapshot` must gate the hook POST on readiness: an app that has not
-    /// bound its port yet would fail the init phase with `ECONNREFUSED`.
-    ///
-    /// The hook route here would answer 200, but readiness never passes — so the hook
-    /// must not be called at all.
     #[tokio::test]
-    async fn before_snapshot_waits_for_readiness_before_posting() {
-        let server = MockServer::start();
-        let hook = server.mock(|when, then| {
-            when.method(httpmock::Method::POST).path("/before");
-            then.status(200);
-        });
-        // Readiness target answers 503 forever, so the app is never ready.
-        server.mock(|when, then| {
-            when.path("/never-ready");
-            then.status(503);
-        });
-        let mut h = hooks_with_health(&server, Some("/before"), None, "/never-ready");
-        h.readiness_timeout = Some(Duration::from_millis(150));
-
-        let err = h
-            .before_snapshot()
-            .await
-            .expect_err("an app that is not ready must fail the before-checkpoint phase");
-        assert!(
-            err.to_string().contains("before-checkpoint") && err.to_string().contains("readiness"),
-            "error must name the before-checkpoint readiness check, got: {err}"
-        );
-        hook.assert_calls(0);
-    }
-
-    /// The readiness gate must be UNCONDITIONAL, not tied to the before-checkpoint
-    /// hook being configured.
-    ///
-    /// The hooks are independent, so a function may set only
-    /// `AWS_LWA_SNAPSTART_AFTER_RESTORE_PATH`. With the gate inside
-    /// `if let Some(before_checkpoint_path)`, that configuration snapshots whatever
-    /// state the app is in — and `after_restore` POSTs its hook before its own
-    /// readiness check (step 2 before step 3, deliberately, so the reconnect happens
-    /// before health is judged), so the POST would hit a process that is not listening
-    /// and every restore would fail.
-    #[tokio::test]
-    async fn before_snapshot_waits_for_readiness_with_no_hook_configured() {
-        let server = MockServer::start();
-        server.mock(|when, then| {
-            when.path("/never-ready");
-            then.status(503);
-        });
-        // Only the AFTER-restore hook is configured.
-        let mut h = hooks_with_health(&server, None, Some("/after"), "/never-ready");
-        h.readiness_timeout = Some(Duration::from_millis(150));
-
-        let err = h
-            .before_snapshot()
-            .await
-            .expect_err("the snapshot must not be taken against an app that is not ready");
-        assert!(
-            err.to_string().contains("before-checkpoint") && err.to_string().contains("readiness"),
-            "error must name the before-checkpoint readiness check, got: {err}"
-        );
-    }
-
-    /// The gate must not change the happy path: a ready app still gets the POST.
-    #[tokio::test]
-    async fn before_snapshot_posts_once_app_is_ready() {
-        let server = MockServer::start();
-        let m = server.mock(|when, then| {
-            when.method(httpmock::Method::POST).path("/before");
-            then.status(200);
-        });
-        let h = hooks(&server, Some("/before"), None);
-        assert!(h.before_snapshot().await.is_ok());
-        m.assert();
-    }
-
-    #[tokio::test]
-    /// With no hook configured there is nothing to POST, but the readiness wait still
-    /// runs (`hooks` mocks a healthy `/health`), so this is not a full no-op.
-    async fn before_snapshot_posts_nothing_when_unset() {
+    async fn before_snapshot_noop_when_unset() {
         let server = MockServer::start();
         let h = hooks(&server, None, None);
         assert!(h.before_snapshot().await.is_ok());
@@ -451,9 +366,7 @@ mod tests {
         let h = hooks_with_health(&server, None, None, "/never");
         let client = build_client(Duration::from_secs(4), Pooling::Enabled);
 
-        let result = h
-            .ensure_ready_with_timeout(&client, Duration::from_millis(100), "after-restore")
-            .await;
+        let result = h.ensure_ready_with_timeout(&client, Duration::from_millis(100)).await;
 
         let err = result.expect_err("unready app should fail the readiness check");
         assert!(err.to_string().contains("timed out"), "unexpected error: {err}");

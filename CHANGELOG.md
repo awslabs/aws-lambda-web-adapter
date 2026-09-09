@@ -24,12 +24,11 @@
   app. Default: 4 seconds. A value that is set but unusable falls back to the
   default and logs a warning.
 - Add `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` to bound the readiness check
-  (fractional seconds allowed, e.g. `0.5`), applied to the initial cold-start
-  readiness wait, the pre-snapshot wait, and the post-SnapStart-restore readiness
-  check. When set and the app does not become ready within it, the adapter
-  **refuses to serve**: cold-start init fails (the runtime never starts), and taking
-  a snapshot or completing a restore fails, rather than admitting traffic to an
-  app that never reported ready. When unset (the default) the wait is
+  (fractional seconds allowed, e.g. `0.5`), applied to both the initial cold-start
+  readiness wait and the post-SnapStart-restore readiness check. When set and the app
+  does not become ready within it, the adapter **refuses to serve**: cold-start init
+  fails (the runtime never starts) and a restore fails, rather than admitting traffic
+  to an app that never reported ready. When unset (the default) the wait is
   **unbounded**, matching the previous behavior, so existing slow-cold-start apps
   are unaffected unless they opt in. On-demand cold starts using `async_init` keep
   that path's own fixed ~9.8s bound (non-fatal) and are not affected by this variable.
@@ -45,14 +44,6 @@
   is normalized so it behaves like `/api`. **Upgrade note:** this changes the path
   forwarded to your app for those inputs — deployments that relied on the old
   repeated/partial stripping should verify their routes.
-- Fix the hooks firing before the application is ready. With `AWS_LWA_ASYNC_INIT=true`
-  the adapter finishes initialization after 9.8 seconds even if the app has not bound
-  its port yet, so the snapshot could capture a still-booting app and each hook `POST`
-  then failed immediately with a connection error. The adapter now waits for the
-  readiness check before the snapshot is taken — bounded by
-  `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` when it is set — which covers both hooks,
-  since the after-restore hook deliberately runs before its own readiness check so the
-  application can reconnect before its health is judged.
 - `AWS_LWA_ASYNC_INIT` is now ignored under SnapStart and Provisioned Concurrency, with
   a warning. It exists to work around the short initialization limit for on-demand cold
   starts by reporting init complete before the application is ready; neither of those
@@ -63,7 +54,8 @@
   `AWS_LWA_ASYNC_INIT=true` together with SnapStart or provisioned concurrency now waits
   for its readiness check during initialization instead of finishing early; bound that
   wait with `AWS_LWA_READINESS_CHECK_TIMEOUT_SECONDS` if you want it to fail rather than
-  block.
+  block. Under SnapStart this is also what guarantees the snapshot is taken of a fully
+  initialized application.
 
 ### Dependencies
 
